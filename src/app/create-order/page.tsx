@@ -23,6 +23,13 @@ import {
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { usePortal } from "@/context/PortalContext";
 import { BoostItem, PaymentMethod } from "@/types";
+import {
+  CityBankLogo,
+  BracBankLogo,
+  DbblLogo,
+  BkashLogo,
+  NagadLogo,
+} from "@/components/ui/BankLogos";
 
 export default function CreateOrderPage() {
   const router = useRouter();
@@ -118,12 +125,49 @@ export default function CreateOrderPage() {
     }
   };
 
-  const paymentAccounts = {
+  // Bank selection
+  const [selectedBank, setSelectedBank] = useState<"City Bank" | "BRAC Bank" | "DBBL">("City Bank");
+  const [copiedText, setCopiedText] = useState<string | null>(null);
+
+  const bankAccounts = {
+    "City Bank": {
+      name: "The City Bank Ltd",
+      branch: "Gulshan Avenue Branch, Dhaka",
+      accountName: "Meta Ads Agency BD",
+      accountNumber: "1502-9384-72001",
+      routingNumber: "225271829",
+      swift: "CIBLBDDH",
+      tag: "CityTouch / NPSB / BEFTN",
+      instructions: "Transfer via CityTouch App or any bank's NPSB/BEFTN/RTGS. Reference: Your Campaign Name or Phone.",
+    },
+    "BRAC Bank": {
+      name: "BRAC Bank PLC",
+      branch: "Banani Branch, Dhaka",
+      accountName: "Meta Ads Agency BD",
+      accountNumber: "2061-4892-0001",
+      routingNumber: "060260424",
+      swift: "BRAKBDDH",
+      tag: "Astha App / NPSB / BEFTN",
+      instructions: "Transfer via Astha App or any bank's NPSB instant transfer. Reference: Your Order ID.",
+    },
+    DBBL: {
+      name: "Dutch-Bangla Bank PLC (DBBL)",
+      branch: "Motijheel Foreign Exchange Branch, Dhaka",
+      accountName: "Meta Ads Agency BD",
+      accountNumber: "115-110-38491",
+      routingNumber: "090272185",
+      swift: "DBBLBDDH",
+      tag: "NexusPay / Rocket / NPSB",
+      instructions: "Transfer via NexusPay App, Rocket to Bank, or NPSB transfer. Reference: Your Phone Number.",
+    },
+  };
+
+  const mobileAccounts = {
     bKash: {
-      title: "bKash Merchant Account",
+      title: "bKash Merchant / Personal Account",
       number: "01712-345678",
-      type: "Make Payment / Send Money",
-      instructions: "Go to bKash App > Send Money or Payment > Enter Number > Amount in BDT > Reference: Use Campaign Name or Phone",
+      type: "Payment / Send Money",
+      instructions: "Go to bKash App > Send Money or Payment > Enter Number > Amount in BDT > Reference: Use Phone Number",
     },
     Nagad: {
       title: "Nagad Merchant Account",
@@ -131,18 +175,12 @@ export default function CreateOrderPage() {
       type: "Merchant Payment",
       instructions: "Go to Nagad App > Merchant Pay > Enter Number > Amount in BDT > Reference: Use Phone Number",
     },
-    "Bank Transfer": {
-      title: "City Bank Bangladesh Ltd",
-      number: "1502-9384-72001",
-      type: "Gulshan Branch, Dhaka",
-      instructions: "Account Name: Meta Ads Agency BD | Routing Number: 225271829 | Transfer via CityTouch / BEFTN / NPSB",
-    },
   };
 
-  const handleCopyAccount = (text: string) => {
+  const handleCopyText = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    setCopiedAccount(true);
-    setTimeout(() => setCopiedAccount(false), 2000);
+    setCopiedText(label);
+    setTimeout(() => setCopiedText(null), 2000);
   };
 
   const handleSubmitOrder = (e: React.FormEvent) => {
@@ -177,7 +215,7 @@ export default function CreateOrderPage() {
         notes: [
           `Client submitted boost order for ${items.length} item(s).`,
           `Target objective: ${primaryObjective} on ${targetPlatform}.`,
-          `Payment submitted via ${paymentMethod} (${transactionId || "pending confirmation"}).`,
+          `Payment submitted via ${paymentMethod}${paymentMethod === "Bank Transfer" ? ` (${selectedBank})` : ""} (${transactionId || "pending confirmation"}).`,
         ],
         isEligibleForRenew: false,
       });
@@ -442,41 +480,167 @@ export default function CreateOrderPage() {
                     key={method}
                     type="button"
                     onClick={() => setPaymentMethod(method)}
-                    className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition-all text-center ${
+                    className={`flex items-center justify-center gap-2 py-2 px-2.5 rounded-xl text-xs font-bold border transition-all text-center ${
                       paymentMethod === method
                         ? "bg-[#0866FF] text-white border-[#0866FF] shadow-xs"
-                        : "bg-white text-slate-600 border-[#E7ECF3] hover:border-slate-300"
+                        : "bg-white text-slate-700 border-[#E7ECF3] hover:border-slate-300"
                     }`}
                   >
-                    {method}
+                    {method === "bKash" && <BkashLogo className="w-4 h-4" />}
+                    {method === "Nagad" && <NagadLogo className="w-4 h-4" />}
+                    {method === "Bank Transfer" && <Building className="w-4 h-4" />}
+                    <span>{method}</span>
                   </button>
                 ))}
               </div>
 
-              {/* Account Details Box */}
-              <div className="p-3.5 bg-[#F6F8FC] rounded-xl border border-[#E7ECF3] space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold text-[#172033]">
-                      {paymentAccounts[paymentMethod].title}
+              {/* Bank Transfer Multi-Bank Selector */}
+              {paymentMethod === "Bank Transfer" ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700">
+                      Select Bank Account:
+                    </label>
+                    <span className="text-[11px] text-slate-400">
+                      3 Verified Partner Banks
                     </span>
-                    <p className="text-[11px] text-slate-500">
-                      {paymentAccounts[paymentMethod].type}
+                  </div>
+
+                  {/* 3 Bank Selector Tabs with Logos */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["City Bank", "BRAC Bank", "DBBL"] as const).map((bank) => (
+                      <button
+                        key={bank}
+                        type="button"
+                        onClick={() => setSelectedBank(bank)}
+                        className={`flex items-center justify-center gap-2 py-2.5 px-2 rounded-xl text-xs font-bold border transition-all text-center ${
+                          selectedBank === bank
+                            ? "bg-[#EBF2FF] text-[#0866FF] border-[#0866FF] shadow-2xs ring-1 ring-[#0866FF]/20"
+                            : "bg-white text-slate-700 border-[#E7ECF3] hover:border-slate-300"
+                        }`}
+                      >
+                        {bank === "City Bank" && <CityBankLogo className="w-4 h-4" />}
+                        {bank === "BRAC Bank" && <BracBankLogo className="w-4 h-4" />}
+                        {bank === "DBBL" && <DbblLogo className="w-4 h-4" />}
+                        <span className="truncate">{bank}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Selected Bank Account Details Card */}
+                  <div className="p-4 bg-[#F6F8FC] rounded-2xl border border-[#E7ECF3] space-y-3">
+                    <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#E7ECF3]">
+                      <div className="flex items-center gap-2.5">
+                        {selectedBank === "City Bank" && <CityBankLogo className="w-8 h-8" />}
+                        {selectedBank === "BRAC Bank" && <BracBankLogo className="w-8 h-8" />}
+                        {selectedBank === "DBBL" && <DbblLogo className="w-8 h-8" />}
+                        <div>
+                          <h4 className="text-xs sm:text-sm font-bold text-[#172033]">
+                            {bankAccounts[selectedBank].name}
+                          </h4>
+                          <p className="text-[11px] text-slate-500 font-medium">
+                            {bankAccounts[selectedBank].branch}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold text-[#0866FF] bg-white border border-[#E7ECF3] px-2 py-0.5 rounded-md shadow-2xs whitespace-nowrap">
+                        {bankAccounts[selectedBank].tag}
+                      </span>
+                    </div>
+
+                    {/* Account Info Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      <div className="p-2.5 bg-white rounded-xl border border-[#E7ECF3]">
+                        <span className="text-[10px] text-slate-400 block font-medium">Account Title</span>
+                        <div className="font-bold text-[#172033] mt-0.5">
+                          {bankAccounts[selectedBank].accountName}
+                        </div>
+                      </div>
+
+                      <div className="p-2.5 bg-white rounded-xl border border-[#E7ECF3] flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] text-slate-400 block font-medium">Account Number</span>
+                          <div className="font-mono font-bold text-[#0866FF] mt-0.5">
+                            {bankAccounts[selectedBank].accountNumber}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyText(bankAccounts[selectedBank].accountNumber, "acc")}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 hover:bg-[#EBF2FF] hover:text-[#0866FF] rounded-lg text-slate-600 transition-colors text-[11px] font-semibold border border-slate-200"
+                        >
+                          {copiedText === "acc" ? (
+                            <Check className="w-3.5 h-3.5 text-[#12A875]" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                          <span>{copiedText === "acc" ? "Copied" : "Copy"}</span>
+                        </button>
+                      </div>
+
+                      <div className="p-2.5 bg-white rounded-xl border border-[#E7ECF3] flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] text-slate-400 block font-medium">Routing Number</span>
+                          <div className="font-mono font-bold text-slate-800 mt-0.5">
+                            {bankAccounts[selectedBank].routingNumber}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyText(bankAccounts[selectedBank].routingNumber, "routing")}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 hover:bg-[#EBF2FF] hover:text-[#0866FF] rounded-lg text-slate-600 transition-colors text-[11px] font-semibold border border-slate-200"
+                        >
+                          {copiedText === "routing" ? (
+                            <Check className="w-3.5 h-3.5 text-[#12A875]" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                          <span>{copiedText === "routing" ? "Copied" : "Copy"}</span>
+                        </button>
+                      </div>
+
+                      <div className="p-2.5 bg-white rounded-xl border border-[#E7ECF3]">
+                        <span className="text-[10px] text-slate-400 block font-medium">SWIFT Code</span>
+                        <div className="font-mono font-bold text-slate-800 mt-0.5">
+                          {bankAccounts[selectedBank].swift}
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-slate-500 bg-white/70 p-2.5 rounded-xl border border-[#E7ECF3]/70 leading-relaxed">
+                      {bankAccounts[selectedBank].instructions}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleCopyAccount(paymentAccounts[paymentMethod].number)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-100 border border-[#E7ECF3] text-xs font-semibold text-[#0866FF] rounded-lg transition-colors"
-                  >
-                    {copiedAccount ? <Check className="w-3.5 h-3.5 text-[#12A875]" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{paymentAccounts[paymentMethod].number}</span>
-                  </button>
                 </div>
-                <p className="text-[11px] text-slate-500 bg-white/70 p-2 rounded-lg border border-[#E7ECF3]/60">
-                  {paymentAccounts[paymentMethod].instructions}
-                </p>
-              </div>
+              ) : (
+                /* Mobile Banking (bKash / Nagad) Account Box */
+                <div className="p-4 bg-[#F6F8FC] rounded-2xl border border-[#E7ECF3] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {paymentMethod === "bKash" ? <BkashLogo className="w-8 h-8" /> : <NagadLogo className="w-8 h-8" />}
+                      <div>
+                        <span className="text-xs font-bold text-[#172033]">
+                          {mobileAccounts[paymentMethod].title}
+                        </span>
+                        <p className="text-[11px] text-slate-500">
+                          {mobileAccounts[paymentMethod].type}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyText(mobileAccounts[paymentMethod].number, "mobile")}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 border border-[#E7ECF3] text-xs font-mono font-bold text-[#0866FF] rounded-xl transition-colors shadow-2xs"
+                    >
+                      {copiedText === "mobile" ? <Check className="w-3.5 h-3.5 text-[#12A875]" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{mobileAccounts[paymentMethod].number}</span>
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-500 bg-white/70 p-2.5 rounded-xl border border-[#E7ECF3]/70 leading-relaxed">
+                    {mobileAccounts[paymentMethod].instructions}
+                  </p>
+                </div>
+              )}
 
               {/* Screenshot Upload with Smart OCR Auto-fill */}
               <div className="space-y-2">
