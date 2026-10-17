@@ -120,7 +120,7 @@ export const OrderDetailsModal: React.FC = () => {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs text-[#0866FF] hover:underline mt-1.5 font-medium"
               >
-                View Post on Facebook / Instagram
+                View Post on Facebook
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>

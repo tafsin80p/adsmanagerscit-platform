@@ -11,7 +11,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Meta Ads Management Portal — Client Dashboard",
-  description: "Enterprise Meta Ads Management Portal for ordering Facebook & Instagram boosts, tracking payments, and monitoring live campaign performance.",
+  description: "Enterprise Meta Ads Management Portal for ordering Facebook page & post boosts, tracking payments, and monitoring live campaign performance.",
 };
 
 export default function RootLayout({

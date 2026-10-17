@@ -494,7 +494,7 @@ export default function DashboardPage() {
 
             <div className="space-y-3 text-xs text-slate-600 leading-relaxed">
               <p>
-                <strong>1. Order Placement:</strong> You submit your Facebook or Instagram post link with your preferred USD budget and target objectives.
+                <strong>1. Order Placement:</strong> You submit your Facebook post link with your preferred USD budget and target objectives.
               </p>
               <p>
                 <strong>2. Manual Execution:</strong> Our certified Meta Ad Specialists set up your campaign inside Meta Ads Manager with tailored audience targeting, bidding strategies, and placements.

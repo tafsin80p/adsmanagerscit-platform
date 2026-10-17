@@ -58,7 +58,7 @@ export default function AdsPerformancePage() {
               Meta Ads Performance Overview
             </h1>
             <p className="text-xs sm:text-sm text-[#667085] mt-1">
-              Synchronized advertising metrics from Facebook & Instagram Meta Marketing API.
+              Synchronized advertising metrics from Facebook Meta Marketing API.
             </p>
           </div>
 
@@ -196,7 +196,7 @@ export default function AdsPerformancePage() {
                 Delivery Trend ({metricView.toUpperCase()})
               </h3>
               <p className="text-xs text-[#667085]">
-                Daily delivery growth over time across Facebook & Instagram feeds and stories.
+                Daily delivery growth over time across Facebook feeds, reels, and in-stream video placements.
               </p>
             </div>
 

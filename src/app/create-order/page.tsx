@@ -31,7 +31,7 @@ export default function CreateOrderPage() {
   // Campaign Type
   const [postType, setPostType] = useState<"Boost Post" | "Ads Campaign" | "Promotion">("Boost Post");
   const [campaignTitle, setCampaignTitle] = useState("");
-  const [targetPlatform, setTargetPlatform] = useState<"Facebook" | "Instagram" | "Both">("Both");
+  const [targetPlatform] = useState<"Facebook">("Facebook");
   const [primaryObjective, setPrimaryObjective] = useState<"Messages" | "Engagement" | "Traffic" | "Leads">("Messages");
 
   // Advertising Items list
@@ -41,7 +41,7 @@ export default function CreateOrderPage() {
       name: "Primary Boost Creative",
       postUrl: "https://www.facebook.com/fashionhubbd/posts/",
       objective: "Messages",
-      platform: "Both",
+      platform: "Facebook",
       dailyBudgetUSD: 5,
       durationDays: 2,
       totalBudgetUSD: 10,
@@ -202,7 +202,7 @@ export default function CreateOrderPage() {
               Boost Order Placed Successfully!
             </h2>
             <p className="text-xs text-[#667085] mt-1 max-w-sm mx-auto leading-relaxed">
-              Your order has been recorded. Our Meta Ad Specialist will verify the payment and initialize ad delivery on Facebook & Instagram.
+              Your order has been recorded. Our Meta Ad Specialist will verify the payment and initialize ad delivery on Facebook.
             </p>
           </div>
 
@@ -305,15 +305,10 @@ export default function CreateOrderPage() {
                   <label className="text-xs font-semibold text-slate-700 block mb-1">
                     Target Platform
                   </label>
-                  <select
-                    value={targetPlatform}
-                    onChange={(e: any) => setTargetPlatform(e.target.value)}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-[#E7ECF3] focus:border-[#0866FF] focus:outline-none bg-white"
-                  >
-                    <option value="Both">Facebook & Instagram (Recommended)</option>
-                    <option value="Facebook">Facebook Only</option>
-                    <option value="Instagram">Instagram Only</option>
-                  </select>
+                  <div className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-[#E7ECF3] bg-[#F6F8FC] text-[#0866FF] font-semibold flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#0866FF]" />
+                    Facebook Feed & Videos (Exclusive)
+                  </div>
                 </div>
 
                 <div>
@@ -378,7 +373,7 @@ export default function CreateOrderPage() {
 
                     <div>
                       <label className="text-[11px] font-medium text-slate-500 block mb-1">
-                        Facebook or Instagram Post URL *
+                        Facebook Post URL *
                       </label>
                       <input
                         type="url"

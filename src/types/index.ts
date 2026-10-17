@@ -9,7 +9,7 @@ export interface BoostItem {
   name: string;
   postUrl: string;
   objective: "Messages" | "Engagement" | "Traffic" | "Leads";
-  platform: "Facebook" | "Instagram" | "Both";
+  platform: "Facebook";
   dailyBudgetUSD: number;
   durationDays: number;
   totalBudgetUSD: number;
@@ -21,7 +21,7 @@ export interface Order {
   postUrl: string;
   thumbnail: string;
   postType: "Boost Post" | "Ads Campaign" | "Promotion";
-  platform: "Facebook" | "Instagram" | "Both";
+  platform: "Facebook";
   objective: "Messages" | "Engagement" | "Traffic" | "Leads";
   dailyBudgetUSD: number;
   totalBudgetUSD: number;
