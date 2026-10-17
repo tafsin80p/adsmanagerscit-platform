@@ -20,8 +20,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col font-sans bg-[#F6F8FC] text-[#172033] selection:bg-[#0866FF]/15 selection:text-[#0866FF]">
+    <html lang="en" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
+      <body
+        className="min-h-full flex flex-col font-sans bg-[#F6F8FC] text-[#172033] selection:bg-[#0866FF]/15 selection:text-[#0866FF]"
+        suppressHydrationWarning
+      >
         <PortalProvider>{children}</PortalProvider>
       </body>
     </html>
