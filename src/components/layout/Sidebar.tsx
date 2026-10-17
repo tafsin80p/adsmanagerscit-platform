@@ -12,8 +12,24 @@ import {
   User,
   Headphones,
   X,
+  Sparkles,
+  ShieldCheck,
+  ChevronRight,
 } from "lucide-react";
 import { usePortal } from "@/context/PortalContext";
+
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  badge?: { text: string; color: string };
+  isLive?: boolean;
+}
+
+interface NavSection {
+  label: string;
+  items: NavItem[];
+}
 
 interface SidebarProps {
   mobileOpen?: boolean;
@@ -22,25 +38,70 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onMobileClose }) => {
   const pathname = usePathname();
-  const { setIsSupportModalOpen } = usePortal();
+  const { orders, profile, setIsSupportModalOpen } = usePortal();
 
-  const navItems = [
-    { name: "Dashboard", href: "/", icon: LayoutDashboard },
-    { name: "Create Order", href: "/create-order", icon: PlusCircle },
-    { name: "My Orders", href: "/my-orders", icon: ClipboardList },
-    { name: "Payment History", href: "/payment-history", icon: Wallet },
-    { name: "Ads Performance", href: "/performance", icon: TrendingUp },
-    { name: "Profile", href: "/profile", icon: User },
+  const activeOrdersCount = orders.filter((o) => o.status === "Active").length;
+  const totalOrdersCount = orders.length;
+
+  const navSections: NavSection[] = [
+    {
+      label: "MAIN MENU",
+      items: [
+        {
+          name: "Dashboard",
+          href: "/",
+          icon: LayoutDashboard,
+        },
+        {
+          name: "Create Order",
+          href: "/create-order",
+          icon: PlusCircle,
+          badge: { text: "New", color: "bg-[#EBF2FF] text-[#0866FF]" },
+        },
+        {
+          name: "My Orders",
+          href: "/my-orders",
+          icon: ClipboardList,
+          badge: { text: String(totalOrdersCount), color: "bg-slate-100 text-slate-700" },
+        },
+      ],
+    },
+    {
+      label: "ANALYTICS & BILLING",
+      items: [
+        {
+          name: "Payment History",
+          href: "/payment-history",
+          icon: Wallet,
+        },
+        {
+          name: "Ads Performance",
+          href: "/performance",
+          icon: TrendingUp,
+          isLive: true,
+        },
+      ],
+    },
+    {
+      label: "ACCOUNT",
+      items: [
+        {
+          name: "Profile",
+          href: "/profile",
+          icon: User,
+        },
+      ],
+    },
   ];
 
   const content = (
-    <div className="flex flex-col h-full justify-between bg-[#0B1730] text-slate-300">
-      <div>
+    <div className="flex flex-col h-full justify-between bg-white text-[#172033] border-r border-[#E7ECF3]">
+      <div className="overflow-y-auto">
         {/* Brand Header */}
-        <div className="h-20 flex items-center justify-between px-6 border-b border-[#1A294A]">
+        <div className="h-20 flex items-center justify-between px-6 border-b border-[#E7ECF3] bg-white">
           <Link href="/" className="flex items-center gap-3 group">
             {/* Meta Infinity Logo Icon */}
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0866FF] to-[#3B82F6] flex items-center justify-center shadow-lg shadow-[#0866FF]/20 group-hover:scale-105 transition-transform duration-200">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0866FF] to-[#0052CC] flex items-center justify-center shadow-md shadow-[#0866FF]/20 group-hover:scale-105 transition-all duration-200">
               <svg
                 viewBox="0 0 24 24"
                 className="w-5 h-5 text-white fill-current"
@@ -50,11 +111,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onMobileClose }) =
               </svg>
             </div>
             <div>
-              <div className="text-white font-bold text-base tracking-tight flex items-center gap-1.5">
-                Meta Ads
+              <div className="flex items-center gap-1.5">
+                <span className="text-[#172033] font-bold text-base tracking-tight">
+                  Meta Ads
+                </span>
+                <span className="text-[10px] font-bold bg-[#EBF2FF] text-[#0866FF] px-1.5 py-0.5 rounded-md">
+                  PORTAL
+                </span>
               </div>
-              <div className="text-[11px] text-slate-400 font-medium tracking-wide">
-                Client Portal
+              <div className="text-[11px] text-[#667085] font-medium tracking-wide">
+                Client Dashboard
               </div>
             </div>
           </Link>
@@ -62,7 +128,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onMobileClose }) =
           {mobileOpen && (
             <button
               onClick={onMobileClose}
-              className="md:hidden text-slate-400 hover:text-white p-1 rounded-lg"
+              className="md:hidden text-slate-400 hover:text-slate-800 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
               aria-label="Close navigation"
             >
               <X className="w-5 h-5" />
@@ -70,57 +136,122 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onMobileClose }) =
           )}
         </div>
 
-        {/* Navigation Items */}
-        <nav className="p-4 space-y-1.5" aria-label="Main Navigation">
-          {navItems.map((item) => {
-            const isActive =
-              item.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(item.href);
-            const Icon = item.icon;
+        {/* Navigation Sections */}
+        <div className="p-4 space-y-6">
+          {navSections.map((section, sIdx) => (
+            <div key={sIdx} className="space-y-1.5">
+              <div className="px-3 text-[10px] font-bold text-slate-400 tracking-wider uppercase">
+                {section.label}
+              </div>
+              <nav className="space-y-1" aria-label={section.label}>
+                {section.items.map((item) => {
+                  const isActive =
+                    item.href === "/"
+                      ? pathname === "/"
+                      : pathname.startsWith(item.href);
+                  const Icon = item.icon;
 
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={onMobileClose}
-                className={`flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
-                  isActive
-                    ? "bg-[#0866FF] text-white shadow-md shadow-[#0866FF]/25 font-semibold"
-                    : "text-slate-400 hover:text-white hover:bg-[#12213D]"
-                }`}
-              >
-                <Icon
-                  className={`w-4 h-4 transition-colors ${
-                    isActive ? "text-white" : "text-slate-400"
-                  }`}
-                  strokeWidth={isActive ? 2.3 : 1.9}
-                />
-                <span>{item.name}</span>
-              </Link>
-            );
-          })}
-        </nav>
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={onMobileClose}
+                      className={`group flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
+                        isActive
+                          ? "bg-[#0866FF] text-white shadow-sm shadow-[#0866FF]/25 font-bold"
+                          : "text-[#667085] hover:text-[#172033] hover:bg-[#F6F8FC]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon
+                          className={`w-4 h-4 transition-colors ${
+                            isActive
+                              ? "text-white"
+                              : "text-slate-400 group-hover:text-[#0866FF]"
+                          }`}
+                          strokeWidth={isActive ? 2.4 : 1.9}
+                        />
+                        <span>{item.name}</span>
+                      </div>
+
+                      {/* Right Badges */}
+                      <div className="flex items-center gap-1.5">
+                        {item.isLive && (
+                          <span
+                            className={`flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full transition-colors ${
+                              isActive
+                                ? "bg-white/20 text-white"
+                                : "bg-[#E8F8F2] text-[#12A875]"
+                            }`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                isActive ? "bg-white" : "bg-[#12A875] animate-pulse"
+                              }`}
+                            />
+                            Live
+                          </span>
+                        )}
+
+                        {item.badge && (
+                          <span
+                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md transition-colors ${
+                              isActive
+                                ? "bg-white/20 text-white"
+                                : item.badge.color
+                            }`}
+                          >
+                            {item.badge.text}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          ))}
+
+          {/* Quick Account Status Mini-Card */}
+          <div className="p-3.5 rounded-2xl bg-[#F6F8FC] border border-[#E7ECF3] space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-[#172033] flex items-center gap-1.5 truncate">
+                <span className="w-2 h-2 rounded-full bg-[#12A875] animate-pulse" />
+                {profile.businessName}
+              </span>
+              <span className="text-[10px] font-bold text-[#0866FF] bg-[#EBF2FF] px-1.5 py-0.5 rounded">
+                Active
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-[11px] text-[#667085]">
+              <span>Active Ad Sets</span>
+              <span className="font-bold text-[#172033]">{activeOrdersCount} Running</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Bottom Support Section */}
-      <div className="p-4 border-t border-[#1A294A]">
+      <div className="p-4 border-t border-[#E7ECF3] bg-white">
         <button
           onClick={() => {
             setIsSupportModalOpen(true);
             if (onMobileClose) onMobileClose();
           }}
-          className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-[#12213D] transition-colors group text-left"
+          className="w-full flex items-center justify-between p-3 rounded-2xl bg-[#F6F8FC] hover:bg-[#EEF3FB] border border-[#E7ECF3] transition-all group text-left shadow-2xs"
         >
-          <div className="w-7 h-7 rounded-lg bg-[#12213D] group-hover:bg-[#1E3054] flex items-center justify-center transition-colors">
-            <Headphones className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#0866FF] transition-colors" />
-          </div>
-          <div>
-            <div className="font-semibold text-slate-300 group-hover:text-white">
-              Need Help?
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-white border border-[#E7ECF3] group-hover:border-[#0866FF]/30 flex items-center justify-center text-[#0866FF] shadow-2xs transition-colors">
+              <Headphones className="w-4 h-4 text-[#0866FF]" />
             </div>
-            <div className="text-[11px] text-slate-400">Contact Support</div>
+            <div>
+              <div className="text-xs font-bold text-[#172033] group-hover:text-[#0866FF] transition-colors">
+                Need Help?
+              </div>
+              <div className="text-[11px] text-[#667085]">Ad Specialist Support</div>
+            </div>
           </div>
+          <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
         </button>
       </div>
     </div>
@@ -129,7 +260,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onMobileClose }) =
   return (
     <>
       {/* Desktop Fixed Sidebar (240px) */}
-      <aside className="hidden md:flex flex-col w-[240px] shrink-0 fixed inset-y-0 left-0 z-30 shadow-sm border-r border-[#162544]">
+      <aside className="hidden md:flex flex-col w-[240px] shrink-0 fixed inset-y-0 left-0 z-30 shadow-xs border-r border-[#E7ECF3] bg-white">
         {content}
       </aside>
 
@@ -137,7 +268,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onMobileClose }) =
       {mobileOpen && (
         <div className="fixed inset-0 z-50 md:hidden flex">
           <div
-            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity duration-200"
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity duration-200"
             onClick={onMobileClose}
             aria-hidden="true"
           />
