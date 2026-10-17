@@ -33,7 +33,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           pageTitle={pageTitle}
         />
 
-        <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto animate-in fade-in duration-200">
+        <main className="flex-1 px-3 sm:px-5 md:px-6 py-4 sm:py-5 w-full animate-in fade-in duration-200">
           {children}
         </main>
       </div>

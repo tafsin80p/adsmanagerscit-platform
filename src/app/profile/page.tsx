@@ -44,7 +44,7 @@ export default function ProfilePage() {
 
   return (
     <DashboardLayout pageTitle="Profile">
-      <div className="space-y-6 max-w-4xl">
+      <div className="space-y-6 w-full">
         {/* Header */}
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#172033] tracking-tight">

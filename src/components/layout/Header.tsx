@@ -88,7 +88,7 @@ export const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle, pageTitle = 
   ];
 
   return (
-    <header className="h-16 md:h-20 bg-white border-b border-[#E7ECF3] sticky top-0 z-20 px-4 md:px-8 flex items-center justify-between gap-4 transition-all">
+    <header className="h-16 md:h-20 bg-white border-b border-[#E7ECF3] sticky top-0 z-20 px-3 sm:px-5 md:px-6 flex items-center justify-between gap-4 transition-all">
       {/* Left: Mobile hamburger & Search bar */}
       <div className="flex items-center gap-3 md:gap-6 flex-1 max-w-xl">
         <button
