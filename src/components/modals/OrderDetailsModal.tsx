@@ -18,8 +18,10 @@ import {
 } from "lucide-react";
 import { usePortal } from "@/context/PortalContext";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { FacebookPostPreview } from "@/components/ui/FacebookPostPreview";
 
 export const OrderDetailsModal: React.FC = () => {
+  const [showPreview, setShowPreview] = React.useState(false);
   const {
     selectedOrderForModal,
     setSelectedOrderForModal,
@@ -75,7 +77,7 @@ export const OrderDetailsModal: React.FC = () => {
         <div className="px-6 py-4 border-b border-[#E7ECF3] flex items-center justify-between bg-slate-50/50">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-bold text-[#0866FF] bg-[#EBF2FF] px-2 py-0.5 rounded-md">
+              <span className="text-xs font-mono font-bold text-[#3858F6] bg-[#EEF2FF] px-2 py-0.5 rounded-md">
                 #{order.id}
               </span>
               <StatusBadge status={order.status} />
@@ -112,19 +114,43 @@ export const OrderDetailsModal: React.FC = () => {
                 {order.postType} • {order.platform}
               </div>
               <div className="text-sm font-semibold text-[#172033] mt-0.5">
-                Objective: <span className="text-[#0866FF]">{order.objective}</span>
+                Objective: <span className="text-[#3858F6]">{order.objective}</span>
               </div>
-              <a
-                href={order.postUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs text-[#0866FF] hover:underline mt-1.5 font-medium"
-              >
-                View Post on Facebook
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
+              <div className="flex items-center gap-2.5 mt-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(!showPreview)}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#3858F6] bg-[#EEF2FF] hover:bg-[#E0E7FF] px-2.5 py-1 rounded-lg transition-colors cursor-pointer active:scale-95"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>{showPreview ? "Hide Preview" : "Preview Post"}</span>
+                </button>
+                <a
+                  href={order.postUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 hover:underline font-medium"
+                >
+                  <span>Open on Facebook</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
             </div>
           </div>
+
+          {/* Collapsible Live Facebook Post Preview */}
+          {showPreview && order.postUrl && (
+            <div className="animate-in fade-in zoom-in-98 duration-150">
+              <FacebookPostPreview
+                postUrl={order.postUrl}
+                pageName={order.facebookPageName || "Min Mart BD"}
+                pageAvatar="/images/profile-avatar.jpg"
+                thumbnail={order.thumbnail}
+                campaignName={order.campaignName}
+                objective={order.objective}
+              />
+            </div>
+          )}
 
           {/* Budget & Payment Breakdown */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -134,7 +160,7 @@ export const OrderDetailsModal: React.FC = () => {
             </div>
             <div className="p-3 bg-white rounded-xl border border-[#E7ECF3]">
               <div className="text-[11px] text-slate-400 font-medium">Total Budget</div>
-              <div className="text-sm font-bold text-[#0866FF] mt-1">${order.totalBudgetUSD.toFixed(2)}</div>
+              <div className="text-sm font-bold text-[#3858F6] mt-1">${order.totalBudgetUSD.toFixed(2)}</div>
             </div>
             <div className="p-3 bg-white rounded-xl border border-[#E7ECF3]">
               <div className="text-[11px] text-slate-400 font-medium">Paid (BDT)</div>
@@ -147,6 +173,39 @@ export const OrderDetailsModal: React.FC = () => {
               <div className="text-sm font-bold text-[#172033] mt-1">{order.durationDays} Day{order.durationDays > 1 ? "s" : ""}</div>
             </div>
           </div>
+
+          {/* Payment Proof / Receipt Screenshot */}
+          {order.screenshotUrl && (
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-[#3858F6]" />
+                  Attached Payment Proof / Screenshot
+                </span>
+                <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  Cloud Stored
+                </span>
+              </div>
+              <a
+                href={order.screenshotUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group relative block rounded-lg overflow-hidden border border-slate-200 bg-white hover:border-[#3858F6] transition-all shadow-3xs"
+              >
+                <div className="relative w-full h-32 bg-slate-100 flex items-center justify-center overflow-hidden">
+                  <img
+                    src={order.screenshotUrl}
+                    alt="Payment receipt proof"
+                    className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                  />
+                </div>
+                <div className="p-2 bg-white flex items-center justify-between text-xs border-t border-slate-100">
+                  <span className="text-slate-600 font-medium">Click to open full receipt</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-[#3858F6] shrink-0" />
+                </div>
+              </a>
+            </div>
+          )}
 
           {/* Status Timeline */}
           <div>
@@ -181,12 +240,19 @@ export const OrderDetailsModal: React.FC = () => {
             <div className="p-4 rounded-xl bg-gradient-to-br from-[#F6F8FC] to-[#EEF3FB] border border-[#E7ECF3]">
               <div className="flex items-center justify-between mb-3">
                 <div className="text-xs font-bold text-[#172033] flex items-center gap-1.5">
-                  <TrendingUp className="w-4 h-4 text-[#0866FF]" />
+                  <TrendingUp className="w-4 h-4 text-[#3858F6]" />
                   Live Campaign Delivery Metrics
                 </div>
-                <span className="text-[10px] text-slate-400">
-                  {order.metrics.lastUpdated}
-                </span>
+                <div className="flex items-center gap-2">
+                  {order.metaCampaignId && (
+                    <span className="text-[10px] font-mono font-bold bg-[#EBF2FF] text-[#0866FF] px-2 py-0.5 rounded-full border border-[#C7D9FE]">
+                      Meta ID: #{order.metaCampaignId}
+                    </span>
+                  )}
+                  <span className="text-[10px] text-slate-400">
+                    {order.metrics.lastUpdated}
+                  </span>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -204,7 +270,7 @@ export const OrderDetailsModal: React.FC = () => {
                 </div>
                 <div className="bg-white p-2.5 rounded-lg border border-[#E7ECF3]">
                   <div className="text-[10px] text-slate-400 uppercase font-medium">Messages</div>
-                  <div className="text-sm font-bold text-[#0866FF]">
+                  <div className="text-sm font-bold text-[#3858F6]">
                     {order.metrics.conversations}
                   </div>
                 </div>
@@ -232,7 +298,7 @@ export const OrderDetailsModal: React.FC = () => {
               <ul className="space-y-1.5 text-xs text-slate-600 bg-[#F6F8FC] p-3 rounded-xl border border-[#E7ECF3]">
                 {order.notes.map((note, i) => (
                   <li key={i} className="flex items-start gap-2">
-                    <span className="text-[#0866FF] font-bold">•</span>
+                    <span className="text-[#3858F6] font-bold">•</span>
                     <span>{note}</span>
                   </li>
                 ))}
@@ -256,7 +322,7 @@ export const OrderDetailsModal: React.FC = () => {
             {order.isEligibleForRenew && (
               <button
                 onClick={handleRenewClick}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-[#0866FF] hover:bg-[#0052CC] text-white rounded-xl shadow-xs transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-[#3858F6] hover:bg-[#2542D9] text-white rounded-xl shadow-xs transition-colors"
               >
                 <Repeat className="w-3.5 h-3.5" />
                 Renew Boost

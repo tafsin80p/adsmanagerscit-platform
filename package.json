@@ -10,8 +10,10 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.2",
+    "cloudinary": "^2.11.0",
     "framer-motion": "^14.3.0",
     "lucide-react": "^1.59.0",
+    "mongoose": "^9.11.4",
     "next": "16.4.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",

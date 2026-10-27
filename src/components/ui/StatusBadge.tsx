@@ -32,9 +32,9 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = "md" })
         };
       case "Completed":
         return {
-          bg: "bg-[#EBF2FF]",
-          text: "text-[#0866FF]",
-          dot: "bg-[#0866FF]",
+          bg: "bg-[#EEF2FF]",
+          text: "text-[#3858F6]",
+          dot: "bg-[#3858F6]",
         };
       case "Confirmed":
         return {

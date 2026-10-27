@@ -2,30 +2,36 @@
 
 @layer base {
   :root {
-    --primary: #0866FF;
-    --primary-hover: #0052CC;
+    --primary: #3858F6;
+    --primary-hover: #2947E3;
     --sidebar-bg: #FFFFFF;
-    --sidebar-surface: #F6F8FC;
-    --main-bg: #F6F8FC;
+    --sidebar-surface: #F5F7FB;
+    --main-bg: #EEF1F7;
     --card-bg: #FFFFFF;
-    --text-primary: #172033;
-    --text-secondary: #667085;
-    --border-subtle: #E7ECF3;
-    --success: #12A875;
+    --text-primary: #121826;
+    --text-secondary: #717D96;
+    --border-subtle: #E6EBF2;
+    --success: #10B981;
     --warning: #F59E0B;
-    --error: #DC4545;
+    --error: #EF4444;
   }
 }
 
-body {
-  background-color: #F6F8FC;
-  color: #172033;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+html {
+  scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-/* Custom subtle scrollbar */
+body {
+  background-color: #EEF1F7;
+  color: #121826;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom subtle modern scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -34,25 +40,80 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #D0D5DD;
+  background: rgba(148, 163, 184, 0.45);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #98A2B3;
+  background: rgba(100, 116, 139, 0.75);
+}
+
+/* Smooth hardware-accelerated card lift utility */
+.card-lift {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+  transform: translateY(0);
+  backface-visibility: hidden;
+  -webkit-font-smoothing: subpixel-antialiased;
+}
+.card-lift:hover {
+  transform: translateY(-2px);
 }
 
 /* Pulse animation for live sync indicator */
 @keyframes live-pulse {
   0%, 100% {
     opacity: 1;
-    transform: scale(1);
   }
   50% {
-    opacity: 0.4;
-    transform: scale(1.15);
+    opacity: 0.35;
   }
 }
 
 .animate-live-pulse {
   animation: live-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Side drawer smooth spring slide-in */
+@keyframes drawer-spring-in {
+  0% {
+    transform: translate3d(100%, 0, 0);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+.animate-drawer-slide-in {
+  animation: drawer-spring-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Backdrop smooth fade-in */
+@keyframes backdrop-smooth-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-backdrop-fade-in {
+  animation: backdrop-smooth-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity;
+}
+
+/* Concentric arc gauge smooth entrance */
+@keyframes gauge-fill {
+  from {
+    stroke-dashoffset: 350;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-gauge-fill {
+  animation: gauge-fill 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

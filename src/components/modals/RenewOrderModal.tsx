@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Check, Repeat, Sparkles, DollarSign } from "lucide-react";
+import { X, Check, Repeat, DollarSign } from "lucide-react";
 import { usePortal } from "@/context/PortalContext";
 
 export const RenewOrderModal: React.FC = () => {
@@ -12,6 +12,8 @@ export const RenewOrderModal: React.FC = () => {
     setIsRenewModalOpen,
     renewOrder,
     exchangeRateBDT,
+    bkashCashoutPercent,
+    nagadCashoutPercent,
   } = usePortal();
 
   const [days, setDays] = useState<number>(3);
@@ -21,11 +23,30 @@ export const RenewOrderModal: React.FC = () => {
 
   const order = selectedOrderForRenew;
   const renewalCostUSD = order.dailyBudgetUSD * days;
-  const renewalCostBDT = Math.round(renewalCostUSD * exchangeRateBDT * 1.05);
+  const baseRenewalCostBDT = Math.round(renewalCostUSD * exchangeRateBDT);
+  const cashoutPercent =
+    order.paymentMethod === "bKash"
+      ? bkashCashoutPercent
+      : order.paymentMethod === "Nagad"
+      ? nagadCashoutPercent
+      : 0;
+  const cashoutChargeBDT = Math.round((baseRenewalCostBDT * cashoutPercent) / 100);
+  const renewalCostBDT = baseRenewalCostBDT + cashoutChargeBDT;
 
   const handleConfirmRenew = () => {
     renewOrder(order.id, days);
     setSuccessMessage(true);
+    try {
+      sessionStorage.setItem(
+        "scit_auth_toast",
+        JSON.stringify({
+          type: "success",
+          title: "Boost Renewed Successfully! 🚀",
+          message: `Order #${order.id} has been extended for ${days} days. Our team is continuing ad delivery.`,
+          duration: 4500,
+        })
+      );
+    } catch {}
     setTimeout(() => {
       setSuccessMessage(false);
       setIsRenewModalOpen(false);
@@ -47,7 +68,7 @@ export const RenewOrderModal: React.FC = () => {
       <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 z-10 border border-[#E7ECF3] animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between pb-4 border-b border-[#E7ECF3]">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#EBF2FF] text-[#0866FF] flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-[#EEF2FF] text-[#3858F6] flex items-center justify-center">
               <Repeat className="w-4 h-4" />
             </div>
             <div>
@@ -90,8 +111,8 @@ export const RenewOrderModal: React.FC = () => {
                     onClick={() => setDays(d)}
                     className={`py-2 text-xs font-bold rounded-xl border transition-all ${
                       days === d
-                        ? "bg-[#0866FF] text-white border-[#0866FF] shadow-xs"
-                        : "bg-white text-slate-600 border-[#E7ECF3] hover:border-[#0866FF]/40"
+                        ? "bg-[#3858F6] text-white border-[#3858F6] shadow-xs"
+                        : "bg-white text-slate-600 border-[#E7ECF3] hover:border-[#3858F6]/40"
                     }`}
                   >
                     +{d} Day{d > 1 ? "s" : ""}
@@ -108,11 +129,17 @@ export const RenewOrderModal: React.FC = () => {
               </div>
               <div className="flex justify-between text-xs text-slate-500">
                 <span>Total Added Budget</span>
-                <span className="font-semibold text-[#0866FF]">${renewalCostUSD.toFixed(2)} USD</span>
+                <span className="font-semibold text-[#3858F6]">${renewalCostUSD.toFixed(2)} USD</span>
               </div>
+              {cashoutChargeBDT > 0 && (
+                <div className="flex justify-between text-xs text-slate-500">
+                  <span>{order.paymentMethod} Cashout (+{cashoutPercent}%)</span>
+                  <span className="font-semibold text-amber-600">+৳{cashoutChargeBDT.toLocaleString()} BDT</span>
+                </div>
+              )}
               <div className="pt-2 border-t border-[#E7ECF3] flex justify-between text-xs font-bold text-[#172033]">
                 <span>Payable Amount (BDT)</span>
-                <span className="text-sm text-[#0866FF]">≈ ৳{renewalCostBDT.toLocaleString()}</span>
+                <span className="text-sm text-[#3858F6]">≈ ৳{renewalCostBDT.toLocaleString()}</span>
               </div>
             </div>
 
@@ -130,7 +157,7 @@ export const RenewOrderModal: React.FC = () => {
               <button
                 type="button"
                 onClick={handleConfirmRenew}
-                className="px-4 py-2 text-xs font-semibold bg-[#0866FF] hover:bg-[#0052CC] text-white rounded-xl shadow-xs transition-colors"
+                className="px-4 py-2 text-xs font-semibold bg-[#3858F6] hover:bg-[#2542D9] text-white rounded-xl shadow-xs transition-colors"
               >
                 Confirm Renewal
               </button>

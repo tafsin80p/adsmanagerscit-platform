@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import {
   Plus,
@@ -15,14 +16,21 @@ import {
   Check,
   ArrowRight,
   ShieldCheck,
-  Sparkles,
   FileCheck,
   Building,
   Smartphone,
+  ExternalLink,
+  CheckCircle,
+  Hash,
+  Phone,
+  ScanLine,
+  Loader2,
+  FileUp,
+  Flame,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { usePortal } from "@/context/PortalContext";
-import { BoostItem, PaymentMethod } from "@/types";
+import { BoostItem, PaymentMethod, BankAccount } from "@/types";
 import {
   CityBankLogo,
   BracBankLogo,
@@ -30,10 +38,30 @@ import {
   BkashLogo,
   NagadLogo,
 } from "@/components/ui/BankLogos";
+import { BankDetailsModal } from "@/components/modals/BankDetailsModal";
+import { FacebookPostPreview } from "@/components/ui/FacebookPostPreview";
+import { AnimatedToast, ToastData } from "@/components/ui/AnimatedToast";
 
 export default function CreateOrderPage() {
   const router = useRouter();
-  const { addOrder, exchangeRateBDT, serviceChargePercent } = usePortal();
+  const {
+    addOrder,
+    exchangeRateBDT,
+    bkashCashoutPercent,
+    nagadCashoutPercent,
+    bkashNumber,
+    bkashAccountType,
+    bkashAccountName,
+    bkashInstructions,
+    bkashActive,
+    nagadNumber,
+    nagadAccountType,
+    nagadAccountName,
+    nagadInstructions,
+    nagadActive,
+    bankAccounts: contextBankAccounts,
+    profile,
+  } = usePortal();
 
   // Campaign Type
   const [postType, setPostType] = useState<"Boost Post" | "Ads Campaign" | "Promotion">("Boost Post");
@@ -45,13 +73,13 @@ export default function CreateOrderPage() {
   const [items, setItems] = useState<BoostItem[]>([
     {
       id: "item-1",
-      name: "Primary Boost Creative",
-      postUrl: "https://www.facebook.com/fashionhubbd/posts/",
+      name: "Ad Creative #1",
+      postUrl: "",
       objective: "Messages",
       platform: "Facebook",
       dailyBudgetUSD: 5,
-      durationDays: 2,
-      totalBudgetUSD: 10,
+      durationDays: 1,
+      totalBudgetUSD: 5,
     },
   ]);
 
@@ -60,16 +88,26 @@ export default function CreateOrderPage() {
   const [transactionId, setTransactionId] = useState("");
   const [senderNumber, setSenderNumber] = useState("");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [isUploadingScreenshot, setIsUploadingScreenshot] = useState(false);
+  const [uploadStorageSource, setUploadStorageSource] = useState<"cloudinary" | "local_fallback" | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [ocrStatus, setOcrStatus] = useState<"idle" | "scanning" | "success">("idle");
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderCreatedSuccess, setOrderCreatedSuccess] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastData | null>(null);
 
   // Live Calculations
   const totalUSD = items.reduce((sum, item) => sum + item.totalBudgetUSD, 0);
-  const subtotalBDT = totalUSD * exchangeRateBDT;
-  const serviceChargeBDT = Math.round((subtotalBDT * serviceChargePercent) / 100);
-  const finalPayableBDT = subtotalBDT + serviceChargeBDT;
+  const baseBDT = Math.round(totalUSD * exchangeRateBDT);
+  const cashoutPercent =
+    paymentMethod === "bKash"
+      ? bkashCashoutPercent
+      : paymentMethod === "Nagad"
+      ? nagadCashoutPercent
+      : 0;
+  const cashoutChargeBDT = Math.round((baseBDT * cashoutPercent) / 100);
+  const finalPayableBDT = baseBDT + cashoutChargeBDT;
 
   // Handlers for dynamic items
   const handleAddItem = () => {
@@ -108,72 +146,99 @@ export default function CreateOrderPage() {
     );
   };
 
-  // Mock Screenshot upload & OCR scanner
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Cloudinary Screenshot upload & OCR scanner
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const fakeUrl = URL.createObjectURL(file);
-      setUploadedImage(fakeUrl);
-      setOcrStatus("scanning");
+    if (!file) return;
 
-      // Simulate real OCR scanner reading receipt
-      setTimeout(() => {
-        const detectedTrx = `TRX${Math.floor(100000 + Math.random() * 900000)}`;
-        setTransactionId(detectedTrx);
-        setOcrStatus("success");
-      }, 1200);
+    setUploadError(null);
+    setIsUploadingScreenshot(true);
+    setOcrStatus("scanning");
+
+    // Immediate local preview so the user sees instant feedback
+    const localPreview = URL.createObjectURL(file);
+    setUploadedImage(localPreview);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "payments");
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data.success && data.url) {
+        setUploadedImage(data.url);
+        setUploadStorageSource(data.storage === "cloudinary" ? "cloudinary" : "local_fallback");
+
+        // Simulate reading receipt
+        setTimeout(() => {
+          const detectedTrx = `TRX${Math.floor(100000 + Math.random() * 900000)}`;
+          setTransactionId(detectedTrx);
+          setOcrStatus("success");
+        }, 800);
+      } else {
+        setUploadError(data.error || "Failed to upload receipt to cloud");
+        setOcrStatus("idle");
+      }
+    } catch (err: unknown) {
+      const error = err as Error;
+      setUploadError(error.message || "Network error uploading receipt");
+      setOcrStatus("idle");
+    } finally {
+      setIsUploadingScreenshot(false);
+      e.target.value = "";
     }
   };
 
-  // Bank selection
-  const [selectedBank, setSelectedBank] = useState<"City Bank" | "BRAC Bank" | "DBBL">("City Bank");
+  // Bank selection & popup modal
+  const activeBankAccounts = useMemo(() => {
+    return contextBankAccounts && contextBankAccounts.length > 0
+      ? contextBankAccounts.filter((b) => b.isActive)
+      : [];
+  }, [contextBankAccounts]);
+
+  const [selectedBankId, setSelectedBankId] = useState<string>("");
+  const [isBankModalOpen, setIsBankModalOpen] = useState(false);
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
-  const bankAccounts = {
-    "City Bank": {
-      name: "The City Bank Ltd",
-      branch: "Gulshan Avenue Branch, Dhaka",
-      accountName: "Meta Ads Agency BD",
-      accountNumber: "1502-9384-72001",
-      routingNumber: "225271829",
-      swift: "CIBLBDDH",
-      tag: "CityTouch / NPSB / BEFTN",
-      instructions: "Transfer via CityTouch App or any bank's NPSB/BEFTN/RTGS. Reference: Your Campaign Name or Phone.",
-    },
-    "BRAC Bank": {
-      name: "BRAC Bank PLC",
-      branch: "Banani Branch, Dhaka",
-      accountName: "Meta Ads Agency BD",
-      accountNumber: "2061-4892-0001",
-      routingNumber: "060260424",
-      swift: "BRAKBDDH",
-      tag: "Astha App / NPSB / BEFTN",
-      instructions: "Transfer via Astha App or any bank's NPSB instant transfer. Reference: Your Order ID.",
-    },
-    DBBL: {
-      name: "Dutch-Bangla Bank PLC (DBBL)",
-      branch: "Motijheel Foreign Exchange Branch, Dhaka",
-      accountName: "Meta Ads Agency BD",
-      accountNumber: "115-110-38491",
-      routingNumber: "090272185",
-      swift: "DBBLBDDH",
-      tag: "NexusPay / Rocket / NPSB",
-      instructions: "Transfer via NexusPay App, Rocket to Bank, or NPSB transfer. Reference: Your Phone Number.",
-    },
+  const selectedBankAccount = useMemo(() => {
+    if (!activeBankAccounts || activeBankAccounts.length === 0) return null;
+    return (
+      activeBankAccounts.find((b) => b.id === selectedBankId) ||
+      activeBankAccounts.find((b) => b.isPrimary) ||
+      activeBankAccounts[0]
+    );
+  }, [activeBankAccounts, selectedBankId]);
+
+  const handleBankSelect = (bank: BankAccount) => {
+    setSelectedBankId(bank.id);
+    setIsBankModalOpen(true);
   };
 
   const mobileAccounts = {
     bKash: {
-      title: "bKash Merchant / Personal Account",
-      number: "01712-345678",
-      type: "Payment / Send Money",
-      instructions: "Go to bKash App > Send Money or Payment > Enter Number > Amount in BDT > Reference: Use Phone Number",
+      brandName: "bKash",
+      title: "bKash Official Account",
+      accountName: bkashAccountName || "Shopno IT / Meta Ads Agency",
+      number: bkashNumber || "01712-345678",
+      type: bkashAccountType || "Personal (Send Money)",
+      instructions:
+        bkashInstructions ||
+        "Open bKash App > Send Money > enter exact amount and put your phone in Reference. Then enter the TrxID below.",
     },
     Nagad: {
-      title: "Nagad Merchant Account",
-      number: "01898-765432",
-      type: "Merchant Payment",
-      instructions: "Go to Nagad App > Merchant Pay > Enter Number > Amount in BDT > Reference: Use Phone Number",
+      brandName: "Nagad",
+      title: "Nagad Official Account",
+      accountName: nagadAccountName || "Shopno IT / Meta Ads Agency",
+      number: nagadNumber || "01898-765432",
+      type: nagadAccountType || "Personal (Send Money)",
+      instructions:
+        nagadInstructions ||
+        "Open Nagad App > Send Money > enter exact amount and put your phone in Reference. Then enter the TrxID below.",
     },
   };
 
@@ -183,23 +248,43 @@ export default function CreateOrderPage() {
     setTimeout(() => setCopiedText(null), 2000);
   };
 
-  const handleSubmitOrder = (e: React.FormEvent) => {
+  const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!campaignTitle.trim()) {
-      alert("Please enter a campaign name or post description.");
+      setToast({
+        type: "error",
+        title: "Missing Campaign Title",
+        message: "Please enter a campaign name or post description.",
+        duration: 4000,
+      });
+      return;
+    }
+    const firstUrl = items[0]?.postUrl?.trim();
+    if (!firstUrl) {
+      setToast({
+        type: "error",
+        title: "Missing Facebook Post URL",
+        message: "Please enter your Facebook post URL.",
+        duration: 4000,
+      });
       return;
     }
     if (totalUSD <= 0) {
-      alert("Please enter a valid budget greater than $0.");
+      setToast({
+        type: "error",
+        title: "Invalid Budget",
+        message: "Please enter a valid budget greater than $0.",
+        duration: 4000,
+      });
       return;
     }
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      const created = addOrder({
+    try {
+      const created = await addOrder({
         campaignName: campaignTitle.trim(),
-        postUrl: items[0]?.postUrl || "https://facebook.com/fashionhubbd",
+        postUrl: firstUrl,
         postType,
         platform: targetPlatform,
         objective: primaryObjective,
@@ -210,24 +295,57 @@ export default function CreateOrderPage() {
         paymentMethod,
         transactionId: transactionId || undefined,
         paidAmountBDT: finalPayableBDT,
-        thumbnail: "/images/winter-collection.jpg",
+        thumbnail: uploadedImage || "/images/winter-collection.jpg",
         items,
         notes: [
           `Client submitted boost order for ${items.length} item(s).`,
           `Target objective: ${primaryObjective} on ${targetPlatform}.`,
-          `Payment submitted via ${paymentMethod}${paymentMethod === "Bank Transfer" ? ` (${selectedBank})` : ""} (${transactionId || "pending confirmation"}).`,
-        ],
+          `Payment submitted via ${paymentMethod}${paymentMethod === "Bank Transfer" ? ` (${selectedBankAccount?.bankName || "Bank"})` : ""}${cashoutChargeBDT > 0 ? ` with ${cashoutPercent}% cashout charge (+৳${cashoutChargeBDT} BDT)` : ""} (${transactionId || "pending confirmation"}).`,
+          senderNumber ? `Sender Account: ${senderNumber}` : "",
+        ].filter(Boolean),
+        senderNumber: senderNumber || undefined,
+        screenshotUrl: uploadedImage || undefined,
         isEligibleForRenew: false,
       });
 
       setIsSubmitting(false);
       setOrderCreatedSuccess(created.id);
-    }, 1000);
+      setToast({
+        type: "success",
+        title: "🎉 Boost Order Placed Successfully!",
+        message: `Order #${created.id} (${campaignTitle.trim()}) has been submitted! Our specialist is reviewing your payment and creatives.`,
+        duration: 5000,
+      });
+
+      try {
+        sessionStorage.setItem(
+          "scit_auth_toast",
+          JSON.stringify({
+            type: "success",
+            title: "🎉 Boost Order Placed Successfully!",
+            message: `Order #${created.id} has been recorded. Review status is live in My Orders.`,
+            duration: 4500,
+          })
+        );
+      } catch {}
+    } catch (err: unknown) {
+      const error = err as Error;
+      setIsSubmitting(false);
+      setToast({
+        type: "error",
+        title: "Order Placement Error",
+        message: error.message || "Could not save order to database. Please try again.",
+        duration: 4500,
+      });
+    }
   };
 
   if (orderCreatedSuccess) {
     return (
       <DashboardLayout pageTitle="Order Confirmed">
+        {/* Animated Toast Notification */}
+        <AnimatedToast toast={toast} onClose={() => setToast(null)} />
+
         <div className="max-w-xl mx-auto py-12 text-center space-y-6 bg-white p-8 rounded-2xl border border-[#E7ECF3] shadow-xs">
           <div className="w-16 h-16 rounded-full bg-[#E8F8F2] text-[#12A875] flex items-center justify-center mx-auto">
             <CheckCircle2 className="w-10 h-10" />
@@ -263,18 +381,25 @@ export default function CreateOrderPage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-center gap-3 pt-2">
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <button
               onClick={() => router.push("/")}
               className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
             >
-              Return to Dashboard
+              Dashboard
             </button>
             <button
               onClick={() => router.push("/my-orders")}
+              className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl"
+            >
+              My Orders
+            </button>
+            <button
+              onClick={() => router.push("/all-boosts")}
               className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#0866FF] hover:bg-[#0052CC] text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
             >
-              <span>Track in My Orders</span>
+              <Flame className="w-4 h-4 text-amber-300" />
+              <span>View in All Boosts</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -285,14 +410,49 @@ export default function CreateOrderPage() {
 
   return (
     <DashboardLayout pageTitle="Create Order">
+      {/* Animated Toast Notification */}
+      <AnimatedToast toast={toast} onClose={() => setToast(null)} />
+
       <div className="space-y-6">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-[#172033] tracking-tight">
-            Create New Boost Order
-          </h1>
-          <p className="text-xs sm:text-sm text-[#667085] mt-1">
-            Configure your campaign, add your creative post URLs, and calculate your budget in BDT.
-          </p>
+        {/* Page Title */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-[#172033] tracking-tight">
+              Create New Boost Order
+            </h1>
+            <p className="text-xs sm:text-sm text-[#667085] mt-1">
+              Configure your campaign, add your creative post URLs, and calculate your budget in BDT.
+            </p>
+          </div>
+        </div>
+
+        {/* Connected Facebook Page Header Banner */}
+        <div className="bg-gradient-to-r from-[#EEF4FF] via-white to-[#F6F8FC] p-4 rounded-2xl border border-[#D8E4FC] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#0866FF] text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm">
+              f
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-[#172033]">
+                  Boosting For: {profile.connectedPage?.name || profile.businessName || "My Facebook Page"}
+                </span>
+                <span className="text-[10px] bg-[#E8F8F2] text-[#12A875] px-2 py-0.5 rounded-full font-bold">
+                  Connected
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-500">
+                {profile.connectedPage?.category || "Shopping & Retail"} • Page ID: {profile.connectedPage?.id || "N/A"}
+              </div>
+            </div>
+          </div>
+          <Link
+            href="/profile"
+            className="text-xs font-bold text-[#0866FF] hover:underline self-start sm:self-auto flex items-center gap-1 bg-white px-3 py-1.5 rounded-xl border border-[#D8E4FC] shadow-2xs"
+          >
+            <span>Change Page in Profile</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </Link>
         </div>
 
         <form onSubmit={handleSubmitOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -307,19 +467,44 @@ export default function CreateOrderPage() {
                 Campaign Type & Objective
               </h2>
 
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                {(["Boost Post", "Ads Campaign", "Promotion"] as const).map((type) => (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {[
+                  {
+                    type: "Boost Post" as const,
+                    label: "Ads Boost",
+                    sub: "Boost Existing Post",
+                    icon: "🚀",
+                  },
+                  {
+                    type: "Ads Campaign" as const,
+                    label: "Ads Campaign",
+                    sub: "Meta Ads Manager",
+                    icon: "📢",
+                  },
+                  {
+                    type: "Promotion" as const,
+                    label: "Promote",
+                    sub: "Page Growth & Likes",
+                    icon: "⭐",
+                  },
+                ].map((item) => (
                   <button
-                    key={type}
+                    key={item.type}
                     type="button"
-                    onClick={() => setPostType(type)}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all text-center ${
-                      postType === type
-                        ? "bg-[#EBF2FF] text-[#0866FF] border-[#0866FF] shadow-2xs"
-                        : "bg-white text-slate-600 border-[#E7ECF3] hover:border-slate-300"
+                    onClick={() => setPostType(item.type)}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      postType === item.type
+                        ? "bg-[#EBF2FF] text-[#0866FF] border-[#0866FF] shadow-2xs ring-1 ring-[#0866FF]/30"
+                        : "bg-white text-slate-700 border-[#E7ECF3] hover:border-slate-300"
                     }`}
                   >
-                    {type}
+                    <div className="flex items-center gap-1.5 font-black text-xs">
+                      <span>{item.icon}</span>
+                      <span>{item.label}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">
+                      {item.sub}
+                    </div>
                   </button>
                 ))}
               </div>
@@ -410,9 +595,16 @@ export default function CreateOrderPage() {
                     </div>
 
                     <div>
-                      <label className="text-[11px] font-medium text-slate-500 block mb-1">
-                        Facebook Post URL *
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-medium text-slate-500">
+                          Facebook Post URL *
+                        </label>
+                        {item.postUrl.trim().length > 0 && (
+                          <span className="text-[10px] font-bold text-[#0866FF] bg-[#EEF2FF] px-2 py-0.5 rounded-full">
+                            Live Post Preview
+                          </span>
+                        )}
+                      </div>
                       <input
                         type="url"
                         required
@@ -422,6 +614,20 @@ export default function CreateOrderPage() {
                         className="w-full text-xs px-3 py-2 bg-white rounded-lg border border-[#E7ECF3] focus:border-[#0866FF] focus:outline-none"
                       />
                     </div>
+
+                    {/* Live Facebook Post & Ad Mockup Preview */}
+                    {item.postUrl.trim().length > 0 && (
+                      <div className="pt-1">
+                        <FacebookPostPreview
+                          postUrl={item.postUrl}
+                          pageName={profile?.connectedPage?.name || "Min Mart BD"}
+                          pageAvatar={profile?.avatar || "/images/profile-avatar.jpg"}
+                          thumbnail="/images/winter-collection.jpg"
+                          campaignName={campaignTitle || item.name}
+                          objective={item.objective || primaryObjective}
+                        />
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
@@ -465,247 +671,438 @@ export default function CreateOrderPage() {
             </div>
 
             {/* Step 3: Payment Verification & Proof Upload */}
-            <div className="bg-white p-5 sm:p-6 rounded-2xl border border-[#E7ECF3] shadow-2xs space-y-4">
-              <h2 className="text-sm font-bold text-[#172033] flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-[#EBF2FF] text-[#0866FF] text-xs flex items-center justify-center font-bold">
-                  3
+            <div className="bg-white p-3.5 sm:p-6 rounded-2xl border border-[#E7ECF3] shadow-xs space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
+                <h2 className="text-sm font-bold text-[#172033] flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-[#0866FF] text-white text-xs flex items-center justify-center font-bold">
+                    3
+                  </span>
+                  Payment Method & Proof
+                </h2>
+                <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 flex items-center gap-1 shrink-0">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  Verified Agency
                 </span>
-                Payment Method & Proof
-              </h2>
-
-              {/* Method Tabs */}
-              <div className="grid grid-cols-3 gap-2">
-                {(["bKash", "Nagad", "Bank Transfer"] as const).map((method) => (
-                  <button
-                    key={method}
-                    type="button"
-                    onClick={() => setPaymentMethod(method)}
-                    className={`flex items-center justify-center gap-2 py-2 px-2.5 rounded-xl text-xs font-bold border transition-all text-center ${
-                      paymentMethod === method
-                        ? "bg-[#0866FF] text-white border-[#0866FF] shadow-xs"
-                        : "bg-white text-slate-700 border-[#E7ECF3] hover:border-slate-300"
-                    }`}
-                  >
-                    {method === "bKash" && <BkashLogo className="w-4 h-4" />}
-                    {method === "Nagad" && <NagadLogo className="w-4 h-4" />}
-                    {method === "Bank Transfer" && <Building className="w-4 h-4" />}
-                    <span>{method}</span>
-                  </button>
-                ))}
               </div>
 
-              {/* Bank Transfer Multi-Bank Selector */}
+              {/* 3 Compact Payment Method Cards */}
+              <div className="grid grid-cols-3 gap-2">
+                {(["bKash", "Nagad", "Bank Transfer"] as const).map((method) => {
+                  const isSelected = paymentMethod === method;
+                  const feeTag =
+                    method === "bKash"
+                      ? `+${bkashCashoutPercent}%`
+                      : method === "Nagad"
+                      ? `+${nagadCashoutPercent}%`
+                      : "0% fee";
+                  return (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => setPaymentMethod(method)}
+                      className={`p-2 sm:p-2.5 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1 text-center min-w-0 ${
+                        isSelected
+                          ? method === "bKash"
+                            ? "border-[#E2136E] bg-[#FFF5F8] text-[#E2136E] shadow-2xs"
+                            : method === "Nagad"
+                            ? "border-[#EA580C] bg-[#FFF7ED] text-[#EA580C] shadow-2xs"
+                            : "border-[#0866FF] bg-[#F0F7FF] text-[#0866FF] shadow-2xs"
+                          : "border-slate-200 hover:border-slate-300 bg-white text-slate-700"
+                      }`}
+                    >
+                      <div className="h-5 sm:h-6 flex items-center justify-center">
+                        {method === "bKash" && <BkashLogo className="w-7 sm:w-8 h-4 sm:h-5" />}
+                        {method === "Nagad" && <NagadLogo className="w-7 sm:w-8 h-4 sm:h-5" />}
+                        {method === "Bank Transfer" && <Building className="w-4 h-4 text-slate-600" />}
+                      </div>
+                      <span className="font-bold text-[11px] sm:text-xs leading-none text-slate-900 truncate max-w-full">
+                        {method}
+                      </span>
+                      <span
+                        className={`text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded-full ${
+                          isSelected ? "bg-white/90" : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        {feeTag}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Conditional Display: Bank Transfer Multi-Bank Selector or Mobile Banking Details */}
               {paymentMethod === "Bank Transfer" ? (
-                <div className="space-y-3">
+                <div className="space-y-3 pt-1">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700">
-                      Select Bank Account:
-                    </label>
-                    <span className="text-[11px] text-slate-400">
-                      3 Verified Partner Banks
+                    <div>
+                      <label className="text-xs font-bold text-[#172033] block">
+                        Select Partner Bank Account
+                      </label>
+                      <p className="text-[11px] text-slate-500">
+                        Click on any bank card to view complete account details
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-bold text-[#0866FF] bg-[#EBF2FF] px-2 py-0.5 rounded-full shrink-0">
+                      {activeBankAccounts.length} Verified Partner Bank{activeBankAccounts.length !== 1 ? "s" : ""}
                     </span>
                   </div>
 
-                  {/* 3 Bank Selector Tabs with Logos */}
-                  <div className="grid grid-cols-3 gap-2">
-                    {(["City Bank", "BRAC Bank", "DBBL"] as const).map((bank) => (
+                  {/* Dynamic Bank Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {activeBankAccounts.map((bank) => {
+                      const isSelected = selectedBankAccount?.id === bank.id;
+                      const lower = bank.bankName.toLowerCase();
+                      const isCity = lower.includes("city");
+                      const isBrac = lower.includes("brac");
+                      const isDbbl = lower.includes("dutch") || lower.includes("dbbl");
+
+                      return (
+                        <div
+                          key={bank.id}
+                          onClick={() => handleBankSelect(bank)}
+                          className={`group relative p-3 rounded-xl border transition-all cursor-pointer flex flex-col items-center text-center justify-between gap-2 ${
+                            isSelected
+                              ? "bg-white border-[#0866FF] shadow-2xs ring-2 ring-[#0866FF]/20"
+                              : "bg-white hover:bg-slate-50 border-[#E7ECF3] hover:border-slate-300"
+                          }`}
+                        >
+                          {isSelected && (
+                            <span className="absolute top-2 right-2 flex items-center gap-0.5 text-[9px] font-bold text-[#0866FF] bg-[#EBF2FF] px-1.5 py-0.2 rounded-full">
+                              <Check className="w-2.5 h-2.5" /> Selected
+                            </span>
+                          )}
+
+                          <div className="w-full h-14 bg-white rounded-lg p-1.5 flex items-center justify-center border border-slate-100">
+                            {isCity && <CityBankLogo className="w-full h-full max-h-10" />}
+                            {isBrac && <BracBankLogo className="w-full h-full max-h-8" />}
+                            {isDbbl && <DbblLogo className="w-full h-full max-h-10" />}
+                            {!isCity && !isBrac && !isDbbl && (
+                              <div className="w-10 h-10 rounded-xl bg-[#EEF2FF] text-[#3858F6] flex items-center justify-center">
+                                <Building className="w-6 h-6" />
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="w-full">
+                            <h4 className="text-xs font-bold text-[#172033] truncate">
+                              {bank.bankName}
+                            </h4>
+                            <p className="text-[10px] text-slate-400 truncate">
+                              {bank.tag || bank.branch || "Online / NPSB Transfer"}
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleBankSelect(bank);
+                            }}
+                            className={`w-full py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                              isSelected
+                                ? "bg-[#0866FF] text-white"
+                                : "bg-[#F6F8FC] text-slate-700 hover:bg-[#EBF2FF] hover:text-[#0866FF]"
+                            }`}
+                          >
+                            <span>Account Details</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Active Bank Confirmation Ribbon */}
+                  {selectedBankAccount && (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-[#EBF2FF]/60 border border-[#0866FF]/25 rounded-xl">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-7 h-7 rounded-full bg-[#0866FF] text-white flex items-center justify-center shrink-0">
+                          <CheckCircle className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="min-w-0 text-xs">
+                          <span className="font-bold text-[#172033] block truncate">
+                            Selected: <span className="text-[#0866FF]">{selectedBankAccount.bankName}</span>
+                          </span>
+                          <span className="text-[11px] text-slate-500 font-mono truncate block">
+                            A/C: {selectedBankAccount.accountNumber} • {selectedBankAccount.accountName}
+                          </span>
+                        </div>
+                      </div>
                       <button
-                        key={bank}
                         type="button"
-                        onClick={() => setSelectedBank(bank)}
-                        className={`flex items-center justify-center gap-2 py-2.5 px-2 rounded-xl text-xs font-bold border transition-all text-center ${
-                          selectedBank === bank
-                            ? "bg-[#EBF2FF] text-[#0866FF] border-[#0866FF] shadow-2xs ring-1 ring-[#0866FF]/20"
-                            : "bg-white text-slate-700 border-[#E7ECF3] hover:border-slate-300"
-                        }`}
+                        onClick={() => setIsBankModalOpen(true)}
+                        className="self-start sm:self-auto px-3 py-1 bg-white hover:bg-slate-50 text-[#0866FF] text-xs font-bold rounded-lg border border-[#0866FF]/20 shadow-3xs transition-colors shrink-0 cursor-pointer"
                       >
-                        {bank === "City Bank" && <CityBankLogo className="w-4 h-4" />}
-                        {bank === "BRAC Bank" && <BracBankLogo className="w-4 h-4" />}
-                        {bank === "DBBL" && <DbblLogo className="w-4 h-4" />}
-                        <span className="truncate">{bank}</span>
+                        View Account Details
                       </button>
-                    ))}
-                  </div>
-
-                  {/* Selected Bank Account Details Card */}
-                  <div className="p-4 bg-[#F6F8FC] rounded-2xl border border-[#E7ECF3] space-y-3">
-                    <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#E7ECF3]">
-                      <div className="flex items-center gap-2.5">
-                        {selectedBank === "City Bank" && <CityBankLogo className="w-8 h-8" />}
-                        {selectedBank === "BRAC Bank" && <BracBankLogo className="w-8 h-8" />}
-                        {selectedBank === "DBBL" && <DbblLogo className="w-8 h-8" />}
-                        <div>
-                          <h4 className="text-xs sm:text-sm font-bold text-[#172033]">
-                            {bankAccounts[selectedBank].name}
-                          </h4>
-                          <p className="text-[11px] text-slate-500 font-medium">
-                            {bankAccounts[selectedBank].branch}
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-bold text-[#0866FF] bg-white border border-[#E7ECF3] px-2 py-0.5 rounded-md shadow-2xs whitespace-nowrap">
-                        {bankAccounts[selectedBank].tag}
-                      </span>
                     </div>
+                  )}
 
-                    {/* Account Info Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                      <div className="p-2.5 bg-white rounded-xl border border-[#E7ECF3]">
-                        <span className="text-[10px] text-slate-400 block font-medium">Account Title</span>
-                        <div className="font-bold text-[#172033] mt-0.5">
-                          {bankAccounts[selectedBank].accountName}
-                        </div>
-                      </div>
-
-                      <div className="p-2.5 bg-white rounded-xl border border-[#E7ECF3] flex items-center justify-between">
-                        <div>
-                          <span className="text-[10px] text-slate-400 block font-medium">Account Number</span>
-                          <div className="font-mono font-bold text-[#0866FF] mt-0.5">
-                            {bankAccounts[selectedBank].accountNumber}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyText(bankAccounts[selectedBank].accountNumber, "acc")}
-                          className="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 hover:bg-[#EBF2FF] hover:text-[#0866FF] rounded-lg text-slate-600 transition-colors text-[11px] font-semibold border border-slate-200"
-                        >
-                          {copiedText === "acc" ? (
-                            <Check className="w-3.5 h-3.5 text-[#12A875]" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5" />
-                          )}
-                          <span>{copiedText === "acc" ? "Copied" : "Copy"}</span>
-                        </button>
-                      </div>
-
-                      <div className="p-2.5 bg-white rounded-xl border border-[#E7ECF3] flex items-center justify-between">
-                        <div>
-                          <span className="text-[10px] text-slate-400 block font-medium">Routing Number</span>
-                          <div className="font-mono font-bold text-slate-800 mt-0.5">
-                            {bankAccounts[selectedBank].routingNumber}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyText(bankAccounts[selectedBank].routingNumber, "routing")}
-                          className="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 hover:bg-[#EBF2FF] hover:text-[#0866FF] rounded-lg text-slate-600 transition-colors text-[11px] font-semibold border border-slate-200"
-                        >
-                          {copiedText === "routing" ? (
-                            <Check className="w-3.5 h-3.5 text-[#12A875]" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5" />
-                          )}
-                          <span>{copiedText === "routing" ? "Copied" : "Copy"}</span>
-                        </button>
-                      </div>
-
-                      <div className="p-2.5 bg-white rounded-xl border border-[#E7ECF3]">
-                        <span className="text-[10px] text-slate-400 block font-medium">SWIFT Code</span>
-                        <div className="font-mono font-bold text-slate-800 mt-0.5">
-                          {bankAccounts[selectedBank].swift}
-                        </div>
-                      </div>
-                    </div>
-
-                    <p className="text-[11px] text-slate-500 bg-white/70 p-2.5 rounded-xl border border-[#E7ECF3]/70 leading-relaxed">
-                      {bankAccounts[selectedBank].instructions}
-                    </p>
-                  </div>
+                  {selectedBankAccount && (
+                    <BankDetailsModal
+                      isOpen={isBankModalOpen}
+                      onClose={() => setIsBankModalOpen(false)}
+                      bankAccount={selectedBankAccount}
+                      onConfirmBank={(b) => {
+                        setSelectedBankId(b.id || selectedBankAccount.id);
+                        setIsBankModalOpen(false);
+                      }}
+                    />
+                  )}
                 </div>
               ) : (
-                /* Mobile Banking (bKash / Nagad) Account Box */
-                <div className="p-4 bg-[#F6F8FC] rounded-2xl border border-[#E7ECF3] space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {paymentMethod === "bKash" ? <BkashLogo className="w-8 h-8" /> : <NagadLogo className="w-8 h-8" />}
-                      <div>
-                        <span className="text-xs font-bold text-[#172033]">
-                          {mobileAccounts[paymentMethod].title}
-                        </span>
-                        <p className="text-[11px] text-slate-500">
-                          {mobileAccounts[paymentMethod].type}
+                /* Ultra-Clean Modern Mobile Banking Slip (Zero Gisibisi, 100% Responsive) */
+                <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5 sm:p-4 space-y-3">
+                  {/* Account Header */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-9 h-7 bg-white rounded-lg border border-slate-200 p-0.5 flex items-center justify-center shrink-0 shadow-3xs">
+                        {paymentMethod === "bKash" ? (
+                          <BkashLogo className="w-full h-full" />
+                        ) : (
+                          <NagadLogo className="w-full h-full" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5 truncate">
+                          <span>{(paymentMethod === "Nagad" ? mobileAccounts.Nagad : mobileAccounts.bKash).title}</span>
+                          <span className="text-[9px] text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded font-semibold border border-emerald-200/50">
+                            Verified
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 truncate">
+                          {(paymentMethod === "Nagad" ? mobileAccounts.Nagad : mobileAccounts.bKash).accountName} • {(paymentMethod === "Nagad" ? mobileAccounts.Nagad : mobileAccounts.bKash).type}
                         </p>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyText(mobileAccounts[paymentMethod].number, "mobile")}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 border border-[#E7ECF3] text-xs font-mono font-bold text-[#0866FF] rounded-xl transition-colors shadow-2xs"
-                    >
-                      {copiedText === "mobile" ? <Check className="w-3.5 h-3.5 text-[#12A875]" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{mobileAccounts[paymentMethod].number}</span>
-                    </button>
                   </div>
-                  <p className="text-[11px] text-slate-500 bg-white/70 p-2.5 rounded-xl border border-[#E7ECF3]/70 leading-relaxed">
-                    {mobileAccounts[paymentMethod].instructions}
+
+                  {/* 2 Clean Data Rows with Copy Buttons */}
+                  <div className="space-y-2 bg-white p-3 rounded-xl border border-slate-200/80 shadow-3xs">
+                    {/* Row 1: Number */}
+                    <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
+                      <div className="min-w-0">
+                        <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                          {(paymentMethod === "Nagad" ? mobileAccounts.Nagad : mobileAccounts.bKash).type} Number
+                        </span>
+                        <span className="text-sm font-mono font-bold text-slate-900 tracking-wider">
+                          {(paymentMethod === "Nagad" ? mobileAccounts.Nagad : mobileAccounts.bKash).number}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText((paymentMethod === "Nagad" ? mobileAccounts.Nagad : mobileAccounts.bKash).number, "mobile")}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-lg shadow-3xs transition-colors shrink-0 cursor-pointer"
+                      >
+                        {copiedText === "mobile" ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-400" />
+                            <span className="text-emerald-300">Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Copy Number</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Row 2: Exact Amount */}
+                    <div className="flex items-center justify-between gap-2 pt-0.5">
+                      <div className="min-w-0">
+                        <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                          Total to Send (inc. {cashoutPercent}% cashout)
+                        </span>
+                        <div className="text-base font-bold text-[#0866FF] font-mono leading-tight">
+                          ৳{finalPayableBDT.toLocaleString()}{" "}
+                          <span className="text-xs font-normal text-slate-400 font-sans">BDT</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(finalPayableBDT.toString(), "amount")}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#0866FF] hover:bg-[#0052CC] text-white text-xs font-semibold rounded-lg shadow-3xs transition-colors shrink-0 cursor-pointer"
+                      >
+                        {copiedText === "amount" ? (
+                          <>
+                            <Check className="w-3 h-3 text-white" />
+                            <span>Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Copy Amount</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Dynamic Guide */}
+                  <p className="text-[11px] text-slate-500 leading-snug px-0.5">
+                    💡 <span className="font-semibold text-slate-700">Guide:</span> {(paymentMethod === "Nagad" ? mobileAccounts.Nagad : mobileAccounts.bKash).instructions}
                   </p>
                 </div>
               )}
 
-              {/* Screenshot Upload with Smart OCR Auto-fill */}
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-700 block">
-                  Payment Screenshot (With Instant OCR Auto-Fill)
-                </label>
-                <div className="border-2 border-dashed border-[#E7ECF3] hover:border-[#0866FF]/60 rounded-xl p-4 text-center cursor-pointer transition-colors relative bg-[#F6F8FC]/50">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileUpload}
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                  />
-                  <div className="flex flex-col items-center gap-1.5 pointer-events-none">
-                    <UploadCloud className="w-6 h-6 text-[#0866FF]" />
-                    <span className="text-xs font-semibold text-slate-700">
-                      Click to upload receipt screenshot
-                    </span>
-                    <span className="text-[10px] text-slate-400">
-                      JPG, PNG under 5MB. OCR will extract your Transaction ID automatically.
-                    </span>
-                  </div>
+              {/* Clean Screenshot Dropzone (Zero Overflow, Fully Responsive) */}
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-xs font-bold text-slate-800">
+                    Payment Receipt / Screenshot
+                  </label>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#0866FF] bg-[#EBF2FF] px-2 py-0.5 rounded-full shrink-0">
+                    <ScanLine className="w-3 h-3 text-[#0866FF]" />
+                    <span>Auto-Detects TrxID</span>
+                  </span>
                 </div>
 
-                {/* OCR Feedback Badge */}
+                {uploadedImage ? (
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between gap-3 shadow-3xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="relative w-12 h-12 rounded-lg border border-slate-200 overflow-hidden bg-white shrink-0">
+                        <img src={uploadedImage} alt="Receipt preview" className="w-full h-full object-cover" />
+                        {isUploadingScreenshot && (
+                          <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center">
+                            <Loader2 className="w-4 h-4 text-white animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-xs font-bold text-slate-900 block truncate">
+                          {isUploadingScreenshot ? "Uploading to Cloud..." : "Receipt Attached"}
+                        </span>
+                        <div className="flex items-center gap-1.5 text-[10px] mt-0.5">
+                          {isUploadingScreenshot ? (
+                            <span className="text-[#0866FF] font-medium flex items-center gap-1">
+                              <Loader2 className="w-3 h-3 animate-spin" /> Uploading to Cloudinary...
+                            </span>
+                          ) : (
+                            <span className="text-emerald-600 font-semibold flex items-center gap-1">
+                              <Check className="w-3 h-3" />
+                              {uploadStorageSource === "cloudinary" ? "Cloudinary Stored" : "Cloud Ready"}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <label className="cursor-pointer inline-flex items-center gap-1 px-2.5 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 rounded-lg transition-colors shadow-3xs">
+                        <FileUp className="w-3.5 h-3.5 text-[#0866FF]" />
+                        <span>Change</span>
+                        <input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          onChange={handleFileUpload}
+                          disabled={isUploadingScreenshot}
+                          className="hidden"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUploadedImage(null);
+                          setOcrStatus("idle");
+                          setUploadError(null);
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-white transition-colors"
+                        title="Remove receipt"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="group relative border-2 border-dashed border-slate-200 hover:border-[#0866FF] bg-slate-50/50 hover:bg-[#F5F9FF] rounded-xl p-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 block">
+                    <input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      onChange={handleFileUpload}
+                      disabled={isUploadingScreenshot}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                    />
+                    <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 shadow-3xs flex items-center justify-center text-[#0866FF] group-hover:scale-105 transition-all">
+                      {isUploadingScreenshot ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-[#0866FF]" />
+                      ) : (
+                        <UploadCloud className="w-4 h-4" />
+                      )}
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-slate-800 group-hover:text-[#0866FF] transition-colors block">
+                        Upload payment receipt / screenshot
+                      </span>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        PNG, JPG, WEBP, or PDF • Cloudinary cloud hosted & OCR scanned
+                      </p>
+                    </div>
+                  </label>
+                )}
+
+                {/* Upload Error Banner */}
+                {uploadError && (
+                  <div className="flex items-center gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 p-2.5 rounded-xl font-medium">
+                    <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                    <span>{uploadError}</span>
+                  </div>
+                )}
+
+                {/* OCR Scan Status Feedback */}
                 {ocrStatus === "scanning" && (
-                  <div className="flex items-center gap-2 text-xs text-[#0866FF] bg-[#EBF2FF] p-2 rounded-lg font-medium animate-pulse">
-                    <Sparkles className="w-4 h-4 animate-spin" />
-                    Scanning receipt via OCR to extract Transaction ID...
+                  <div className="flex items-center gap-2 text-xs text-[#0866FF] bg-[#EBF2FF] p-2.5 rounded-xl font-medium border border-[#0866FF]/20 animate-pulse">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0866FF] shrink-0" />
+                    <span>Scanning receipt to detect Transaction ID...</span>
                   </div>
                 )}
                 {ocrStatus === "success" && (
-                  <div className="flex items-center gap-2 text-xs text-[#12A875] bg-[#E8F8F2] p-2 rounded-lg font-medium">
-                    <FileCheck className="w-4 h-4" />
-                    OCR read successful! Transaction ID detected and filled below.
+                  <div className="flex items-center justify-between text-xs text-emerald-800 bg-emerald-50 p-2.5 rounded-xl font-medium border border-emerald-200">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span className="truncate">Detected TrxID: <strong className="font-mono text-emerald-950 font-bold">{transactionId}</strong></span>
+                    </div>
+                    <span className="text-[9px] bg-white px-1.5 py-0.5 rounded font-bold text-emerald-700 border border-emerald-200 shrink-0">
+                      Auto-Filled
+                    </span>
                   </div>
                 )}
               </div>
 
-              {/* Manual Transaction ID & Sender inputs */}
+              {/* Manual Transaction ID & Sender Account Inputs */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">
-                    Transaction ID (TRX) *
+                  <label className="text-xs font-bold text-slate-800 block mb-1 flex items-center gap-1">
+                    <Hash className="w-3.5 h-3.5 text-[#0866FF]" />
+                    <span>Transaction ID (TRX) *</span>
                   </label>
                   <input
                     type="text"
                     required
                     value={transactionId}
                     onChange={(e) => setTransactionId(e.target.value)}
-                    placeholder="e.g. BK98X7102 or TRX109283"
-                    className="w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border border-[#E7ECF3] focus:border-[#0866FF] focus:outline-none uppercase"
+                    placeholder="e.g. BK98X7102"
+                    className="w-full text-xs font-mono font-bold tracking-wider px-3 py-2 rounded-xl border border-slate-200 focus:border-[#0866FF] focus:outline-none uppercase bg-white placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:text-slate-400"
                   />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    From your {paymentMethod} confirmation SMS
+                  </p>
                 </div>
+
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">
-                    Sender Account / Mobile Number
+                  <label className="text-xs font-bold text-slate-800 block mb-1 flex items-center gap-1">
+                    <Phone className="w-3.5 h-3.5 text-[#0866FF]" />
+                    <span>Sender Account / Mobile Number</span>
                   </label>
                   <input
-                    type="text"
+                    type="tel"
                     value={senderNumber}
                     onChange={(e) => setSenderNumber(e.target.value)}
                     placeholder="e.g. 01712-XXXXXX"
-                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-[#E7ECF3] focus:border-[#0866FF] focus:outline-none"
+                    className="w-full text-xs font-medium px-3 py-2 rounded-xl border border-slate-200 focus:border-[#0866FF] focus:outline-none bg-white placeholder:text-slate-400"
                   />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Number used to send the payment
+                  </p>
                 </div>
               </div>
             </div>
@@ -738,7 +1135,7 @@ export default function CreateOrderPage() {
 
                 <div className="flex justify-between items-center text-slate-600">
                   <span className="flex items-center gap-1">
-                    <span>Configured USD Rate</span>
+                    <span>Dollar Rate</span>
                     <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 font-mono">
                       Live
                     </span>
@@ -747,14 +1144,30 @@ export default function CreateOrderPage() {
                 </div>
 
                 <div className="flex justify-between items-center text-slate-600">
-                  <span>BDT Subtotal</span>
-                  <span className="font-semibold text-slate-800">৳{subtotalBDT.toLocaleString()} BDT</span>
+                  <span>BDT Base Amount</span>
+                  <span className="font-semibold text-slate-800">৳{baseBDT.toLocaleString()} BDT</span>
                 </div>
 
-                <div className="flex justify-between items-center text-slate-600">
-                  <span>Service Fee ({serviceChargePercent}%)</span>
-                  <span className="font-semibold text-slate-800">৳{serviceChargeBDT.toLocaleString()} BDT</span>
-                </div>
+                {cashoutChargeBDT > 0 ? (
+                  <div className="flex justify-between items-center text-slate-600">
+                    <span className="flex items-center gap-1">
+                      <span>{paymentMethod} Cashout Fee</span>
+                      <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200/80 px-1.5 py-0.5 rounded font-mono font-medium">
+                        +{cashoutPercent}%
+                      </span>
+                    </span>
+                    <span className="font-bold text-amber-700">
+                      +৳{cashoutChargeBDT.toLocaleString()} BDT
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center text-slate-600">
+                    <span>Cashout Fee</span>
+                    <span className="font-semibold text-[#12A875] bg-emerald-50 px-2 py-0.5 rounded-md text-[11px] border border-emerald-200/60">
+                      0% (Free for Bank)
+                    </span>
+                  </div>
+                )}
 
                 <div className="pt-3 border-t border-[#E7ECF3] flex justify-between items-baseline">
                   <div>
