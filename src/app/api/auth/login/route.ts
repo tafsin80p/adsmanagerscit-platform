@@ -143,7 +143,7 @@ export async function POST(req: Request) {
     ).toString("base64");
 
     response.cookies.set("scit_auth_session", sessionToken, {
-      httpOnly: false,
+      httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       maxAge: 30 * 24 * 60 * 60, // 30 days
       path: "/",

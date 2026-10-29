@@ -177,19 +177,19 @@ const initialOrders: Order[] = [];
 const initialPayments: PaymentTransaction[] = [];
 
 const initialProfile: ClientProfile = {
-  name: "MIN Mart BD",
-  email: "tafsin@fashionhubbd.com",
-  phone: "+880 1712-889900",
-  businessName: "MIN Mart BD",
-  avatar: "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=100090491619527",
+  name: "",
+  email: "",
+  phone: "",
+  businessName: "",
+  avatar: "/images/avatar.jpg",
   role: "Client",
   connectedPage: {
-    name: "MIN Mart BD",
-    id: "110132735345674",
-    followers: "12.8K followers",
-    category: "Shopping & Retail",
-    verified: true,
-    avatar: "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=100090491619527",
+    name: "",
+    id: "",
+    followers: "",
+    category: "",
+    verified: false,
+    avatar: "/images/avatar.jpg",
   },
   currency: "USD",
   notifications: {
@@ -853,15 +853,18 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
           } catch {}
         } else {
           setIsAuthenticated(false);
+          setProfile(initialProfile);
           try {
             localStorage.removeItem("scit_user_profile");
           } catch {}
         }
       })
       .catch(() => {
-        if (!hasLocal) {
-          setIsAuthenticated(false);
-        }
+        setIsAuthenticated(false);
+        setProfile(initialProfile);
+        try {
+          localStorage.removeItem("scit_user_profile");
+        } catch {}
       })
       .finally(() => {
         setIsAuthLoading(false);

@@ -7,7 +7,7 @@ export async function POST() {
   });
 
   response.cookies.set("scit_auth_session", "", {
-    httpOnly: false,
+    httpOnly: true,
     maxAge: 0,
     path: "/",
   });

@@ -25,7 +25,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [landingToast, setLandingToast] = useState<ToastData | null>(null);
 
-  // Check for post-login/register welcome toast
+  // Check for post-login/register welcome toast or unauthorized admin attempt
   useEffect(() => {
     try {
       const stored = sessionStorage.getItem("scit_auth_toast");
@@ -35,6 +35,19 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         setLandingToast(parsed);
       }
     } catch {}
+
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("unauthorized") === "admin_restricted") {
+        setLandingToast({
+          type: "error",
+          title: "Access Restricted ⛔",
+          message: "Client accounts are not authorized to access the Admin Operations Console.",
+          duration: 5000,
+        });
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
   }, []);
 
   useEffect(() => {
