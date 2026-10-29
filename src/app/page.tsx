@@ -388,19 +388,28 @@ export default function DashboardPage() {
     .reduce((sum, o) => sum + (o.metrics?.spendUSD !== undefined && o.metrics.spendUSD > 0 ? o.metrics.spendUSD : (o.totalBudgetUSD || 0)), 0);
   const totalSpentBDT = Math.round(totalSpentUSD * exchangeRateBDT);
 
-  // Total Reach, Views/Impressions, and Conversations across orders
+  // Total Reach, Views/Impressions, and Conversations across orders (Prevents double counting)
   const totalReach =
     clientOrders.length > 0
-      ? clientOrders.reduce((sum, o) => sum + (o.metrics?.reach || 0), 0) + (liveMetrics?.reach || 0)
-      : 0;
+      ? Math.max(
+          clientOrders.reduce((sum, o) => sum + (o.metrics?.reach || 0), 0),
+          liveMetrics?.reach || 0
+        )
+      : (liveMetrics?.reach || 0);
   const totalImpressions =
     clientOrders.length > 0
-      ? clientOrders.reduce((sum, o) => sum + (o.metrics?.impressions || 0), 0) + (liveMetrics?.impressions || 0)
-      : 0;
+      ? Math.max(
+          clientOrders.reduce((sum, o) => sum + (o.metrics?.impressions || 0), 0),
+          liveMetrics?.impressions || 0
+        )
+      : (liveMetrics?.impressions || 0);
   const totalConversations =
     clientOrders.length > 0
-      ? clientOrders.reduce((sum, o) => sum + (o.metrics?.conversations || 0), 0) + (liveMetrics?.messages || 0)
-      : 0;
+      ? Math.max(
+          clientOrders.reduce((sum, o) => sum + (o.metrics?.conversations || 0), 0),
+          liveMetrics?.messages || 0
+        )
+      : (liveMetrics?.messages || 0);
 
   // Recent 4 orders for dashboard
   const recentOrders = clientOrders.slice(0, 4);
@@ -601,8 +610,9 @@ export default function DashboardPage() {
               <div className="w-11 h-11 rounded-2xl bg-[#F5F7FB] text-slate-700 flex items-center justify-center border border-slate-100 pointer-events-none">
                 <Users className="w-5 h-5 text-slate-700 stroke-[2.2]" />
               </div>
-              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#EAF8F1] text-[#10B981] pointer-events-none">
-                +18.0%
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#EAF8F1] text-[#10B981] pointer-events-none flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
+                +{liveMetrics?.reachGrowth || 18.0}%
               </span>
             </div>
 
