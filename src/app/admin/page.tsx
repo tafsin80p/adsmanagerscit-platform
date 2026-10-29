@@ -343,7 +343,9 @@ export default function AdminDashboardPage() {
                 ${totalSpendUSD.toFixed(2)}
               </div>
               <div className="text-[11px] text-white/70 font-medium mt-1 truncate">
-                ≈ ৳{totalSpendBDT.toLocaleString()} BDT ({portalOrders.length} Portal Orders) • Page: ${pageBoostsSpendUSD.toFixed(2)}
+                {pageBoosts.length > 0
+                  ? `≈ ৳${totalSpendBDT.toLocaleString()} BDT (${portalOrders.length} Portal Orders) • Page: $${pageBoostsSpendUSD.toFixed(2)}`
+                  : `≈ ৳${totalSpendBDT.toLocaleString()} BDT (${portalOrders.length} Portal Orders)`}
               </div>
             </div>
 
@@ -375,7 +377,9 @@ export default function AdminDashboardPage() {
                 {portalOrders.length} Orders
               </div>
               <div className="text-[11px] text-[#8A94A6] font-medium mt-1 truncate">
-                {activeOrders.length} Running Live • {pendingOrders.length} In Queue • ({pageBoosts.length} FB Page Boosts)
+                {portalOrders.length > 0 || pageBoosts.length > 0
+                  ? `${activeOrders.length} Running Live • ${pendingOrders.length} In Queue${pageBoosts.length > 0 ? ` • (${pageBoosts.length} FB Page Boosts)` : ""}`
+                  : "0 Active Campaigns • No Orders Placed"}
               </div>
             </div>
           </Link>

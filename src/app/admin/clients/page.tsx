@@ -387,10 +387,12 @@ export default function AdminClientsPage() {
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EEF2FF] text-[#3858F6] text-xs font-black">
                 <span>{portalOrdersList.length} Portal Orders</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EAF8F1] text-[#10B981] text-xs font-black">
-                <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
-                <span>{pageBoostsList.length} Connected FB Page Boosts</span>
-              </span>
+              {pageBoostsList.length > 0 && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EAF8F1] text-[#10B981] text-xs font-black">
+                  <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
+                  <span>{pageBoostsList.length} Connected FB Page Boosts</span>
+                </span>
+              )}
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold">
                 {totalClientsCount} Registered Users
               </span>
@@ -446,7 +448,7 @@ export default function AdminClientsPage() {
                 {totalActiveAdsCount} Active Boosts
               </div>
               <div className="text-[11px] text-white/70 font-medium mt-1 truncate">
-                0 Portal Orders • {pageBoostsList.length} FB Page Boosts Synced
+                {portalOrdersList.length} Portal Orders{pageBoostsList.length > 0 ? ` • ${pageBoostsList.length} FB Page Boosts Synced` : " • 0 FB Boosts"}
               </div>
             </div>
             <div className="absolute -right-8 -bottom-8 w-28 h-28 bg-white/10 rounded-full blur-xl pointer-events-none" />

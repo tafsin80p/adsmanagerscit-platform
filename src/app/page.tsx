@@ -599,7 +599,9 @@ export default function DashboardPage() {
               <div className="text-[11px] text-[#8A94A6] font-medium mt-1 truncate">
                 {portalOrders.length > 0
                   ? `${portalOrders.filter((o) => o.status === "Active").length} Running • ${portalOrders.filter((o) => o.status === "Pending").length} Awaiting Verification`
-                  : `${pageBoosts.length} Direct Page Boosts in All Boost`}
+                  : pageBoosts.length > 0
+                    ? `${pageBoosts.length} Direct Page Boosts in All Boost`
+                    : "No active boost campaigns yet"}
               </div>
             </div>
           </div>
