@@ -18,6 +18,11 @@ import {
   CreditCard,
   ShieldCheck,
   Link as LinkIcon,
+  UploadCloud,
+  Trash2,
+  ExternalLink,
+  ImageIcon,
+  Check,
 } from "lucide-react";
 import { usePortal } from "@/context/PortalContext";
 import { ClientAccount, OrderStatus, PaymentStatus, PaymentMethod } from "@/types";
@@ -61,6 +66,63 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
   const [notes, setNotes] = useState("");
   const [initialReach, setInitialReach] = useState<number>(0);
   const [initialImpressions, setInitialImpressions] = useState<number>(0);
+
+  // Payment Screenshot state
+  const [screenshotUrl, setScreenshotUrl] = useState("");
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
+  const [isUploadingScreenshot, setIsUploadingScreenshot] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+
+  const handleScreenshotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadError(null);
+    setUploadSuccess(null);
+    setIsUploadingScreenshot(true);
+
+    const localUrl = URL.createObjectURL(file);
+    setScreenshotPreview(localUrl);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "receipts");
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success && data.url) {
+        setScreenshotUrl(data.url);
+        setScreenshotPreview(data.url);
+        setUploadSuccess(
+          data.storage === "cloudinary"
+            ? "Payment screenshot uploaded to Cloudinary!"
+            : "Screenshot uploaded successfully!"
+        );
+        setTimeout(() => setUploadSuccess(null), 3500);
+      } else {
+        setUploadError(data.error || "Failed to upload image. Please check file format and size.");
+      }
+    } catch (err: unknown) {
+      const error = err as Error;
+      setUploadError(error.message || "Network error uploading screenshot.");
+    } finally {
+      setIsUploadingScreenshot(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleRemoveScreenshot = () => {
+    setScreenshotUrl("");
+    setScreenshotPreview(null);
+    setUploadError(null);
+    setUploadSuccess(null);
+  };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -160,6 +222,7 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
         paymentMethod,
         transactionId: transactionId.trim() || undefined,
         paidAmountBDT: totalBudgetBDT,
+        screenshotUrl: screenshotUrl.trim() || undefined,
         clientEmail: selectedClient.email,
         clientName: selectedClient.name,
         businessName: selectedClient.businessName || selectedClient.connectedPage?.name || selectedClient.name,
@@ -514,6 +577,142 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
                   onChange={(e) => setTransactionId(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-mono font-medium text-slate-800 focus:outline-none focus:bg-white focus:border-[#3858F6]"
                 />
+              </div>
+
+              {/* Payment Receipt / Screenshot Upload Dropzone */}
+              <div className="sm:col-span-2 space-y-2 pt-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-[#3858F6]" />
+                    Payment Receipt / Verification Screenshot
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    Upload receipt (PNG, JPG, WEBP, PDF) or paste URL
+                  </span>
+                </div>
+
+                {screenshotPreview || screenshotUrl ? (
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between gap-3 shadow-3xs animate-in fade-in">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative w-14 h-14 rounded-xl border border-slate-200 overflow-hidden bg-white shrink-0 shadow-2xs group">
+                        <img
+                          src={screenshotPreview || screenshotUrl}
+                          alt="Payment screenshot proof"
+                          className="w-full h-full object-cover"
+                        />
+                        {isUploadingScreenshot && (
+                          <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center">
+                            <Loader2 className="w-4 h-4 text-white animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-xs font-bold text-slate-900 block truncate">
+                          {isUploadingScreenshot
+                            ? "Uploading to Cloud..."
+                            : "Payment Proof Screenshot Attached"}
+                        </span>
+                        <div className="flex items-center gap-2 text-[10px] mt-0.5">
+                          {isUploadingScreenshot ? (
+                            <span className="text-[#3858F6] font-semibold flex items-center gap-1">
+                              <Loader2 className="w-3 h-3 animate-spin" /> Uploading...
+                            </span>
+                          ) : (
+                            <span className="text-emerald-600 font-semibold flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" /> Ready to Save
+                            </span>
+                          )}
+                          <a
+                            href={screenshotUrl || screenshotPreview || "#"}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#3858F6] hover:underline flex items-center gap-0.5 font-bold"
+                          >
+                            <span>View Full</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                        <p className="text-[10px] text-slate-400 truncate max-w-[280px] font-mono mt-0.5">
+                          {screenshotUrl || "Local preview"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <label className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-3xs">
+                        Change
+                        <input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          onChange={handleScreenshotUpload}
+                          disabled={isUploadingScreenshot}
+                          className="hidden"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleRemoveScreenshot}
+                        className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                        title="Remove screenshot"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <label className="relative flex flex-col items-center justify-center p-4 border-2 border-dashed border-[#CBD5E1] hover:border-[#3858F6] rounded-2xl bg-[#F8FAFC] hover:bg-[#EEF4FF]/40 cursor-pointer transition-all group">
+                      <input
+                        type="file"
+                        accept="image/*,application/pdf"
+                        onChange={handleScreenshotUpload}
+                        disabled={isUploadingScreenshot}
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                      />
+                      <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 shadow-3xs flex items-center justify-center text-[#3858F6] group-hover:scale-105 transition-all mb-2">
+                        {isUploadingScreenshot ? (
+                          <Loader2 className="w-5 h-5 animate-spin text-[#3858F6]" />
+                        ) : (
+                          <UploadCloud className="w-5 h-5" />
+                        )}
+                      </div>
+                      <span className="text-xs font-bold text-slate-800 group-hover:text-[#3858F6] transition-colors">
+                        Click or drag payment screenshot / invoice here
+                      </span>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        PNG, JPG, WEBP, PDF up to 10MB • Cloudinary Cloud Hosted
+                      </p>
+                    </label>
+
+                    {/* Or manual URL input */}
+                    <div className="flex items-center gap-2 pt-0.5">
+                      <input
+                        type="url"
+                        placeholder="Or paste screenshot image URL directly (e.g. https://res.cloudinary.com/...)"
+                        value={screenshotUrl}
+                        onChange={(e) => {
+                          setScreenshotUrl(e.target.value);
+                          setScreenshotPreview(e.target.value);
+                        }}
+                        className="w-full px-3.5 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-mono text-slate-800 focus:outline-none focus:bg-white focus:border-[#3858F6]"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Upload Status Feedback */}
+                {uploadSuccess && (
+                  <div className="flex items-center gap-2 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl font-medium animate-in fade-in">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>{uploadSuccess}</span>
+                  </div>
+                )}
+                {uploadError && (
+                  <div className="flex items-center gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 p-2.5 rounded-xl font-medium animate-in fade-in">
+                    <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                    <span>{uploadError}</span>
+                  </div>
+                )}
               </div>
 
               {/* Initial Metrics (Optional) */}

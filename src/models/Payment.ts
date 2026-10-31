@@ -4,7 +4,7 @@ export interface IPayment extends Document {
   id: string;
   orderId: string;
   campaignName: string;
-  method: "bKash" | "Nagad" | "Bank Transfer";
+  method: "bKash" | "Nagad" | "Bank Transfer" | "Meta Ad Account" | "Facebook Card";
   transactionId: string;
   amountUSD: number;
   amountBDT: number;
@@ -23,7 +23,7 @@ const PaymentSchema = new Schema<IPayment>(
     campaignName: { type: String, required: true },
     method: {
       type: String,
-      enum: ["bKash", "Nagad", "Bank Transfer"],
+      enum: ["bKash", "Nagad", "Bank Transfer", "Meta Ad Account", "Facebook Card"],
       required: true,
     },
     transactionId: { type: String, required: true },

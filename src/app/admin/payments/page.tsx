@@ -752,6 +752,34 @@ SCIT Meta Ads Agency Internal Audit
                   </div>
                 </div>
 
+                {/* Attached Screenshot / Payment Receipt Proof */}
+                {selectedReceipt.screenshotUrl && (
+                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-[#3858F6]" />
+                        Attached Payment Proof / Screenshot
+                      </span>
+                      <a
+                        href={selectedReceipt.screenshotUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] font-bold text-[#3858F6] hover:underline inline-flex items-center gap-1"
+                      >
+                        <span>Open Full</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                    <div className="relative w-full h-36 rounded-xl border border-slate-200 overflow-hidden bg-white group">
+                      <img
+                        src={selectedReceipt.screenshotUrl}
+                        alt="Payment receipt proof"
+                        className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {/* Verification Control Inside Modal */}
                 <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-700">Audit Status:</span>
