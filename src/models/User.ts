@@ -24,6 +24,7 @@ export interface IUser extends Document {
     whatsapp: boolean;
   };
   createdAt: Date;
+  updatedAt?: Date;
 }
 
 export function hashPassword(password: string): string {

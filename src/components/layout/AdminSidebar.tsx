@@ -21,6 +21,7 @@ import {
   TrendingUp,
   Share2,
   CreditCard,
+  User,
 } from "lucide-react";
 import { usePortal } from "@/context/PortalContext";
 
@@ -120,6 +121,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, onMobile
           href: "/admin/meta-integration",
           icon: Share2,
           badge: { text: "API", color: "bg-[#0866FF]/10 text-[#0866FF]" },
+        },
+        {
+          name: "Admin Profile",
+          href: "/admin/profile",
+          icon: User,
+          badge: { text: "Security", color: "bg-[#EAF8F1] text-[#10B981]" },
         },
       ],
     },
@@ -270,9 +277,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, onMobile
 
       {/* Admin Specialist Profile Card */}
       <div className="p-4 pt-2">
-        <div className="bg-[#12151D] text-white p-5 rounded-3xl relative overflow-hidden shadow-xl border border-white/5 space-y-3.5">
+        <Link
+          href="/admin/profile"
+          onClick={onMobileClose}
+          className="block bg-[#12151D] hover:bg-[#181C26] transition-colors text-white p-5 rounded-3xl relative overflow-hidden shadow-xl border border-white/5 space-y-3.5 group cursor-pointer"
+        >
           {/* Subtle glow circle */}
-          <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#3858F6]/25 rounded-full blur-xl pointer-events-none" />
+          <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#3858F6]/25 rounded-full blur-xl pointer-events-none group-hover:bg-[#3858F6]/35 transition-all" />
 
           <div className="flex items-center justify-between">
             <div className="w-9 h-9 rounded-2xl bg-white/10 flex items-center justify-center text-white border border-white/10 pointer-events-none">
@@ -284,9 +295,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, onMobile
           </div>
 
           <div>
-            <h4 className="text-sm font-bold text-white tracking-tight">
-              {adminName}
-            </h4>
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-bold text-white tracking-tight group-hover:text-[#60A5FA] transition-colors">
+                {adminName}
+              </h4>
+              <span className="text-[10px] text-white/50 group-hover:text-white transition-colors">Edit →</span>
+            </div>
             <p className="text-[11px] text-white/60 mt-0.5 leading-relaxed font-normal">
               Meta Certified Media Buyer & Agency Strategy Lead
             </p>
@@ -298,7 +312,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, onMobile
               API v21.0 Connected
             </span>
           </div>
-        </div>
+        </Link>
       </div>
     </div>
   );

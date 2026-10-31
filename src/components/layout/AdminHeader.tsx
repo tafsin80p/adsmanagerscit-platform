@@ -150,6 +150,14 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
 
               <div className="py-1">
                 <Link
+                  href="/admin/profile"
+                  onClick={() => setShowProfileMenu(false)}
+                  className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-[#F6F8FC] hover:text-[#3858F6]"
+                >
+                  <User className="w-4 h-4 text-slate-400" />
+                  Admin Profile & Security
+                </Link>
+                <Link
                   href="/"
                   onClick={() => setShowProfileMenu(false)}
                   className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-[#F6F8FC] hover:text-[#3858F6]"

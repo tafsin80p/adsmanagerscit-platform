@@ -53,11 +53,12 @@ export function middleware(req: NextRequest) {
       );
     }
 
-    // Admin-only API endpoints: Clients must never access client management, system settings, or Meta config
+    // Admin-only API endpoints: Clients must never access client management, system settings, Meta config, or admin profile
     const isAdminOnlyApi =
       pathname.startsWith("/api/clients") ||
       pathname.startsWith("/api/settings") ||
-      pathname.startsWith("/api/meta/");
+      pathname.startsWith("/api/meta/") ||
+      pathname.startsWith("/api/admin");
 
     if (isAdminOnlyApi && userRole !== "admin") {
       return NextResponse.json(
