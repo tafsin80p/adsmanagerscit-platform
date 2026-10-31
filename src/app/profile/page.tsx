@@ -23,6 +23,10 @@ import {
   Camera,
   UploadCloud,
   Check,
+  Lock,
+  KeyRound,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { usePortal } from "@/context/PortalContext";
@@ -56,6 +60,61 @@ export default function ProfilePage() {
   const [isUploadingPageLogo, setIsUploadingPageLogo] = useState(false);
   const [avatarUploadSuccess, setAvatarUploadSuccess] = useState<string | null>(null);
   const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
+
+  // Security & Password Change states
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordFeedback, setPasswordFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  const handleChangePassword = async () => {
+    setPasswordFeedback(null);
+    if (!passwordData.currentPassword.trim()) {
+      setPasswordFeedback({ type: "error", message: "Please enter your current password." });
+      return;
+    }
+    if (!passwordData.newPassword.trim() || passwordData.newPassword.length < 6) {
+      setPasswordFeedback({ type: "error", message: "New password must be at least 6 characters long." });
+      return;
+    }
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordFeedback({ type: "error", message: "New password and confirmation do not match." });
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const res = await fetch("/api/auth/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setPasswordFeedback({ type: "success", message: "Password updated successfully!" });
+        setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+        setTimeout(() => setPasswordFeedback(null), 5000);
+      } else {
+        setPasswordFeedback({ type: "error", message: data.error || "Failed to update password." });
+      }
+    } catch {
+      setPasswordFeedback({ type: "error", message: "Network error updating password." });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>, isPageLogo = false) => {
     const file = e.target.files?.[0];
@@ -561,6 +620,144 @@ export default function ProfilePage() {
                   className="w-4 h-4 text-[#0866FF] rounded-md focus:ring-0"
                 />
               </label>
+            </div>
+          </div>
+
+          {/* Security & Password Change */}
+          <div className="bg-white p-6 rounded-2xl border border-[#E7ECF3] shadow-2xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-bold text-[#172033] flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-[#0866FF]" />
+                  Account Security & Password
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Update your client login password. Admin retains emergency credential recovery access if needed.
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#EEF4FF] text-[#0866FF] text-xs font-bold rounded-lg self-start sm:self-auto">
+                <Lock className="w-3.5 h-3.5" />
+                PBKDF2 Encrypted
+              </span>
+            </div>
+
+            {/* Error or Success Alert */}
+            {passwordFeedback && (
+              <div
+                className={`p-3 rounded-xl border text-xs flex items-center gap-2 animate-in fade-in ${
+                  passwordFeedback.type === "success"
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                    : "bg-rose-50 border-rose-200 text-rose-800"
+                }`}
+              >
+                {passwordFeedback.type === "success" ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                )}
+                <span className="font-semibold">{passwordFeedback.message}</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+              {/* Current Password */}
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Current Password *
+                </label>
+                <div className="relative">
+                  <input
+                    type={showCurrentPass ? "text" : "password"}
+                    value={passwordData.currentPassword}
+                    onChange={(e) =>
+                      setPasswordData({ ...passwordData, currentPassword: e.target.value })
+                    }
+                    placeholder="Enter current password"
+                    className="w-full text-xs px-3.5 py-2.5 pr-9 rounded-xl border border-[#E7ECF3] focus:border-[#0866FF] focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPass(!showCurrentPass)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showCurrentPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* New Password */}
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  New Password *
+                </label>
+                <div className="relative">
+                  <input
+                    type={showNewPass ? "text" : "password"}
+                    value={passwordData.newPassword}
+                    onChange={(e) =>
+                      setPasswordData({ ...passwordData, newPassword: e.target.value })
+                    }
+                    placeholder="At least 6 characters"
+                    className="w-full text-xs px-3.5 py-2.5 pr-9 rounded-xl border border-[#E7ECF3] focus:border-[#0866FF] focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPass(!showNewPass)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm New Password */}
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Confirm New Password *
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPass ? "text" : "password"}
+                    value={passwordData.confirmPassword}
+                    onChange={(e) =>
+                      setPasswordData({ ...passwordData, confirmPassword: e.target.value })
+                    }
+                    placeholder="Re-enter new password"
+                    className="w-full text-xs px-3.5 py-2.5 pr-9 rounded-xl border border-[#E7ECF3] focus:border-[#0866FF] focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPass(!showConfirmPass)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showConfirmPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100">
+              <span className="text-[11px] text-slate-400">
+                Minimum 6 characters. Make sure you store it safely.
+              </span>
+              <button
+                type="button"
+                onClick={handleChangePassword}
+                disabled={isChangingPassword}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition-colors disabled:opacity-60 cursor-pointer self-start sm:self-auto"
+              >
+                {isChangingPassword ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Updating...</span>
+                  </>
+                ) : (
+                  <>
+                    <KeyRound className="w-3.5 h-3.5" />
+                    <span>Update Password</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
 

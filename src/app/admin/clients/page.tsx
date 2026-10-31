@@ -36,6 +36,7 @@ import {
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { usePortal } from "@/context/PortalContext";
 import { Order, ClientAccount } from "@/types";
+import { AdminCreateOrderModal } from "@/components/modals/AdminCreateOrderModal";
 
 // Helper to generate consistent avatar gradient based on brand name
 function getAvatarGradient(name: string): string {
@@ -80,6 +81,8 @@ export default function AdminClientsPage() {
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isCreateOrderModalOpen, setIsCreateOrderModalOpen] = useState(false);
+  const [orderModalClientId, setOrderModalClientId] = useState("");
   const [editingClient, setEditingClient] = useState<ClientAccount | null>(null);
   const [editPassword, setEditPassword] = useState("");
   const [deletingClient, setDeletingClient] = useState<ClientAccount | null>(null);
@@ -419,6 +422,18 @@ export default function AdminClientsPage() {
               <span>{isMounted && (isRefreshing || isLoading) ? "Syncing..." : "Sync Live DB"}</span>
             </button>
 
+            {/* Create Order Button */}
+            <button
+              onClick={() => {
+                setOrderModalClientId("");
+                setIsCreateOrderModalOpen(true);
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              <span>+ Create Order</span>
+            </button>
+
             {/* Add New User / Client Onboarding Button */}
             <button
               onClick={() => setIsAddModalOpen(true)}
@@ -749,6 +764,19 @@ export default function AdminClientsPage() {
                           <Phone className="w-4 h-4" />
                         </a>
                       )}
+
+                      {/* Create Order Button */}
+                      <button
+                        onClick={() => {
+                          setOrderModalClientId(client._id || client.id || client.email);
+                          setIsCreateOrderModalOpen(true);
+                        }}
+                        className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#3858F6] border border-blue-200 text-xs font-bold transition-colors cursor-pointer shadow-3xs"
+                        title="Create new order for this client"
+                      >
+                        <ShoppingBag className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">+ Order</span>
+                      </button>
 
                       {/* Edit User Button */}
                       <button
@@ -1328,6 +1356,22 @@ export default function AdminClientsPage() {
           </div>
         </div>
       )}
+
+      {/* Admin Create Order Modal */}
+      <AdminCreateOrderModal
+        isOpen={isCreateOrderModalOpen}
+        onClose={() => setIsCreateOrderModalOpen(false)}
+        initialClientId={orderModalClientId}
+        clients={clients}
+        onOrderCreated={(newOrder) => {
+          showNotification(
+            `Order #${newOrder.id} created successfully for ${
+              newOrder.clientName || newOrder.clientEmail
+            }!`
+          );
+          fetchClients();
+        }}
+      />
     </AdminLayout>
   );
 }

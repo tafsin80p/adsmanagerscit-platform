@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -32,11 +32,13 @@ import {
   BarChart3,
   Save,
   Share2,
+  Plus,
 } from "lucide-react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { usePortal } from "@/context/PortalContext";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Order, OrderStatus } from "@/types";
+import { AdminCreateOrderModal } from "@/components/modals/AdminCreateOrderModal";
 
 export default function AdminOrdersPage() {
   const {
@@ -61,6 +63,21 @@ export default function AdminOrdersPage() {
   const [notification, setNotification] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isCreateOrderModalOpen, setIsCreateOrderModalOpen] = useState(false);
+  const [preselectedClientId, setPreselectedClientId] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const cId = params.get("clientId");
+      if (cId) {
+        setPreselectedClientId(cId);
+        setIsCreateOrderModalOpen(true);
+      } else if (params.get("create") === "true") {
+        setIsCreateOrderModalOpen(true);
+      }
+    }
+  }, []);
 
   // Update Live Results (Metrics) Modal State
   const [selectedOrderForMetrics, setSelectedOrderForMetrics] = useState<Order | null>(null);
@@ -336,6 +353,15 @@ export default function AdminOrdersPage() {
           </div>
 
           <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+            {/* Create Order for Client Button */}
+            <button
+              onClick={() => setIsCreateOrderModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#3858F6] hover:bg-[#2542D9] text-white rounded-xl text-xs font-black shadow-md shadow-[#3858F6]/25 transition-all active:scale-95 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create Order for Client</span>
+            </button>
+
             {/* Live Refresh Trigger */}
             <button
               onClick={handleRefresh}
@@ -1080,6 +1106,19 @@ export default function AdminOrdersPage() {
             </div>
           </div>
         )}
+        {/* Admin Create Order on Behalf of Client Modal */}
+        <AdminCreateOrderModal
+          isOpen={isCreateOrderModalOpen}
+          onClose={() => setIsCreateOrderModalOpen(false)}
+          initialClientId={preselectedClientId}
+          onOrderCreated={(newOrder) => {
+            showNotification(
+              `Order #${newOrder.id} created successfully for ${
+                newOrder.clientName || newOrder.clientEmail
+              }!`
+            );
+          }}
+        />
       </div>
     </AdminLayout>
   );

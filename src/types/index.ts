@@ -248,6 +248,7 @@ export interface ClientAccount {
     followers: string;
     category: string;
     verified: boolean;
+    avatar?: string;
   };
   currency?: "USD" | "BDT";
   createdAt?: string;
