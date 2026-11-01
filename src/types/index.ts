@@ -243,7 +243,7 @@ export interface ClientAccount {
   phone: string;
   businessName: string;
   avatar?: string;
-  role: "client" | "admin";
+  role: "client" | "admin" | "representative";
   connectedPage: {
     name: string;
     id?: string;

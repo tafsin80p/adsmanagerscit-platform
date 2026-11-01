@@ -64,24 +64,18 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, onMobile
   const totalCount = portalOrders.length;
   const reviewPaymentsCount = payments.filter((p) => p.status === "Under Review").length;
 
+  const isRepresentative = (profile.role as string) === "representative";
+
   const navSections: NavSection[] = [
     {
-      label: "ADMIN OPERATIONS",
+      label: isRepresentative ? "SUPPORT DESK" : "ADMIN OPERATIONS",
       items: [
         {
-          name: "Admin Console",
-          href: "/admin",
-          icon: LayoutDashboard,
+          name: "Live Support Chat",
+          href: "/admin/live-chat",
+          icon: MessageSquare,
           isLive: true,
-        },
-        {
-          name: "Pending Approvals",
-          href: "/admin/pending",
-          icon: Clock,
-          badge:
-            pendingCount > 0
-              ? { text: String(pendingCount), color: "bg-[#FEF3C7] text-[#D97706]" }
-              : undefined,
+          badge: { text: "Live", color: "bg-emerald-100 text-emerald-800" },
         },
         {
           name: "All Client Orders",
@@ -92,52 +86,68 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, onMobile
               ? { text: String(totalCount), color: "bg-[#EEF2F6] text-slate-700" }
               : undefined,
         },
-        {
-          name: "Payment Audit",
-          href: "/admin/payments",
-          icon: Wallet,
-          badge:
-            reviewPaymentsCount > 0
-              ? { text: String(reviewPaymentsCount), color: "bg-[#FEF3C7] text-[#D97706]" }
-              : undefined,
-        },
-        {
-          name: "Live Support Chat",
-          href: "/admin/live-chat",
-          icon: MessageSquare,
-          isLive: true,
-          badge: { text: "Live", color: "bg-emerald-100 text-emerald-800" },
-        },
+        ...(!isRepresentative
+          ? [
+              {
+                name: "Admin Console",
+                href: "/admin",
+                icon: LayoutDashboard,
+                isLive: true,
+              },
+              {
+                name: "Pending Approvals",
+                href: "/admin/pending",
+                icon: Clock,
+                badge:
+                  pendingCount > 0
+                    ? { text: String(pendingCount), color: "bg-[#FEF3C7] text-[#D97706]" }
+                    : undefined,
+              },
+              {
+                name: "Payment Audit",
+                href: "/admin/payments",
+                icon: Wallet,
+                badge:
+                  reviewPaymentsCount > 0
+                    ? { text: String(reviewPaymentsCount), color: "bg-[#FEF3C7] text-[#D97706]" }
+                    : undefined,
+              },
+            ]
+          : []),
       ],
     },
-    {
-      label: "SPECIALIST TOOLS",
-      items: [
-        {
-          name: "Payment Accounts",
-          href: "/admin/rates",
-          icon: CreditCard,
-        },
-        {
-          name: "Users & Clients",
-          href: "/admin/clients",
-          icon: Users,
-          badge: { text: "Manage", color: "bg-[#EEF2FF] text-[#3858F6]" },
-        },
-        {
-          name: "Meta Ads Manager",
-          href: "/admin/meta-integration",
-          icon: Share2,
-          badge: { text: "API", color: "bg-[#0866FF]/10 text-[#0866FF]" },
-        },
-        {
-          name: "Admin Profile",
-          href: "/admin/profile",
-          icon: User,
-          badge: { text: "Security", color: "bg-[#EAF8F1] text-[#10B981]" },
-        },
-      ],
-    },
+    ...(!isRepresentative
+      ? [
+          {
+            label: "SPECIALIST TOOLS",
+            items: [
+              {
+                name: "Payment Accounts",
+                href: "/admin/rates",
+                icon: CreditCard,
+              },
+              {
+                name: "Users & Clients",
+                href: "/admin/clients",
+                icon: Users,
+                badge: { text: "Manage", color: "bg-[#EEF2FF] text-[#3858F6]" },
+              },
+              {
+                name: "Meta Ads Manager",
+                href: "/admin/meta-integration",
+                icon: Share2,
+                badge: { text: "API", color: "bg-[#0866FF]/10 text-[#0866FF]" },
+              },
+              {
+                name: "Admin Profile",
+                href: "/admin/profile",
+                icon: User,
+                badge: { text: "Security", color: "bg-[#EAF8F1] text-[#10B981]" },
+              },
+            ],
+          },
+        ]
+      : []),
     {
       label: "PORTAL SWITCH",
       items: [

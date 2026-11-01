@@ -70,7 +70,7 @@ export async function POST(req: Request) {
       password: hashPassword(password),
       phone: phone.trim() || "+880 1700-000000",
       businessName: businessName.trim() || `${name}'s Brand`,
-      role: role === "admin" ? "admin" : "client",
+      role: role === "admin" ? "admin" : role === "representative" ? "representative" : "client",
       avatar: "/images/avatar.jpg",
       connectedPage: {
         name: pageName.trim() || businessName.trim() || `${name}'s Facebook Page`,

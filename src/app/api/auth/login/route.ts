@@ -93,7 +93,7 @@ export async function POST(req: Request) {
     }
 
     // Check accountType compatibility if provided
-    if (accountType === "specialist" && user.role !== "admin") {
+    if (accountType === "specialist" && user.role !== "admin" && user.role !== "representative") {
       return NextResponse.json(
         {
           success: false,

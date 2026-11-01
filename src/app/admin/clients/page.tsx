@@ -32,6 +32,7 @@ import {
   AlertCircle,
   FileText,
   ShoppingBag,
+  Headphones,
 } from "lucide-react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { usePortal } from "@/context/PortalContext";
@@ -98,7 +99,7 @@ export default function AdminClientsPage() {
     businessName: "",
     email: "",
     phone: "",
-    role: "client" as "client" | "admin",
+    role: "client" as "client" | "admin" | "representative",
     pageName: "",
     pageCategory: "Apparel & Clothing Store",
     pageFollowers: "25.0K followers",
@@ -656,6 +657,11 @@ export default function AdminClientsPage() {
                               <ShieldCheck className="w-3 h-3 text-purple-600" />
                               <span>Super Admin</span>
                             </span>
+                          ) : client.role === "representative" ? (
+                            <span className="text-[10px] font-black bg-blue-50 text-[#3858F6] border border-blue-200 px-2.5 py-0.5 rounded-full flex items-center gap-1 shrink-0">
+                              <Headphones className="w-3 h-3 text-[#3858F6]" />
+                              <span>Support Agent</span>
+                            </span>
                           ) : (
                             <span className="text-[10px] font-bold bg-[#EAF8F1] text-[#10B981] border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1 shrink-0">
                               <CheckCircle2 className="w-3 h-3" />
@@ -1105,6 +1111,21 @@ export default function AdminClientsPage() {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Account Role & Access Level *
+                </label>
+                <select
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+                  className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826] focus:outline-none focus:bg-white focus:border-[#3858F6]"
+                >
+                  <option value="client">Client (E-Commerce Brand Portal)</option>
+                  <option value="representative">🎧 Support Representative (Live Chat Specialist)</option>
+                  <option value="admin">🛡️ Super Admin (Full Platform Access)</option>
+                </select>
+              </div>
+
               <div className="pt-2 border-t border-[#F0F3F7]">
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Connected Facebook Page Name
@@ -1208,12 +1229,13 @@ export default function AdminClientsPage() {
                   <select
                     value={editingClient.role || "client"}
                     onChange={(e) =>
-                      setEditingClient({ ...editingClient, role: e.target.value as "client" | "admin" })
+                      setEditingClient({ ...editingClient, role: e.target.value as any })
                     }
                     className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826]"
                   >
                     <option value="client">Client (E-Commerce Brand)</option>
-                    <option value="admin">Super Admin / Agency Specialist</option>
+                    <option value="representative">🎧 Support Representative (Live Chat Specialist)</option>
+                    <option value="admin">🛡️ Super Admin / Agency Specialist</option>
                   </select>
                 </div>
               </div>

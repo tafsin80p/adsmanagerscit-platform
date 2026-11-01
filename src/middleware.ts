@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 interface SessionPayload {
   id?: string;
   email?: string;
-  role?: "client" | "admin";
+  role?: "client" | "admin" | "representative";
   timestamp?: number;
 }
 
@@ -82,6 +82,8 @@ export function middleware(req: NextRequest) {
   if (isAuthPage && isAuthenticated) {
     if (userRole === "admin") {
       return NextResponse.redirect(new URL("/admin", req.url));
+    } else if (userRole === "representative") {
+      return NextResponse.redirect(new URL("/admin/live-chat", req.url));
     } else {
       // If a logged-in client tries to visit /admin/login, redirect to client portal
       if (pathname === "/admin/login") {
@@ -111,13 +113,24 @@ export function middleware(req: NextRequest) {
     }
 
     // B: Logged-in client trying to access Admin pages -> BLOCKED & REDIRECTED TO CLIENT HOME
-    if (userRole !== "admin") {
+    if (userRole !== "admin" && userRole !== "representative") {
       const clientHomeUrl = new URL("/", req.url);
       clientHomeUrl.searchParams.set("unauthorized", "admin_restricted");
       return NextResponse.redirect(clientHomeUrl);
     }
 
-    // C: Authenticated admin -> Allowed
+    // C: Support representative restrictions (cannot access currency rates, Meta API tokens, or user management)
+    if (userRole === "representative") {
+      const isRestrictedForRep =
+        pathname === "/admin/rates" ||
+        pathname === "/admin/meta-integration" ||
+        pathname === "/admin/clients";
+      if (isRestrictedForRep) {
+        return NextResponse.redirect(new URL("/admin/live-chat", req.url));
+      }
+    }
+
+    // D: Authenticated admin or authorized representative -> Allowed
     return NextResponse.next();
   }
 
