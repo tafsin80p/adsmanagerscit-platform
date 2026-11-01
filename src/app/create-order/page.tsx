@@ -159,6 +159,12 @@ export default function CreateOrderPage() {
     const localPreview = URL.createObjectURL(file);
     setUploadedImage(localPreview);
 
+    // Safety timeout: if upload or network takes longer than 15s, guarantee loading spinner resets
+    const safetyTimer = setTimeout(() => {
+      setIsUploadingScreenshot(false);
+      setOcrStatus((prev) => (prev === "scanning" ? "not_found" : prev));
+    }, 15000);
+
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -169,8 +175,9 @@ export default function CreateOrderPage() {
         body: formData,
       });
 
+      clearTimeout(safetyTimer);
       const data = await res.json();
-      if (data.success && data.url) {
+      if (res.ok && data.success && data.url) {
         setUploadedImage(data.url);
         setUploadStorageSource(data.storage === "cloudinary" ? "cloudinary" : "local_fallback");
 
@@ -190,10 +197,12 @@ export default function CreateOrderPage() {
         setOcrStatus("idle");
       }
     } catch (err: unknown) {
+      clearTimeout(safetyTimer);
       const error = err as Error;
       setUploadError(error.message || "Network error uploading receipt");
       setOcrStatus("idle");
     } finally {
+      clearTimeout(safetyTimer);
       setIsUploadingScreenshot(false);
       e.target.value = "";
     }

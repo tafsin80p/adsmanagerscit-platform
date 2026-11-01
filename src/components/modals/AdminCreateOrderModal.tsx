@@ -85,6 +85,11 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
     const localUrl = URL.createObjectURL(file);
     setScreenshotPreview(localUrl);
 
+    // Safety timeout: if upload or network takes longer than 15s, guarantee loading spinner resets
+    const safetyTimer = setTimeout(() => {
+      setIsUploadingScreenshot(false);
+    }, 15000);
+
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -95,6 +100,7 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
         body: formData,
       });
 
+      clearTimeout(safetyTimer);
       const data = await res.json();
       if (res.ok && data.success && data.url) {
         setScreenshotUrl(data.url);
@@ -115,9 +121,11 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
         setUploadError(data.error || "Failed to upload image. Please check file format and size.");
       }
     } catch (err: unknown) {
+      clearTimeout(safetyTimer);
       const error = err as Error;
       setUploadError(error.message || "Network error uploading screenshot.");
     } finally {
+      clearTimeout(safetyTimer);
       setIsUploadingScreenshot(false);
       e.target.value = "";
     }

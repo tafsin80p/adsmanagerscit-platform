@@ -1,4 +1,5 @@
-import Tesseract from "tesseract.js";
+import path from "path";
+import { createWorker } from "tesseract.js";
 
 export interface ParsedReceiptData {
   trxId: string | null;
@@ -7,6 +8,26 @@ export interface ParsedReceiptData {
   gateway: "bKash" | "Nagad" | "Bank" | "Rocket" | null;
   confidence: number;
   rawText: string;
+}
+
+/**
+ * Resolves the explicit worker script path in Next.js bundled environment.
+ */
+function getWorkerOptions() {
+  try {
+    const workerPath = path.join(
+      process.cwd(),
+      "node_modules",
+      "tesseract.js",
+      "src",
+      "worker-script",
+      "node",
+      "index.js"
+    );
+    return { workerPath };
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -62,7 +83,6 @@ export function parseReceiptText(text: string, ocrConfidence = 0): ParsedReceipt
 
   // 2. Transaction ID Extraction
   // Pass 1: Explicit labels on the same line (supports English and Bengali)
-  // Example: "TrxID: 9J29AKD921", "Transaction ID: BLA78D9SK2", "Txn ID: 71KD9A8J", "Ref No: FT243029108491"
   const sameLineLabelRegex =
     /(?:trx\s*id|transaction\s*id|trans\s*id|txn\s*id|trx\s*no|txn\s*no|ref\s*no|reference\s*(?:no|number|num)?|ref\s*id|trace\s*id|utr\s*no|utr|ট্রানজেকশন\s*আইডি|লেনদেন\s*(?:আইডি|নম্বর)|রেফারেন্স)\s*[:;：|#.\-]?\s*([A-Za-z0-9_-]{6,30})/i;
 
@@ -105,7 +125,7 @@ export function parseReceiptText(text: string, ocrConfidence = 0): ParsedReceipt
     if (ftMatch) {
       result.trxId = ftMatch[1].toUpperCase();
     } else if (result.gateway === "bKash" || !result.gateway) {
-      // bKash format: typically 10 uppercase alphanumeric chars with letters & numbers (e.g. BLA78D9SK2, 9J29AKD921)
+      // bKash format: typically 10 uppercase alphanumeric chars
       const matches10 = cleanText.match(/\b([A-Z0-9]{10})\b/g);
       if (matches10) {
         const valid = matches10.find(
@@ -120,7 +140,7 @@ export function parseReceiptText(text: string, ocrConfidence = 0): ParsedReceipt
     }
 
     if (!result.trxId && (result.gateway === "Nagad" || !result.gateway)) {
-      // Nagad format: typically 8 uppercase alphanumeric chars (e.g. 71KD9A8J)
+      // Nagad format: typically 8 uppercase alphanumeric chars
       const matches8 = cleanText.match(/\b([A-Z0-9]{8})\b/g);
       if (matches8) {
         const valid = matches8.find(
@@ -128,7 +148,7 @@ export function parseReceiptText(text: string, ocrConfidence = 0): ParsedReceipt
             /[A-Z]/.test(m) &&
             /[0-9]/.test(m) &&
             !m.startsWith("01") &&
-            !m.startsWith("202") // avoids year prefixes like 20261101
+            !m.startsWith("202")
         );
         if (valid) result.trxId = valid.toUpperCase();
       }
@@ -136,14 +156,12 @@ export function parseReceiptText(text: string, ocrConfidence = 0): ParsedReceipt
   }
 
   // 3. Sender / Payer Mobile Number Extraction
-  // Priority: explicit sender/from/payer label
   const senderRegex =
     /(?:sender|from|payer|account\s*no|wallet|mobile|প্রেরক|প্রেরকের\s*নম্বর)\s*[:;：|#.\-]?\s*(?:\+?88)?\s*(01[3-9]\d{2}[-\s]?\d{6})/i;
   const senderMatch = cleanText.match(senderRegex);
   if (senderMatch && senderMatch[1]) {
     result.senderNumber = senderMatch[1].replace(/[-\s]/g, "");
   } else {
-    // Fallback: search for valid Bangladeshi mobile numbers
     const allPhones = cleanText.match(/(?:\+?88)?\b(01[3-9]\d{8})\b/g);
     if (allPhones && allPhones.length > 0) {
       result.senderNumber = allPhones[0].replace(/^[+]?88/, "");
@@ -177,11 +195,10 @@ function sanitizeTrxId(raw: string): string {
 }
 
 /**
- * Validates that candidate TrxID is not a common noise word or pure common word.
+ * Validates that candidate TrxID is not a common noise word.
  */
 function isValidTrxCandidate(val: string): boolean {
   if (!val || val.length < 6 || val.length > 30) return false;
-  // Ignore common keywords if OCR misgrouped them
   const blacklist = [
     "SUCCESSFUL",
     "SUCCESS",
@@ -196,27 +213,48 @@ function isValidTrxCandidate(val: string): boolean {
     "BALANCE",
   ];
   if (blacklist.includes(val.toUpperCase())) return false;
-  // Must contain alphanumeric chars
   return /^[A-Za-z0-9_-]+$/.test(val);
 }
 
 /**
  * Runs Tesseract OCR on an image buffer or file URL and parses payment data.
+ * Protected by a strict 4-second timeout so it NEVER hangs an HTTP request.
  */
 export async function scanReceiptImage(imageInput: Buffer | string): Promise<ParsedReceiptData> {
+  const emptyResult: ParsedReceiptData = {
+    trxId: null,
+    senderNumber: null,
+    amount: null,
+    gateway: null,
+    confidence: 0,
+    rawText: "",
+  };
+
   try {
-    const { data } = await Tesseract.recognize(imageInput, "eng");
-    return parseReceiptText(data.text, data.confidence);
+    const ocrPromise = (async (): Promise<ParsedReceiptData> => {
+      const workerOptions = getWorkerOptions();
+      const worker = await createWorker("eng", 1, workerOptions);
+      try {
+        const { data } = await worker.recognize(imageInput);
+        return parseReceiptText(data.text, data.confidence);
+      } finally {
+        await worker.terminate().catch(() => {});
+      }
+    })();
+
+    // 4-second strict safety timeout
+    const timeoutPromise = new Promise<ParsedReceiptData>((resolve) => {
+      setTimeout(() => {
+        console.warn("[ReceiptOCR] OCR timeout reached (4s), falling back gracefully.");
+        resolve(emptyResult);
+      }, 4000);
+    });
+
+    return await Promise.race([ocrPromise, timeoutPromise]);
   } catch (err) {
-    console.error("[ReceiptOCR] Error during Tesseract recognition:", err);
-    return {
-      trxId: null,
-      senderNumber: null,
-      amount: null,
-      gateway: null,
-      confidence: 0,
-      rawText: "",
-    };
+    console.warn("[ReceiptOCR] Error during recognition (falling back gracefully):", err);
+    return emptyResult;
   }
 }
+
 
