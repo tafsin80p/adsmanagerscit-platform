@@ -59,6 +59,7 @@ export interface ISetting extends Document {
   telegramBotToken?: string;
   telegramChatId?: string;
   telegramEnabled?: boolean;
+  telegramWebhookUrl?: string;
   lastUpdated: Date;
 }
 
@@ -128,6 +129,7 @@ const SettingSchema = new Schema<ISetting>(
     telegramBotToken: { type: String, default: "" },
     telegramChatId: { type: String, default: "" },
     telegramEnabled: { type: Boolean, default: true },
+    telegramWebhookUrl: { type: String, default: "" },
     lastUpdated: { type: Date, default: Date.now },
   },
   {

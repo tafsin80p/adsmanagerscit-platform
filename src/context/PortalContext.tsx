@@ -103,6 +103,7 @@ interface PortalContextType {
   telegramBotToken: string;
   telegramChatId: string;
   telegramEnabled: boolean;
+  telegramWebhookUrl: string;
   isLoadingSettings: boolean;
   refreshSettings: () => Promise<void>;
   disconnectMetaApi: () => Promise<void>;
@@ -166,6 +167,7 @@ interface PortalContextType {
     telegramBotToken?: string;
     telegramChatId?: string;
     telegramEnabled?: boolean;
+    telegramWebhookUrl?: string;
   }) => Promise<any>;
   dbConnected: boolean;
   isAuthenticated: boolean;
@@ -621,6 +623,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
   const [telegramBotToken, setTelegramBotToken] = useState<string>("");
   const [telegramChatId, setTelegramChatId] = useState<string>("");
   const [telegramEnabled, setTelegramEnabled] = useState<boolean>(true);
+  const [telegramWebhookUrl, setTelegramWebhookUrl] = useState<string>("");
   const [isLoadingSettings, setIsLoadingSettings] = useState<boolean>(false);
   const [dbConnected, setDbConnected] = useState<boolean>(false);
 
@@ -700,6 +703,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
     if (s.telegramBotToken !== undefined) setTelegramBotToken(s.telegramBotToken);
     if (s.telegramChatId !== undefined) setTelegramChatId(s.telegramChatId);
     if (s.telegramEnabled !== undefined) setTelegramEnabled(Boolean(s.telegramEnabled));
+    if (s.telegramWebhookUrl !== undefined) setTelegramWebhookUrl(s.telegramWebhookUrl);
 
     if (s.lastUpdated) {
       try {
@@ -1198,6 +1202,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
     telegramBotToken?: string;
     telegramChatId?: string;
     telegramEnabled?: boolean;
+    telegramWebhookUrl?: string;
   }) => {
     if (rates.exchangeRateBDT !== undefined) setExchangeRateBDT(rates.exchangeRateBDT);
     if (rates.serviceChargePercent !== undefined) setServiceChargePercent(rates.serviceChargePercent);
@@ -1216,6 +1221,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
     if (rates.telegramBotToken !== undefined) setTelegramBotToken(rates.telegramBotToken);
     if (rates.telegramChatId !== undefined) setTelegramChatId(rates.telegramChatId);
     if (rates.telegramEnabled !== undefined) setTelegramEnabled(rates.telegramEnabled);
+    if (rates.telegramWebhookUrl !== undefined) setTelegramWebhookUrl(rates.telegramWebhookUrl);
 
     let syncBankDetails = rates.bankDetails;
     if (rates.bankAccounts !== undefined) {
@@ -1409,6 +1415,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
         telegramBotToken,
         telegramChatId,
         telegramEnabled,
+        telegramWebhookUrl,
         isLoadingSettings,
         refreshSettings,
         isSyncing,

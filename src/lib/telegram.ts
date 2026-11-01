@@ -5,7 +5,12 @@ export interface TelegramConfig {
   botToken: string;
   chatId: string;
   enabled: boolean;
+  webhookUrl?: string;
 }
+
+export type TelegramInlineButton =
+  | { text: string; url: string; callback_data?: never }
+  | { text: string; callback_data: string; url?: never };
 
 export function escapeHtml(text: string): string {
   if (!text) return "";
@@ -22,6 +27,7 @@ export function escapeHtml(text: string): string {
 export async function getTelegramConfig(): Promise<TelegramConfig> {
   let botToken = process.env.TELEGRAM_BOT_TOKEN || "";
   let chatId = process.env.TELEGRAM_CHAT_ID || "";
+  let webhookUrl = process.env.TELEGRAM_WEBHOOK_URL || "";
   let enabled = true;
 
   try {
@@ -33,6 +39,9 @@ export async function getTelegramConfig(): Promise<TelegramConfig> {
       }
       if (settings.telegramChatId) {
         chatId = settings.telegramChatId.trim();
+      }
+      if (settings.telegramWebhookUrl) {
+        webhookUrl = settings.telegramWebhookUrl.trim();
       }
       if (settings.telegramEnabled !== undefined) {
         enabled = Boolean(settings.telegramEnabled);
@@ -46,13 +55,14 @@ export async function getTelegramConfig(): Promise<TelegramConfig> {
     botToken,
     chatId,
     enabled,
+    webhookUrl,
   };
 }
 
 export interface SendTelegramOptions {
   parseMode?: "HTML" | "Markdown" | "MarkdownV2";
   photoUrl?: string;
-  inlineKeyboard?: Array<Array<{ text: string; url: string }>>;
+  inlineKeyboard?: TelegramInlineButton[][];
   botTokenOverride?: string;
   chatIdOverride?: string;
 }
@@ -187,17 +197,174 @@ export async function sendTelegramMessage(
 }
 
 /**
- * Formats and broadcasts an instant alert when a new order is received.
+ * Answers a Telegram callback query with a toast notification or alert box.
+ */
+export async function answerTelegramCallbackQuery(
+  callbackQueryId: string,
+  text: string,
+  showAlert = false,
+  botTokenOverride?: string
+): Promise<boolean> {
+  const config = await getTelegramConfig();
+  const token = botTokenOverride || config.botToken;
+  if (!token) return false;
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        callback_query_id: callbackQueryId,
+        text,
+        show_alert: showAlert,
+      }),
+    });
+    const data = await res.json();
+    return Boolean(res.ok && data.ok);
+  } catch (err) {
+    console.error("[Telegram] answerCallbackQuery error:", err);
+    return false;
+  }
+}
+
+/**
+ * Edits a previously sent Telegram message or photo caption to reflect order state changes.
+ */
+export async function editTelegramMessage(
+  chatId: string | number,
+  messageId: number,
+  text: string,
+  options?: {
+    parseMode?: "HTML" | "Markdown";
+    inlineKeyboard?: TelegramInlineButton[][];
+    isCaption?: boolean;
+    botTokenOverride?: string;
+  }
+): Promise<boolean> {
+  const config = await getTelegramConfig();
+  const token = options?.botTokenOverride || config.botToken;
+  if (!token) return false;
+
+  const endpoint = options?.isCaption
+    ? `https://api.telegram.org/bot${token}/editMessageCaption`
+    : `https://api.telegram.org/bot${token}/editMessageText`;
+
+  const payload: Record<string, any> = {
+    chat_id: chatId,
+    message_id: messageId,
+    parse_mode: options?.parseMode || "HTML",
+  };
+
+  if (options?.isCaption) {
+    payload.caption = text.slice(0, 1024);
+  } else {
+    payload.text = text;
+    payload.disable_web_page_preview = false;
+  }
+
+  if (options?.inlineKeyboard) {
+    payload.reply_markup = {
+      inline_keyboard: options.inlineKeyboard,
+    };
+  } else {
+    // Clear buttons if inlineKeyboard is empty array
+    payload.reply_markup = {
+      inline_keyboard: [],
+    };
+  }
+
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    return Boolean(res.ok && data.ok);
+  } catch (err) {
+    console.error("[Telegram] editTelegramMessage error:", err);
+    return false;
+  }
+}
+
+/**
+ * Registers a Webhook URL with Telegram Bot API to listen for button clicks & updates.
+ */
+export async function setTelegramWebhook(
+  webhookUrl: string,
+  botTokenOverride?: string
+): Promise<{ success: boolean; description?: string }> {
+  const config = await getTelegramConfig();
+  const token = (botTokenOverride || config.botToken).trim();
+  if (!token) return { success: false, description: "No Telegram Bot Token provided." };
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: webhookUrl,
+        allowed_updates: ["message", "callback_query"],
+      }),
+    });
+    const data = await res.json();
+    return { success: Boolean(res.ok && data.ok), description: data.description };
+  } catch (err: unknown) {
+    const error = err as Error;
+    return { success: false, description: error.message };
+  }
+}
+
+/**
+ * Retrieves current Telegram Webhook registration status.
+ */
+export async function getTelegramWebhookInfo(
+  botTokenOverride?: string
+): Promise<{
+  success: boolean;
+  url?: string;
+  hasCustomCertificate?: boolean;
+  pendingUpdateCount?: number;
+  lastErrorDate?: number;
+  lastErrorMessage?: string;
+  description?: string;
+}> {
+  const config = await getTelegramConfig();
+  const token = (botTokenOverride || config.botToken).trim();
+  if (!token) return { success: false, description: "No Telegram Bot Token provided." };
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/getWebhookInfo`);
+    const data = await res.json();
+    if (res.ok && data.ok && data.result) {
+      return {
+        success: true,
+        url: data.result.url || "",
+        hasCustomCertificate: data.result.has_custom_certificate,
+        pendingUpdateCount: data.result.pending_update_count,
+        lastErrorDate: data.result.last_error_date,
+        lastErrorMessage: data.result.last_error_message,
+      };
+    }
+    return { success: false, description: data.description };
+  } catch (err: unknown) {
+    const error = err as Error;
+    return { success: false, description: error.message };
+  }
+}
+
+/**
+ * Formats and broadcasts an instant alert when a new order is received,
+ * equipped with interactive one-click Confirm & Reject buttons for Telegram group admins.
  */
 export async function notifyNewOrderTelegram(order: any): Promise<boolean> {
   try {
     const orderId = order.id || "NEW-ORDER";
     const campaignName = order.campaignName || "Untitled Campaign";
     const clientName = order.clientName || order.businessName || "Valued Client";
-    const businessName = order.businessName || order.facebookPageName || "Business";
-    const clientEmail = order.clientEmail || "Not provided";
     const pageName = order.facebookPageName || "Connected FB Page";
     const pageId = order.facebookPageId || "";
+    const clientEmail = order.clientEmail || "Not provided";
     const postType = order.postType || "Boost Post";
     const objective = order.objective || "Messages";
     const dailyBudget = Number(order.dailyBudgetUSD || 0).toFixed(2);
@@ -233,24 +400,25 @@ export async function notifyNewOrderTelegram(order: any): Promise<boolean> {
 • TrxID: <code>${escapeHtml(transactionId)}</code>
 ${notes ? `\n📝 <b>Specialist Note:</b>\n<i>${escapeHtml(notes)}</i>` : ""}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡ <i>Shopno IT • Automated Agency Notification</i>
+👇 <i>Tap below to verify payment & confirm order instantly without logging into admin:</i>
 `.trim();
 
-    const inlineKeyboard: Array<Array<{ text: string; url: string }>> = [];
-    const buttonsRow: Array<{ text: string; url: string }> = [];
+    // Interactive Action Buttons
+    const inlineKeyboard: TelegramInlineButton[][] = [
+      [
+        { text: "✅ Confirm & Activate Order", callback_data: `confirm:${orderId}` },
+        { text: "❌ Reject", callback_data: `reject:${orderId}` },
+      ],
+    ];
 
     if (postUrl && postUrl.startsWith("http")) {
-      buttonsRow.push({ text: "🔗 View Post Creative", url: postUrl });
-    }
-
-    if (buttonsRow.length > 0) {
-      inlineKeyboard.push(buttonsRow);
+      inlineKeyboard.push([{ text: "🔗 View Post Creative", url: postUrl }]);
     }
 
     const result = await sendTelegramMessage(message, {
       parseMode: "HTML",
       photoUrl: order.screenshotUrl || undefined,
-      inlineKeyboard: inlineKeyboard.length > 0 ? inlineKeyboard : undefined,
+      inlineKeyboard,
     });
 
     return result.success;

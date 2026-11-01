@@ -73,6 +73,7 @@ export default function AdminExchangeRatesPage() {
     telegramBotToken,
     telegramChatId,
     telegramEnabled,
+    telegramWebhookUrl,
     isLoadingSettings,
     refreshSettings,
     updateRates,
@@ -100,6 +101,19 @@ export default function AdminExchangeRatesPage() {
   const [isTestingTelegram, setIsTestingTelegram] = useState<boolean>(false);
   const [telegramTestFeedback, setTelegramTestFeedback] = useState<{ success: boolean; message: string } | null>(null);
   const [isSavingTelegram, setIsSavingTelegram] = useState<boolean>(false);
+
+  // Telegram Webhook State (for 1-click confirm/reject from Telegram)
+  const [webhookUrlInput, setWebhookUrlInput] = useState<string>(telegramWebhookUrl || "");
+  const [webhookInfo, setWebhookInfo] = useState<{
+    url?: string;
+    has_custom_certificate?: boolean;
+    pending_update_count?: number;
+    last_error_date?: number;
+    last_error_message?: string;
+  } | null>(null);
+  const [isLoadingWebhookInfo, setIsLoadingWebhookInfo] = useState<boolean>(false);
+  const [isSettingWebhook, setIsSettingWebhook] = useState<boolean>(false);
+  const [webhookFeedback, setWebhookFeedback] = useState<{ success: boolean; message: string } | null>(null);
 
   // bKash Account State
   const [bkashPhone, setBkashPhone] = useState<string>(bkashNumber || "01712-345678");
@@ -259,6 +273,77 @@ export default function AdminExchangeRatesPage() {
     if (telegramChatId !== undefined) setTelegramChatIdInput(telegramChatId);
     if (telegramEnabled !== undefined) setTelegramEnabledState(telegramEnabled);
   }, [telegramBotToken, telegramChatId, telegramEnabled]);
+
+  useEffect(() => {
+    if (telegramWebhookUrl) {
+      setWebhookUrlInput(telegramWebhookUrl);
+    } else if (typeof window !== "undefined") {
+      setWebhookUrlInput(`${window.location.origin}/api/telegram/webhook`);
+    }
+  }, [telegramWebhookUrl]);
+
+  // Fetch webhook status whenever switching to Telegram tab
+  const fetchWebhookStatus = async () => {
+    setIsLoadingWebhookInfo(true);
+    try {
+      const res = await fetch("/api/telegram/set-webhook");
+      const data = await res.json();
+      if (res.ok && data.webhookInfo?.result) {
+        setWebhookInfo(data.webhookInfo.result);
+        if (data.webhookInfo.result.url && !telegramWebhookUrl) {
+          setWebhookUrlInput(data.webhookInfo.result.url);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching Telegram webhook info:", err);
+    } finally {
+      setIsLoadingWebhookInfo(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "telegram") {
+      fetchWebhookStatus();
+    }
+  }, [activeTab]);
+
+  const handleRegisterWebhook = async () => {
+    setIsSettingWebhook(true);
+    setWebhookFeedback(null);
+    try {
+      const res = await fetch("/api/telegram/set-webhook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          webhookUrl: webhookUrlInput.trim(),
+          botToken: telegramTokenInput.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setWebhookFeedback({
+          success: true,
+          message: data.message || "Telegram Webhook successfully registered! Interactive buttons are now active.",
+        });
+        showNotification("Telegram Webhook successfully registered!");
+        await fetchWebhookStatus();
+        await refreshSettings();
+      } else {
+        setWebhookFeedback({
+          success: false,
+          message: data.error || "Failed to register Telegram Webhook. Ensure the URL is an HTTPS public URL.",
+        });
+      }
+    } catch (err: unknown) {
+      const error = err as Error;
+      setWebhookFeedback({
+        success: false,
+        message: error.message || "Network error while connecting to Telegram API.",
+      });
+    } finally {
+      setIsSettingWebhook(false);
+    }
+  };
 
   const handleTestTelegram = async () => {
     setIsTestingTelegram(true);
@@ -1740,6 +1825,137 @@ export default function AdminExchangeRatesPage() {
                     </button>
                   </div>
                 </div>
+
+                {/* Card 2: Interactive Telegram Webhook & 1-Click Approval */}
+                <div className="bg-white p-6 sm:p-7 rounded-[28px] border border-[#E9EDF4] shadow-[0_4px_25px_rgba(0,0,0,0.03)] space-y-5">
+                  <div className="flex items-center justify-between pb-4 border-b border-[#F0F3F7]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black">
+                        <CheckCircle2 className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm sm:text-base font-black text-[#121826] flex items-center gap-2">
+                          <span>Direct Telegram Order Approval</span>
+                          <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">
+                            Zero Login Needed
+                          </span>
+                        </h3>
+                        <p className="text-xs text-[#8A94A6]">
+                          Confirm and activate orders directly inside Telegram with one tap.
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={fetchWebhookStatus}
+                      disabled={isLoadingWebhookInfo}
+                      className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                      title="Refresh Telegram Webhook status"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isLoadingWebhookInfo ? "animate-spin" : ""}`} />
+                      <span className="hidden sm:inline">Refresh Status</span>
+                    </button>
+                  </div>
+
+                  {/* Feature Explanation Banner */}
+                  <div className="bg-gradient-to-br from-emerald-50/80 to-teal-50/80 border border-emerald-200/70 rounded-2xl p-4 text-xs text-emerald-950 space-y-2">
+                    <div className="font-bold flex items-center gap-2 text-emerald-800">
+                      <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>How 1-Click Approval Works</span>
+                    </div>
+                    <p className="text-[11px] text-emerald-900/80 leading-relaxed">
+                      When an order notification arrives in your Telegram group, it now includes interactive buttons: 
+                      <strong className="text-emerald-950"> [ ✅ Confirm & Activate Order ]</strong> and <strong className="text-rose-900"> [ ❌ Reject ]</strong>.
+                      Tapping the confirm button instantly marks the order as <b>Active</b> and payment as <b>Verified</b> in MongoDB Atlas, and tags the admin who confirmed it. You don&apos;t have to log into this website!
+                    </p>
+                  </div>
+
+                  {/* Webhook Feedback Message */}
+                  {webhookFeedback && (
+                    <div
+                      className={`p-4 rounded-2xl border text-xs flex items-center gap-2.5 animate-in fade-in ${
+                        webhookFeedback.success
+                          ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                          : "bg-rose-50 border-rose-200 text-rose-800"
+                      }`}
+                    >
+                      {webhookFeedback.success ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                      )}
+                      <span className="font-semibold">{webhookFeedback.message}</span>
+                    </div>
+                  )}
+
+                  {/* Current Webhook Status Badge */}
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                        Telegram Webhook Connection
+                      </span>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          webhookInfo?.url
+                            ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                            : "bg-amber-100 text-amber-700 border border-amber-200"
+                        }`}
+                      >
+                        {webhookInfo?.url ? "Active & Registered" : "Not Registered"}
+                      </span>
+                    </div>
+                    <div className="text-xs font-mono font-medium text-slate-800 break-all bg-white p-2.5 rounded-xl border border-slate-200">
+                      {webhookInfo?.url ? (
+                        <span className="text-emerald-700 font-bold">✓ {webhookInfo.url}</span>
+                      ) : (
+                        <span className="text-slate-400 italic">No webhook registered yet. Click &quot;Activate Webhook&quot; below to link Telegram.</span>
+                      )}
+                    </div>
+                    {webhookInfo?.last_error_message && (
+                      <div className="text-[11px] text-rose-600 bg-rose-50 p-2 rounded-lg border border-rose-200">
+                        ⚠️ Last Telegram Error: {webhookInfo.last_error_message}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Webhook Registration Input */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-700 block">
+                      Telegram Webhook Endpoint URL *
+                    </label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        type="url"
+                        value={webhookUrlInput}
+                        onChange={(e) => setWebhookUrlInput(e.target.value)}
+                        placeholder="https://your-domain.com/api/telegram/webhook"
+                        className="flex-1 px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-mono font-medium text-slate-900 focus:bg-white focus:border-emerald-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleRegisterWebhook}
+                        disabled={isSettingWebhook || !webhookUrlInput.trim() || !telegramTokenInput.trim()}
+                        className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shrink-0"
+                      >
+                        {isSettingWebhook ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Registering...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Activate Webhook</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Telegram requires an <b>HTTPS</b> public domain to send button click updates. In production (e.g. Vercel), click <b>Activate Webhook</b> once to link Telegram.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {/* Right Column: Setup Guide & Sample Preview (5 Cols) */}
@@ -1825,6 +2041,25 @@ export default function AdminExchangeRatesPage() {
                     <div>📸 <b>Payment Proof:</b> [Receipt Photo Attached]</div>
                     <div className="text-slate-500">━━━━━━━━━━━━━━━━━━━━━━━━━━</div>
                     <div className="text-[10px] text-slate-400 italic">⚡ Shopno IT • Automated Agency Notification</div>
+                  </div>
+
+                  {/* Mock Inline Buttons */}
+                  <div className="pt-1 space-y-2">
+                    <div className="text-[10px] text-blue-300 font-sans font-bold flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-amber-400" />
+                      <span>Interactive Buttons inside Telegram:</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="py-2 px-2 bg-emerald-600 text-white font-sans text-[11px] font-bold rounded-xl text-center shadow border border-emerald-400/40 select-none">
+                        ✅ Confirm & Activate
+                      </div>
+                      <div className="py-2 px-2 bg-rose-600 text-white font-sans text-[11px] font-bold rounded-xl text-center shadow border border-rose-400/40 select-none">
+                        ❌ Reject
+                      </div>
+                    </div>
+                    <div className="py-1.5 px-3 bg-slate-800 text-blue-400 hover:text-blue-300 text-center font-sans text-[11px] font-bold rounded-xl border border-slate-700 select-none">
+                      🔗 View Order in Admin
+                    </div>
                   </div>
                 </div>
               </div>
