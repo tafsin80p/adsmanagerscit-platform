@@ -76,7 +76,7 @@ export default function AdminClientsPage() {
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState<"All" | "Clients" | "Admins" | "Active" | "Pending">("All");
+  const [filterType, setFilterType] = useState<"All" | "Clients" | "Support Agents" | "Admins" | "Active" | "Pending">("All");
   const [sortBy, setSortBy] = useState<"newest" | "name" | "orders">("newest");
   const [expandedClientId, setExpandedClientId] = useState<string | null>(null);
 
@@ -157,7 +157,7 @@ export default function AdminClientsPage() {
     }
   };
 
-  // Onboard New User / Client Handler
+  // Onboard New User / Client / Support Representative Handler
   const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.email.trim()) {
@@ -165,12 +165,32 @@ export default function AdminClientsPage() {
       return;
     }
 
+    const isStaff = formData.role === "representative" || formData.role === "admin";
+    if (!isStaff && !formData.businessName.trim()) {
+      showNotification("Please provide Brand / Business Name for the client.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
+      const payload = {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        role: formData.role,
+        password: formData.password.trim() || "staff123",
+        businessName: isStaff
+          ? (formData.businessName.trim() || (formData.role === "representative" ? "Support Representative" : "Platform Admin"))
+          : formData.businessName.trim(),
+        phone: isStaff ? "" : formData.phone.trim(),
+        pageName: isStaff ? "" : formData.pageName.trim(),
+        pageCategory: isStaff ? "Customer Support" : formData.pageCategory.trim(),
+        pageFollowers: isStaff ? "Staff Member" : formData.pageFollowers.trim(),
+      };
+
       const res = await fetch("/api/clients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -178,7 +198,13 @@ export default function AdminClientsPage() {
         throw new Error(data.error || "Failed to create user account.");
       }
 
-      showNotification(`User account '${formData.name}' onboarded successfully!`);
+      showNotification(
+        formData.role === "representative"
+          ? `Support representative '${formData.name}' created successfully!`
+          : formData.role === "admin"
+          ? `Admin '${formData.name}' created successfully!`
+          : `Client account '${formData.name}' onboarded successfully!`
+      );
       setIsAddModalOpen(false);
       setFormData({
         name: "",
@@ -205,16 +231,28 @@ export default function AdminClientsPage() {
     e.preventDefault();
     if (!editingClient) return;
 
+    const isStaff = editingClient.role === "representative" || editingClient.role === "admin";
+    if (!editingClient.name?.trim() || !editingClient.email?.trim()) {
+      showNotification("Please provide user name and email.");
+      return;
+    }
+    if (!isStaff && !editingClient.businessName?.trim()) {
+      showNotification("Please provide Brand Name for the client.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const id = editingClient._id || editingClient.id || editingClient.email;
       const payload: Record<string, any> = {
-        name: editingClient.name,
-        email: editingClient.email,
-        businessName: editingClient.businessName,
-        phone: editingClient.phone,
+        name: editingClient.name.trim(),
+        email: editingClient.email.trim(),
         role: editingClient.role || "client",
-        connectedPage: editingClient.connectedPage,
+        businessName: isStaff
+          ? (editingClient.businessName?.trim() || (editingClient.role === "representative" ? "Support Representative" : "Platform Admin"))
+          : editingClient.businessName.trim(),
+        phone: isStaff ? "" : (editingClient.phone?.trim() || ""),
+        connectedPage: isStaff ? undefined : editingClient.connectedPage,
       };
       if (editPassword.trim()) {
         payload.password = editPassword.trim();
@@ -337,6 +375,8 @@ export default function AdminClientsPage() {
             ? true
             : filterType === "Clients"
             ? client.role === "client" || !client.role
+            : filterType === "Support Agents"
+            ? client.role === "representative"
             : filterType === "Admins"
             ? client.role === "admin"
             : filterType === "Active"
@@ -558,7 +598,7 @@ export default function AdminClientsPage() {
           <div className="flex items-center gap-2.5 flex-wrap">
             {/* Filter Tabs */}
             <div className="flex items-center gap-1.5 bg-[#F5F7FB] p-1 rounded-xl border border-slate-200">
-              {(["All", "Clients", "Admins", "Active", "Pending"] as const).map((ft) => (
+              {(["All", "Clients", "Support Agents", "Admins", "Active", "Pending"] as const).map((ft) => (
                 <button
                   key={ft}
                   onClick={() => setFilterType(ft)}
@@ -572,8 +612,10 @@ export default function AdminClientsPage() {
                     ? "All Users"
                     : ft === "Clients"
                     ? "Clients Only"
+                    : ft === "Support Agents"
+                    ? "🎧 Support Agents"
                     : ft === "Admins"
-                    ? "Admins Only"
+                    ? "🛡️ Admins"
                     : ft === "Active"
                     ? "Active Boosts"
                     : "Pending"}
@@ -650,7 +692,7 @@ export default function AdminClientsPage() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-extrabold text-base sm:text-lg text-[#121826] truncate">
-                            {client.businessName || client.name}
+                            {client.role === "representative" ? client.name : (client.businessName || client.name)}
                           </h3>
                           {client.role === "admin" ? (
                             <span className="text-[10px] font-black bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-0.5 rounded-full flex items-center gap-1 shrink-0">
@@ -668,7 +710,7 @@ export default function AdminClientsPage() {
                               <span>Client Account</span>
                             </span>
                           )}
-                          {client.connectedPage?.verified && (
+                          {client.role === "client" && client.connectedPage?.verified && (
                             <span className="text-[10px] font-bold bg-[#EFF6FF] text-[#3858F6] border border-[#BFDBFE] px-2.5 py-0.5 rounded-full flex items-center gap-1 shrink-0">
                               Verified Page
                             </span>
@@ -691,98 +733,124 @@ export default function AdminClientsPage() {
                             </button>
                           </span>
                           <span>•</span>
-                          <span className="truncate">
-                            Owner: <strong>{client.name}</strong> ({client.phone || "No phone"})
-                          </span>
-                          <span>•</span>
-                          <span>
-                            Page: <strong>{client.connectedPage?.name || "Meta Page"}</strong>
-                          </span>
+                          {client.role === "representative" ? (
+                            <span className="font-bold text-[#3858F6]">
+                              Customer Care Support Representative
+                            </span>
+                          ) : client.role === "admin" ? (
+                            <span className="font-bold text-purple-700">
+                              System Platform Administrator
+                            </span>
+                          ) : (
+                            <>
+                              <span className="truncate">
+                                Owner: <strong>{client.name}</strong> ({client.phone || "No phone"})
+                              </span>
+                              <span>•</span>
+                              <span>
+                                Page: <strong>{client.connectedPage?.name || "Meta Page"}</strong>
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
 
                     {/* Right: Actions, Badges & WhatsApp */}
                     <div className="flex items-center gap-2.5 flex-wrap shrink-0">
-                      {/* Live Running Badges */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <div
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 ${
-                            runningPortalAds.length > 0
-                              ? "bg-[#EAF8F1] border-[#10B981]/40 text-[#059669]"
-                              : "bg-slate-50 border-slate-200 text-slate-500"
-                          }`}
-                        >
-                          <span
-                            className={`w-2 h-2 rounded-full ${
-                              runningPortalAds.length > 0 ? "bg-[#10B981] animate-pulse" : "bg-slate-400"
-                            }`}
-                          />
-                          <span>
-                            {runningPortalAds.length > 0
-                              ? `${runningPortalAds.length} Portal Active`
-                              : "0 Portal Orders"}
-                          </span>
-                        </div>
+                      {client.role === "client" || !client.role ? (
+                        <>
+                          {/* Live Running Badges */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <div
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 ${
+                                runningPortalAds.length > 0
+                                  ? "bg-[#EAF8F1] border-[#10B981]/40 text-[#059669]"
+                                  : "bg-slate-50 border-slate-200 text-slate-500"
+                              }`}
+                            >
+                              <span
+                                className={`w-2 h-2 rounded-full ${
+                                  runningPortalAds.length > 0 ? "bg-[#10B981] animate-pulse" : "bg-slate-400"
+                                }`}
+                              />
+                              <span>
+                                {runningPortalAds.length > 0
+                                  ? `${runningPortalAds.length} Portal Active`
+                                  : "0 Portal Orders"}
+                              </span>
+                            </div>
 
-                        {clientPageBoosts.length > 0 && (
-                          <div className="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#EFF6FF] border border-[#BFDBFE] text-[#2563EB] flex items-center gap-1.5">
-                            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                            <span>{clientPageBoosts.length} FB Page Boosts Connected</span>
+                            {clientPageBoosts.length > 0 && (
+                              <div className="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#EFF6FF] border border-[#BFDBFE] text-[#2563EB] flex items-center gap-1.5">
+                                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                                <span>{clientPageBoosts.length} FB Page Boosts Connected</span>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
 
-                      {/* Pending Pill if any */}
-                      {pendingOrdersList.length > 0 && (
-                        <Link
-                          href="/admin/pending"
-                          className="px-3.5 py-2 rounded-2xl text-xs font-bold bg-[#FFFBEB] border border-amber-200 text-[#D97706] hover:bg-[#FEF3C7] transition-colors"
-                        >
-                          {pendingOrdersList.length} Pending Approval
-                        </Link>
+                          {/* Pending Pill if any */}
+                          {pendingOrdersList.length > 0 && (
+                            <Link
+                              href="/admin/pending"
+                              className="px-3.5 py-2 rounded-2xl text-xs font-bold bg-[#FFFBEB] border border-amber-200 text-[#D97706] hover:bg-[#FEF3C7] transition-colors"
+                            >
+                              {pendingOrdersList.length} Pending Approval
+                            </Link>
+                          )}
+
+                          {/* Direct WhatsApp Client Button */}
+                          {cleanPhone && (
+                            <a
+                              href={`https://wa.me/${cleanPhone}?text=Hi%20${encodeURIComponent(
+                                client.name
+                              )},%20regarding%20your%20Meta%20Ads%20boost%20campaigns%20for%20${encodeURIComponent(
+                                client.businessName
+                              )}.`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#10B981] hover:bg-[#059669] text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">WhatsApp</span>
+                            </a>
+                          )}
+
+                          {/* Direct Phone Call Button */}
+                          {cleanPhone && (
+                            <a
+                              href={`tel:${cleanPhone}`}
+                              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                              title="Call phone"
+                            >
+                              <Phone className="w-4 h-4" />
+                            </a>
+                          )}
+
+                          {/* Create Order Button */}
+                          <button
+                            onClick={() => {
+                              setOrderModalClientId(client._id || client.id || client.email);
+                              setIsCreateOrderModalOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#3858F6] border border-blue-200 text-xs font-bold transition-colors cursor-pointer shadow-3xs"
+                            title="Create new order for this client"
+                          >
+                            <ShoppingBag className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">+ Order</span>
+                          </button>
+                        </>
+                      ) : client.role === "representative" ? (
+                        <div className="px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-50 border border-blue-200 text-[#3858F6] flex items-center gap-1.5">
+                          <Headphones className="w-3.5 h-3.5" />
+                          <span>Live Chat Agent</span>
+                        </div>
+                      ) : (
+                        <div className="px-3 py-1.5 rounded-xl text-xs font-bold bg-purple-50 border border-purple-200 text-purple-700 flex items-center gap-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>Super Administrator</span>
+                        </div>
                       )}
-
-                      {/* Direct WhatsApp Client Button */}
-                      {cleanPhone && (
-                        <a
-                          href={`https://wa.me/${cleanPhone}?text=Hi%20${encodeURIComponent(
-                            client.name
-                          )},%20regarding%20your%20Meta%20Ads%20boost%20campaigns%20for%20${encodeURIComponent(
-                            client.businessName
-                          )}.`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#10B981] hover:bg-[#059669] text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
-                        >
-                          <MessageSquare className="w-3.5 h-3.5" />
-                          <span className="hidden sm:inline">WhatsApp</span>
-                        </a>
-                      )}
-
-                      {/* Direct Phone Call Button */}
-                      {cleanPhone && (
-                        <a
-                          href={`tel:${cleanPhone}`}
-                          className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
-                          title="Call phone"
-                        >
-                          <Phone className="w-4 h-4" />
-                        </a>
-                      )}
-
-                      {/* Create Order Button */}
-                      <button
-                        onClick={() => {
-                          setOrderModalClientId(client._id || client.id || client.email);
-                          setIsCreateOrderModalOpen(true);
-                        }}
-                        className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#3858F6] border border-blue-200 text-xs font-bold transition-colors cursor-pointer shadow-3xs"
-                        title="Create new order for this client"
-                      >
-                        <ShoppingBag className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">+ Order</span>
-                      </button>
 
                       {/* Edit User Button */}
                       <button
@@ -816,47 +884,109 @@ export default function AdminClientsPage() {
                         <span>Delete</span>
                       </button>
 
-                      {/* Expand/Collapse Accordion Button */}
-                      <button
-                        onClick={() => setExpandedClientId(isExpanded ? null : clientId)}
-                        className="p-2 rounded-xl bg-[#F5F7FB] hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
-                        aria-label="Toggle campaigns"
-                      >
-                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                      </button>
+                      {/* Expand/Collapse Accordion Button (Client only) */}
+                      {(client.role === "client" || !client.role) && (
+                        <button
+                          onClick={() => setExpandedClientId(isExpanded ? null : clientId)}
+                          className="p-2 rounded-xl bg-[#F5F7FB] hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
+                          aria-label="Toggle campaigns"
+                        >
+                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
+                      )}
                     </div>
                   </div>
 
                   {/* 4 Quick Metrics Strip */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-6 sm:px-7 py-4 bg-[#FBFBFE] border-b border-[#F0F3F7] text-xs">
-                    <div>
-                      <span className="text-slate-400 font-medium">Portal In-App Orders:</span>
-                      <div className="font-extrabold text-[#121826] text-sm mt-0.5">
-                        {clientPortalOrders.length} Orders (0 Active)
+                  {client.role === "representative" ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-6 sm:px-7 py-4 bg-[#F8FAFC] border-b border-[#F0F3F7] text-xs">
+                      <div>
+                        <span className="text-slate-400 font-medium">Account Access:</span>
+                        <div className="font-extrabold text-[#3858F6] text-sm mt-0.5 flex items-center gap-1">
+                          <Headphones className="w-3.5 h-3.5" />
+                          <span>Support Agent</span>
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-medium">Assigned Desk:</span>
+                        <div className="font-extrabold text-slate-800 text-sm mt-0.5">
+                          Live Chat Portal
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-medium">Order Inspection:</span>
+                        <div className="font-extrabold text-[#10B981] text-sm mt-0.5">
+                          Portal Orders Lookup
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-medium">Staff Status:</span>
+                        <div className="font-extrabold text-emerald-600 text-sm mt-0.5 flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>Active Representative</span>
+                        </div>
                       </div>
                     </div>
+                  ) : client.role === "admin" ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-6 sm:px-7 py-4 bg-[#FAF5FF] border-b border-[#F0F3F7] text-xs">
+                      <div>
+                        <span className="text-slate-400 font-medium">Account Access:</span>
+                        <div className="font-extrabold text-purple-700 text-sm mt-0.5 flex items-center gap-1">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>Super Admin</span>
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-medium">Assigned Desk:</span>
+                        <div className="font-extrabold text-slate-800 text-sm mt-0.5">
+                          Full Platform Control
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-medium">Settings & Rates:</span>
+                        <div className="font-extrabold text-[#10B981] text-sm mt-0.5">
+                          Global Management
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-medium">Staff Status:</span>
+                        <div className="font-extrabold text-purple-700 text-sm mt-0.5 flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse" />
+                          <span>Active Administrator</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-6 sm:px-7 py-4 bg-[#FBFBFE] border-b border-[#F0F3F7] text-xs">
+                      <div>
+                        <span className="text-slate-400 font-medium">Portal In-App Orders:</span>
+                        <div className="font-extrabold text-[#121826] text-sm mt-0.5">
+                          {clientPortalOrders.length} Orders (0 Active)
+                        </div>
+                      </div>
 
-                    <div>
-                      <span className="text-slate-400 font-medium">Connected Page Boosts:</span>
-                      <div className="font-extrabold text-[#3858F6] text-sm mt-0.5">
-                        {clientPageBoosts.length} Campaigns Synced
+                      <div>
+                        <span className="text-slate-400 font-medium">Connected Page Boosts:</span>
+                        <div className="font-extrabold text-[#3858F6] text-sm mt-0.5">
+                          {clientPageBoosts.length} Campaigns Synced
+                        </div>
                       </div>
-                    </div>
 
-                    <div>
-                      <span className="text-slate-400 font-medium">Pending Approvals:</span>
-                      <div className="font-extrabold text-[#D97706] text-sm mt-0.5">
-                        {pendingOrdersList.length} In Review
+                      <div>
+                        <span className="text-slate-400 font-medium">Pending Approvals:</span>
+                        <div className="font-extrabold text-[#D97706] text-sm mt-0.5">
+                          {pendingOrdersList.length} In Review
+                        </div>
                       </div>
-                    </div>
 
-                    <div>
-                      <span className="text-slate-400 font-medium">Page Followers:</span>
-                      <div className="font-extrabold text-slate-800 text-sm mt-0.5">
-                        {client.connectedPage?.followers || "12.8K"}
+                      <div>
+                        <span className="text-slate-400 font-medium">Page Followers:</span>
+                        <div className="font-extrabold text-slate-800 text-sm mt-0.5">
+                          {client.connectedPage?.followers || "12.8K"}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Expanded Section: Running and Past Ads */}
                   {isExpanded && (
@@ -1016,101 +1146,56 @@ export default function AdminClientsPage() {
         )}
       </div>
 
-      {/* Onboard New Client Brand Modal */}
+      {/* Onboard / Create User Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-[28px] max-w-lg w-full p-6 sm:p-7 space-y-5 border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-[#F0F3F7] pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-[#EEF2FF] text-[#3858F6] flex items-center justify-center">
-                  <Building className="w-4 h-4" />
+                <div
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                    formData.role === "representative"
+                      ? "bg-blue-50 text-[#3858F6]"
+                      : formData.role === "admin"
+                      ? "bg-purple-50 text-purple-600"
+                      : "bg-[#EEF2FF] text-[#3858F6]"
+                  }`}
+                >
+                  {formData.role === "representative" ? (
+                    <Headphones className="w-4 h-4" />
+                  ) : formData.role === "admin" ? (
+                    <ShieldCheck className="w-4 h-4" />
+                  ) : (
+                    <Building className="w-4 h-4" />
+                  )}
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-base text-[#121826]">Onboard New Client Brand</h3>
-                  <p className="text-xs text-slate-400">Register e-commerce client into MongoDB Atlas</p>
+                  <h3 className="font-extrabold text-base text-[#121826]">
+                    {formData.role === "representative"
+                      ? "Create Support Representative"
+                      : formData.role === "admin"
+                      ? "Create Administrator Account"
+                      : "Onboard New Client Brand"}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    {formData.role === "representative"
+                      ? "Register customer support agent for Live Chat"
+                      : formData.role === "admin"
+                      ? "Register administrator with full platform control"
+                      : "Register e-commerce client into MongoDB Atlas"}
+                  </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleCreateClient} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Brand / Business Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Trendy Lifestyle BD"
-                  value={formData.businessName}
-                  onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826] focus:outline-none focus:bg-white focus:border-[#3858F6]"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Owner Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Mahin Ahmed"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826] focus:outline-none focus:bg-white focus:border-[#3858F6]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Email Address *
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="mahin@brand.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826] focus:outline-none focus:bg-white focus:border-[#3858F6]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    WhatsApp / Phone
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="+880 1712-XXXXXX"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826] focus:outline-none focus:bg-white focus:border-[#3858F6]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Initial Password
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="client123"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826] focus:outline-none focus:bg-white focus:border-[#3858F6]"
-                  />
-                </div>
-              </div>
-
+              {/* Account Role & Access Level Dropdown at TOP */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Account Role & Access Level *
@@ -1121,56 +1206,178 @@ export default function AdminClientsPage() {
                   className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826] focus:outline-none focus:bg-white focus:border-[#3858F6]"
                 >
                   <option value="client">Client (E-Commerce Brand Portal)</option>
-                  <option value="representative">🎧 Support Representative (Live Chat Specialist)</option>
+                  <option value="representative">🎧 Support Representative (Customer Care Agent)</option>
                   <option value="admin">🛡️ Super Admin (Full Platform Access)</option>
                 </select>
               </div>
 
-              <div className="pt-2 border-t border-[#F0F3F7]">
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Connected Facebook Page Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Trendy Lifestyle Bangladesh Official"
-                  value={formData.pageName}
-                  onChange={(e) => setFormData({ ...formData, pageName: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:border-[#3858F6]"
-                />
-              </div>
+              {/* Informational banner when representative is selected */}
+              {formData.role === "representative" && (
+                <div className="p-3 bg-blue-50/80 border border-blue-200/80 rounded-xl flex items-start gap-2.5 text-xs text-blue-900">
+                  <Headphones className="w-4 h-4 text-[#3858F6] shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-[#3858F6]">Customer Support Representative Mode</span>
+                    <p className="text-[11px] text-blue-800/80 mt-0.5">
+                      কাস্টমার সাপোর্ট এজেন্টের জন্য শুধু নাম, অফিসিয়াল ইমেইল ও পাসওয়ার্ড প্রদান করুন। ফেসবুক পেজ বা ব্র্যান্ড ইনফরমেশন প্রয়োজন নেই।
+                    </p>
+                  </div>
+                </div>
+              )}
 
+              {/* Client-only field: Brand / Business Name */}
+              {formData.role === "client" && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Brand / Business Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Trendy Lifestyle BD"
+                    value={formData.businessName}
+                    onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826] focus:outline-none focus:bg-white focus:border-[#3858F6]"
+                  />
+                </div>
+              )}
+
+              {/* Full Name & Email */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Page Category
+                    {formData.role === "client"
+                      ? "Owner Full Name *"
+                      : "Representative / Staff Name *"}
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Apparel & Clothing"
-                    value={formData.pageCategory}
-                    onChange={(e) => setFormData({ ...formData, pageCategory: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:border-[#3858F6]"
+                    required
+                    placeholder={
+                      formData.role === "client" ? "e.g. Mahin Ahmed" : "e.g. Support Specialist"
+                    }
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826] focus:outline-none focus:bg-white focus:border-[#3858F6]"
                   />
                 </div>
+
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Page Followers
+                    {formData.role === "client"
+                      ? "Email Address *"
+                      : "Official Work Email *"}
                   </label>
                   <input
-                    type="text"
-                    placeholder="e.g. 35.0K followers"
-                    value={formData.pageFollowers}
-                    onChange={(e) => setFormData({ ...formData, pageFollowers: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:border-[#3858F6]"
+                    type="email"
+                    required
+                    placeholder={
+                      formData.role === "client"
+                        ? "mahin@brand.com"
+                        : "support@shopnocareer.com"
+                    }
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826] focus:outline-none focus:bg-white focus:border-[#3858F6]"
                   />
                 </div>
               </div>
+
+              {/* Password & WhatsApp (WhatsApp only for client) */}
+              {formData.role === "client" ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      WhatsApp / Phone
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="+880 1712-XXXXXX"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826] focus:outline-none focus:bg-white focus:border-[#3858F6]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Initial Password *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="client123"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826] focus:outline-none focus:bg-white focus:border-[#3858F6]"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Login Password *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Enter staff login password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826] focus:outline-none focus:bg-white focus:border-[#3858F6]"
+                  />
+                </div>
+              )}
+
+              {/* Facebook Page fields (Client only) */}
+              {formData.role === "client" && (
+                <>
+                  <div className="pt-2 border-t border-[#F0F3F7]">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Connected Facebook Page Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Trendy Lifestyle Bangladesh Official"
+                      value={formData.pageName}
+                      onChange={(e) => setFormData({ ...formData, pageName: e.target.value })}
+                      className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:border-[#3858F6]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Page Category
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Apparel & Clothing"
+                        value={formData.pageCategory}
+                        onChange={(e) => setFormData({ ...formData, pageCategory: e.target.value })}
+                        className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:border-[#3858F6]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Page Followers
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 35.0K followers"
+                        value={formData.pageFollowers}
+                        onChange={(e) => setFormData({ ...formData, pageFollowers: e.target.value })}
+                        className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:border-[#3858F6]"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#F0F3F7]">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                  className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1179,7 +1386,13 @@ export default function AdminClientsPage() {
                   disabled={isSubmitting}
                   className="px-5 py-2.5 bg-[#3858F6] hover:bg-[#2542D9] text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
                 >
-                  {isSubmitting ? "Onboarding..." : "Register Client Brand"}
+                  {isSubmitting
+                    ? "Processing..."
+                    : formData.role === "representative"
+                    ? "Create Support Representative"
+                    : formData.role === "admin"
+                    ? "Create Administrator"
+                    : "Register Client Brand"}
                 </button>
               </div>
             </form>
@@ -1187,62 +1400,132 @@ export default function AdminClientsPage() {
         </div>
       )}
 
-      {/* Edit Client Modal */}
+      {/* Edit User Modal */}
       {editingClient && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-[28px] max-w-lg w-full p-6 sm:p-7 space-y-5 border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-[#F0F3F7] pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-[#EEF2FF] text-[#3858F6] flex items-center justify-center">
-                  <Edit2 className="w-4 h-4" />
+                <div
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                    editingClient.role === "representative"
+                      ? "bg-blue-50 text-[#3858F6]"
+                      : editingClient.role === "admin"
+                      ? "bg-purple-50 text-purple-600"
+                      : "bg-[#EEF2FF] text-[#3858F6]"
+                  }`}
+                >
+                  {editingClient.role === "representative" ? (
+                    <Headphones className="w-4 h-4" />
+                  ) : editingClient.role === "admin" ? (
+                    <ShieldCheck className="w-4 h-4" />
+                  ) : (
+                    <Edit2 className="w-4 h-4" />
+                  )}
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-base text-[#121826]">Edit Client Brand</h3>
-                  <p className="text-xs text-slate-400">Update account credentials</p>
+                  <h3 className="font-extrabold text-base text-[#121826]">
+                    {editingClient.role === "representative"
+                      ? "Edit Support Representative"
+                      : editingClient.role === "admin"
+                      ? "Edit Administrator"
+                      : "Edit Client Brand"}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    {editingClient.role === "representative"
+                      ? "Update support specialist credentials"
+                      : editingClient.role === "admin"
+                      ? "Update admin account and access level"
+                      : "Update account credentials and brand details"}
+                  </p>
                 </div>
               </div>
               <button
                 onClick={() => setEditingClient(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleUpdateClient} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Account Role Dropdown */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Account Role & Access Level</label>
+                <select
+                  value={editingClient.role || "client"}
+                  onChange={(e) =>
+                    setEditingClient({ ...editingClient, role: e.target.value as any })
+                  }
+                  className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826]"
+                >
+                  <option value="client">Client (E-Commerce Brand)</option>
+                  <option value="representative">🎧 Support Representative (Customer Care Agent)</option>
+                  <option value="admin">🛡️ Super Admin / Platform Specialist</option>
+                </select>
+              </div>
+
+              {/* Informational banner when representative is selected */}
+              {editingClient.role === "representative" && (
+                <div className="p-3 bg-blue-50/80 border border-blue-200/80 rounded-xl flex items-start gap-2.5 text-xs text-blue-900">
+                  <Headphones className="w-4 h-4 text-[#3858F6] shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-[#3858F6]">Customer Support Representative Mode</span>
+                    <p className="text-[11px] text-blue-800/80 mt-0.5">
+                      এই ইউজারের শুধুমাত্র লাইভ চ্যাট ও অর্ডার সার্চ এক্সেস রয়েছে। কোনো ফেসবুক পেজ বা ব্র্যান্ড ইনফরমেশন প্রয়োজন নেই।
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Brand Name (Client only) */}
+              {editingClient.role === "client" && (
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Brand Name</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Brand Name *</label>
                   <input
                     type="text"
                     required
-                    value={editingClient.businessName}
+                    value={editingClient.businessName || ""}
                     onChange={(e) =>
                       setEditingClient({ ...editingClient, businessName: e.target.value })
                     }
                     className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826]"
                   />
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Account Role</label>
-                  <select
-                    value={editingClient.role || "client"}
-                    onChange={(e) =>
-                      setEditingClient({ ...editingClient, role: e.target.value as any })
-                    }
-                    className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826]"
-                  >
-                    <option value="client">Client (E-Commerce Brand)</option>
-                    <option value="representative">🎧 Support Representative (Live Chat Specialist)</option>
-                    <option value="admin">🛡️ Super Admin / Agency Specialist</option>
-                  </select>
+              {/* Name & Phone */}
+              {editingClient.role === "client" ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Owner Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={editingClient.name}
+                      onChange={(e) =>
+                        setEditingClient({ ...editingClient, name: e.target.value })
+                      }
+                      className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Phone Number (WhatsApp)</label>
+                    <input
+                      type="text"
+                      value={editingClient.phone || ""}
+                      onChange={(e) =>
+                        setEditingClient({ ...editingClient, phone: e.target.value })
+                      }
+                      className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826]"
+                    />
+                  </div>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              ) : (
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Owner Name</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    {editingClient.role === "representative" ? "Representative Name *" : "Administrator Name *"}
+                  </label>
                   <input
                     type="text"
                     required
@@ -1253,21 +1536,10 @@ export default function AdminClientsPage() {
                     className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826]"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Phone Number</label>
-                  <input
-                    type="text"
-                    value={editingClient.phone}
-                    onChange={(e) =>
-                      setEditingClient({ ...editingClient, phone: e.target.value })
-                    }
-                    className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826]"
-                  />
-                </div>
-              </div>
+              )}
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Email Address *</label>
                 <input
                   type="email"
                   required
@@ -1293,25 +1565,28 @@ export default function AdminClientsPage() {
                 <p className="text-[11px] text-slate-400 mt-1">Leave empty to keep existing password.</p>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Connected Facebook Page
-                </label>
-                <input
-                  type="text"
-                  value={editingClient.connectedPage?.name || ""}
-                  onChange={(e) =>
-                    setEditingClient({
-                      ...editingClient,
-                      connectedPage: {
-                        ...editingClient.connectedPage,
-                        name: e.target.value,
-                      },
-                    })
-                  }
-                  className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-semibold text-slate-800"
-                />
-              </div>
+              {/* Connected Facebook Page (Client only) */}
+              {editingClient.role === "client" && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Connected Facebook Page
+                  </label>
+                  <input
+                    type="text"
+                    value={editingClient.connectedPage?.name || ""}
+                    onChange={(e) =>
+                      setEditingClient({
+                        ...editingClient,
+                        connectedPage: {
+                          ...editingClient.connectedPage,
+                          name: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-semibold text-slate-800"
+                  />
+                </div>
+              )}
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#F0F3F7]">
                 <button
@@ -1324,7 +1599,7 @@ export default function AdminClientsPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2.5 bg-[#3858F6] hover:bg-[#2542D9] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer"
+                  className="px-5 py-2.5 bg-[#3858F6] hover:bg-[#2542D9] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
                 >
                   {isSubmitting ? "Saving..." : "Save Changes"}
                 </button>

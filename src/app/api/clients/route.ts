@@ -64,26 +64,35 @@ export async function POST(req: Request) {
       );
     }
 
+    const isStaff = role === "representative" || role === "admin";
     const newClient = await UserModel.create({
       name: name.trim(),
       email: cleanEmail,
       password: hashPassword(password),
-      phone: phone.trim() || "+880 1700-000000",
-      businessName: businessName.trim() || `${name}'s Brand`,
+      phone: phone.trim() || (isStaff ? "" : "+880 1700-000000"),
+      businessName: businessName.trim() || (isStaff ? (role === "representative" ? "Support Representative" : "Admin Staff") : `${name}'s Brand`),
       role: role === "admin" ? "admin" : role === "representative" ? "representative" : "client",
       avatar: "/images/avatar.jpg",
-      connectedPage: {
-        name: pageName.trim() || businessName.trim() || `${name}'s Facebook Page`,
-        id: `FB-PAGE-${Math.floor(1000000 + Math.random() * 9000000)}`,
-        followers: pageFollowers.trim() || "12.5K followers",
-        category: pageCategory.trim() || "Retail & Shopping",
-        verified: true,
-      },
+      connectedPage: isStaff
+        ? {
+            name: role === "representative" ? "Live Chat Desk" : "Admin Console",
+            id: `STAFF-${Math.floor(1000000 + Math.random() * 9000000)}`,
+            followers: "Staff Member",
+            category: role === "representative" ? "Customer Support" : "Administration",
+            verified: true,
+          }
+        : {
+            name: pageName.trim() || businessName.trim() || `${name}'s Facebook Page`,
+            id: `FB-PAGE-${Math.floor(1000000 + Math.random() * 9000000)}`,
+            followers: pageFollowers.trim() || "12.5K followers",
+            category: pageCategory.trim() || "Retail & Shopping",
+            verified: true,
+          },
       currency: "USD",
       notifications: {
         email: true,
-        sms: true,
-        whatsapp: true,
+        sms: !isStaff,
+        whatsapp: !isStaff,
       },
     });
 
