@@ -52,7 +52,7 @@ export const SupportModal: React.FC = () => {
         </div>
 
         {/* Quick Contact Chips */}
-        <div className="grid grid-cols-2 gap-2.5 py-4">
+        <div className="grid grid-cols-2 gap-2.5 py-3">
           <a
             href="https://wa.me/8801712889900"
             target="_blank"
@@ -75,6 +75,28 @@ export const SupportModal: React.FC = () => {
               <div className="text-[10px] font-normal text-slate-400">9 AM – 11 PM (Daily)</div>
             </div>
           </a>
+        </div>
+
+        {/* Instant Live Chat Card */}
+        <div className="mb-4 p-3.5 bg-gradient-to-r from-[#EEF4FF] to-[#F5F8FF] rounded-2xl border border-[#D8E4FC] flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+            <div>
+              <div className="text-xs font-bold text-[#172033]">Live Support Specialists Online</div>
+              <div className="text-[11px] text-slate-500">Real-time instant reply on chat</div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setIsSupportModalOpen(false);
+              const chatBtn = document.querySelector<HTMLButtonElement>(".fixed.bottom-5 button");
+              if (chatBtn) chatBtn.click();
+            }}
+            className="px-3.5 py-1.5 bg-[#0866FF] hover:bg-[#0052CC] text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+          >
+            Open Live Chat
+          </button>
         </div>
 
         {submitted ? (

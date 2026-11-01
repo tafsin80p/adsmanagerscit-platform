@@ -10,6 +10,7 @@ import { RenewOrderModal } from "@/components/modals/RenewOrderModal";
 import { SupportModal } from "@/components/modals/SupportModal";
 import { NotificationDrawer } from "./NotificationDrawer";
 import { AnimatedToast, ToastData } from "@/components/ui/AnimatedToast";
+import { ClientLiveChatWidget } from "@/components/chat/ClientLiveChatWidget";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -91,11 +92,12 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         </main>
       </div>
 
-      {/* Global Interactive Modals & Drawers */}
+      {/* Global Interactive Modals, Drawers & Live Support */}
       <OrderDetailsModal />
       <RenewOrderModal />
       <SupportModal />
       <NotificationDrawer isAdmin={false} />
+      <ClientLiveChatWidget />
 
       {/* Landing Toast Notification */}
       <AnimatedToast toast={landingToast} onClose={() => setLandingToast(null)} />

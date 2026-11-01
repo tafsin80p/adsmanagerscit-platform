@@ -22,6 +22,7 @@ import {
   Share2,
   CreditCard,
   User,
+  MessageSquare,
 } from "lucide-react";
 import { usePortal } from "@/context/PortalContext";
 
@@ -99,6 +100,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, onMobile
             reviewPaymentsCount > 0
               ? { text: String(reviewPaymentsCount), color: "bg-[#FEF3C7] text-[#D97706]" }
               : undefined,
+        },
+        {
+          name: "Live Support Chat",
+          href: "/admin/live-chat",
+          icon: MessageSquare,
+          isLive: true,
+          badge: { text: "Live", color: "bg-emerald-100 text-emerald-800" },
         },
       ],
     },

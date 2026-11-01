@@ -38,6 +38,7 @@ export function middleware(req: NextRequest) {
   const isPublicApi =
     pathname.startsWith("/api/auth/") ||
     pathname.startsWith("/api/telegram/") ||
+    pathname.startsWith("/api/chat/") ||
     pathname === "/api/test-db" ||
     pathname === "/api/facebook/page-info";
 
