@@ -389,8 +389,9 @@ export async function notifyNewOrderTelegram(order: any): Promise<boolean> {
 📧 <b>Email:</b> <code>${escapeHtml(clientEmail)}</code>
 
 💰 <b>Budget & Schedule:</b>
-• Daily Budget: $${dailyBudget} USD / Day
+• Strategy: <b>${order.budgetType === "total" ? "Lifetime / Total Budget" : "Daily Budget"}</b>
 • Duration: ${durationDays} Days
+• Daily Pace: $${dailyBudget} USD / Day
 • Total USD: <b>$${totalUSD} USD</b>
 • Total BDT: <b>৳${totalBDT} BDT</b>
 
@@ -403,11 +404,28 @@ ${notes ? `\n📝 <b>Specialist Note:</b>\n<i>${escapeHtml(notes)}</i>` : ""}
 👇 <i>Tap below to verify payment & confirm order instantly without logging into admin:</i>
 `.trim();
 
-    // Interactive Action Buttons
+    const config = await getTelegramConfig();
+    let siteOrigin = "https://shopnocareerit.com";
+    if (config.webhookUrl && config.webhookUrl.startsWith("http")) {
+      try {
+        const parsed = new URL(config.webhookUrl);
+        siteOrigin = parsed.origin;
+      } catch { }
+    } else if (process.env.NEXTAUTH_URL) {
+      siteOrigin = process.env.NEXTAUTH_URL.replace(/\/$/, "");
+    }
+
+    // Interactive Action Buttons (both Callback & Direct 1-Click URL)
     const inlineKeyboard: TelegramInlineButton[][] = [
       [
         { text: "✅ Confirm & Activate Order", callback_data: `confirm:${orderId}` },
         { text: "❌ Reject", callback_data: `reject:${orderId}` },
+      ],
+      [
+        {
+          text: "⚡ 1-Click Instant Confirm (No Login)",
+          url: `${siteOrigin}/api/telegram/action?action=confirm&orderId=${encodeURIComponent(orderId)}`,
+        },
       ],
     ];
 
@@ -425,5 +443,150 @@ ${notes ? `\n📝 <b>Specialist Note:</b>\n<i>${escapeHtml(notes)}</i>` : ""}
   } catch (err) {
     console.error("[Telegram] Error triggering order notification:", err);
     return false;
+  }
+}
+
+/**
+ * Processes pending Telegram callback updates (e.g. when webhook is not yet set or during local testing).
+ * Reads Telegram's getUpdates queue, processes button clicks (confirm/reject), updates MongoDB Atlas,
+ * and clears processed items so nothing is missed.
+ */
+export async function processTelegramPendingUpdates(): Promise<number> {
+  const config = await getTelegramConfig();
+  if (!config.botToken || !config.enabled) return 0;
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${config.botToken}/getUpdates?limit=20&timeout=0`);
+    const data = await res.json();
+    if (!res.ok || !data.ok || !Array.isArray(data.result) || data.result.length === 0) {
+      return 0;
+    }
+
+    const { OrderModel, PaymentModel } = await import("@/models");
+    let maxProcessedUpdateId = -1;
+    let processedCount = 0;
+
+    for (const update of data.result) {
+      if (update.update_id > maxProcessedUpdateId) {
+        maxProcessedUpdateId = update.update_id;
+      }
+
+      if (update.callback_query) {
+        const cq = update.callback_query;
+        const callbackId = cq.id;
+        const cqData = cq.data || "";
+        const fromUser = cq.from;
+        const message = cq.message;
+
+        const responder = fromUser.username
+          ? `@${fromUser.username}`
+          : [fromUser.first_name, fromUser.last_name].filter(Boolean).join(" ") || "Admin";
+
+        if (cqData === "info_done") {
+          await answerTelegramCallbackQuery(callbackId, "This order status has already been updated.", false);
+          continue;
+        }
+
+        const colonIndex = cqData.indexOf(":");
+        if (colonIndex !== -1) {
+          const action = cqData.slice(0, colonIndex);
+          const orderId = cqData.slice(colonIndex + 1);
+
+          const order = await OrderModel.findOne({ id: orderId });
+          if (order) {
+            const nowFormatted = new Date().toLocaleString("en-US", {
+              timeZone: "Asia/Dhaka",
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+
+            if (action === "confirm") {
+              await OrderModel.findOneAndUpdate(
+                { id: order.id },
+                { $set: { status: "Active", paymentStatus: "Verified" } }
+              );
+
+              await PaymentModel.findOneAndUpdate(
+                { orderId: order.id },
+                { $set: { status: "Verified" } }
+              );
+
+              await answerTelegramCallbackQuery(
+                callbackId,
+                `✅ Order #${order.id} verified & activated successfully!`,
+                false
+              );
+
+              if (message) {
+                const chatId = message.chat.id;
+                const messageId = message.message_id;
+                const isCaption = Boolean(message.caption && !message.text);
+                const originalBody = (message.caption || message.text || "").replace(
+                  /━━━━━━━━━━━━━━━━━━━━━━━━━━\s*👇[\s\S]*$/g,
+                  ""
+                ).trim();
+
+                const updatedMessage = `
+${originalBody}
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ <b>ORDER CONFIRMED & ACTIVATED</b>
+👤 <b>Verified by:</b> <b>${escapeHtml(responder)}</b>
+🕒 <b>Verified on:</b> ${nowFormatted}
+⚡ <i>Payment marked as Verified in MongoDB database.</i>
+`.trim();
+
+                const updatedButtons: any[][] = [
+                  [{ text: "🟢 Order Active & Verified", callback_data: "info_done" }],
+                ];
+                if (order.postUrl && order.postUrl.startsWith("http")) {
+                  updatedButtons.push([{ text: "🔗 View Post Creative", url: order.postUrl }]);
+                }
+
+                await editTelegramMessage(chatId, messageId, updatedMessage, {
+                  isCaption,
+                  parseMode: "HTML",
+                  inlineKeyboard: updatedButtons,
+                });
+              }
+
+              processedCount++;
+            } else if (action === "reject") {
+              await OrderModel.findOneAndUpdate(
+                { id: order.id },
+                { $set: { status: "Rejected", paymentStatus: "Failed" } }
+              );
+
+              await PaymentModel.findOneAndUpdate(
+                { orderId: order.id },
+                { $set: { status: "Failed" } }
+              );
+
+              await answerTelegramCallbackQuery(
+                callbackId,
+                `❌ Order #${order.id} marked as Rejected.`,
+                false
+              );
+
+              processedCount++;
+            }
+          }
+        }
+      }
+    }
+
+    // Acknowledge processed updates so Telegram clears them from queue
+    if (maxProcessedUpdateId > 0) {
+      await fetch(
+        `https://api.telegram.org/bot${config.botToken}/getUpdates?offset=${maxProcessedUpdateId + 1}&limit=1`
+      ).catch(() => { });
+    }
+
+    return processedCount;
+  } catch (err) {
+    console.warn("[Telegram] Error processing pending updates:", err);
+    return 0;
   }
 }

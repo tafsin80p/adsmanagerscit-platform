@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import { OrderModel, PaymentModel } from "@/models";
-import { notifyNewOrderTelegram } from "@/lib/telegram";
+import { notifyNewOrderTelegram, processTelegramPendingUpdates } from "@/lib/telegram";
 import { scanReceiptImage } from "@/lib/receiptOcr";
-
 
 export async function GET() {
   try {
     await connectDB();
+    // Non-blocking sync for any pending Telegram button clicks
+    processTelegramPendingUpdates().catch(() => {});
     const orders = await OrderModel.find({}).sort({ createdAt: -1 }).lean();
     return NextResponse.json({ success: true, count: orders.length, orders });
   } catch (error: unknown) {

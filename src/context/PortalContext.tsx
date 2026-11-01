@@ -1041,7 +1041,13 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
 
       setOrders((prev) =>
         prev.map((order) =>
-          order.id === affectedOrderId ? { ...order, paymentStatus: orderPaymentStatus } : order
+          order.id === affectedOrderId
+            ? {
+                ...order,
+                paymentStatus: orderPaymentStatus,
+                status: status === "Verified" ? "Active" : status === "Failed" ? "Rejected" : order.status,
+              }
+            : order
         )
       );
     }

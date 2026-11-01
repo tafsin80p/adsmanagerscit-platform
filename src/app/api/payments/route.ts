@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     body.id = finalId;
     const payment = await PaymentModel.create(body);
 
-    // Optionally update associated order payment status
+    // Optionally update associated order payment status & activate order if verified
     if (body.orderId && body.status) {
       const orderPaymentStatus =
         body.status === "Verified"
@@ -62,16 +62,20 @@ export async function POST(req: Request) {
           ? "Failed"
           : "Under Review";
 
+      const orderUpdates: Record<string, any> = {
+        paymentStatus: orderPaymentStatus,
+        transactionId: body.transactionId,
+        paymentMethod: body.method,
+        paidAmountBDT: body.amountBDT,
+      };
+
+      if (body.status === "Verified") {
+        orderUpdates.status = "Active";
+      }
+
       await OrderModel.findOneAndUpdate(
         { id: body.orderId },
-        {
-          $set: {
-            paymentStatus: orderPaymentStatus,
-            transactionId: body.transactionId,
-            paymentMethod: body.method,
-            paidAmountBDT: body.amountBDT,
-          },
-        }
+        { $set: orderUpdates }
       );
     }
 

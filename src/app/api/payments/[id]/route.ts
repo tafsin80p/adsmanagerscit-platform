@@ -59,9 +59,16 @@ export async function PATCH(
           ? "Failed"
           : "Awaiting Verification";
 
+      const orderUpdates: Record<string, string> = { paymentStatus: orderPaymentStatus };
+      if (body.status === "Verified") {
+        orderUpdates.status = "Active";
+      } else if (body.status === "Failed") {
+        orderUpdates.status = "Rejected";
+      }
+
       await OrderModel.findOneAndUpdate(
         { id: updatedPayment.orderId },
-        { $set: { paymentStatus: orderPaymentStatus } }
+        { $set: orderUpdates }
       );
     }
 

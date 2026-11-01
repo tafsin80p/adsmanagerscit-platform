@@ -10,6 +10,7 @@ export interface BoostItem {
   postUrl: string;
   objective: "Messages" | "Engagement" | "Traffic" | "Leads";
   platform: "Facebook";
+  budgetType?: "daily" | "total";
   dailyBudgetUSD: number;
   durationDays: number;
   totalBudgetUSD: number;
@@ -139,6 +140,7 @@ export interface Order {
   dailyBudgetUSD: number;
   totalBudgetUSD: number;
   durationDays: number;
+  budgetType?: "daily" | "total";
   status: OrderStatus;
   paymentStatus: PaymentStatus;
   paymentMethod?: PaymentMethod;

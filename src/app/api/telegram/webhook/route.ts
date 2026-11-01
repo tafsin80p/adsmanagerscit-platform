@@ -82,9 +82,10 @@ export async function POST(req: Request) {
 
       if (action === "confirm") {
         // Update Order in MongoDB Atlas
-        order.status = "Active";
-        order.paymentStatus = "Verified";
-        await order.save();
+        await OrderModel.findOneAndUpdate(
+          { id: order.id },
+          { $set: { status: "Active", paymentStatus: "Verified" } }
+        );
 
         // Update corresponding Payment in MongoDB Atlas
         await PaymentModel.findOneAndUpdate(
@@ -124,9 +125,10 @@ ${originalBody}
         });
       } else if (action === "reject") {
         // Update Order to Rejected
-        order.status = "Rejected";
-        order.paymentStatus = "Failed";
-        await order.save();
+        await OrderModel.findOneAndUpdate(
+          { id: order.id },
+          { $set: { status: "Rejected", paymentStatus: "Failed" } }
+        );
 
         // Update Payment to Failed
         await PaymentModel.findOneAndUpdate(

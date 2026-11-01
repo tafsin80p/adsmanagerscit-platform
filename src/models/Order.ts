@@ -6,6 +6,7 @@ export interface IBoostItem {
   postUrl: string;
   objective: "Messages" | "Engagement" | "Traffic" | "Leads";
   platform: "Facebook";
+  budgetType?: "daily" | "total";
   dailyBudgetUSD: number;
   durationDays: number;
   totalBudgetUSD: number;
@@ -32,6 +33,7 @@ export interface IOrder extends Document {
   dailyBudgetUSD: number;
   totalBudgetUSD: number;
   durationDays: number;
+  budgetType?: "daily" | "total";
   status: "Pending" | "Confirmed" | "Active" | "Paused" | "Completed" | "Rejected";
   paymentStatus: "Verified" | "Awaiting Verification" | "Under Review" | "Unpaid" | "Refunded" | "Failed";
   paymentMethod?: "bKash" | "Nagad" | "Bank Transfer" | "Meta Ad Account" | "Facebook Card";
@@ -65,6 +67,7 @@ const BoostItemSchema = new Schema<IBoostItem>(
     postUrl: { type: String, default: "" },
     objective: { type: String, enum: ["Messages", "Engagement", "Traffic", "Leads"], default: "Messages" },
     platform: { type: String, default: "Facebook" },
+    budgetType: { type: String, enum: ["daily", "total"], default: "daily" },
     dailyBudgetUSD: { type: Number, default: 0 },
     durationDays: { type: Number, default: 1 },
     totalBudgetUSD: { type: Number, default: 0 },
@@ -105,6 +108,7 @@ const OrderSchema = new Schema<IOrder>(
     dailyBudgetUSD: { type: Number, required: true, default: 0 },
     totalBudgetUSD: { type: Number, required: true, default: 0 },
     durationDays: { type: Number, required: true, default: 1 },
+    budgetType: { type: String, enum: ["daily", "total"], default: "daily" },
     status: {
       type: String,
       enum: ["Pending", "Confirmed", "Active", "Paused", "Completed", "Rejected"],

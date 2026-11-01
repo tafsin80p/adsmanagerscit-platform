@@ -77,6 +77,7 @@ export default function CreateOrderPage() {
       postUrl: "",
       objective: "Messages",
       platform: "Facebook",
+      budgetType: "daily",
       dailyBudgetUSD: 5,
       durationDays: 1,
       totalBudgetUSD: 5,
@@ -117,6 +118,7 @@ export default function CreateOrderPage() {
       postUrl: "",
       objective: primaryObjective,
       platform: targetPlatform,
+      budgetType: "daily",
       dailyBudgetUSD: 5,
       durationDays: 1,
       totalBudgetUSD: 5,
@@ -134,10 +136,37 @@ export default function CreateOrderPage() {
       prev.map((item) => {
         if (item.id === id) {
           const updated = { ...item, [field]: value };
-          if (field === "dailyBudgetUSD" || field === "durationDays") {
-            const daily = field === "dailyBudgetUSD" ? Number(value) || 0 : item.dailyBudgetUSD;
-            const days = field === "durationDays" ? Number(value) || 1 : item.durationDays;
-            updated.totalBudgetUSD = daily * days;
+          const mode = field === "budgetType" ? value : item.budgetType || "daily";
+
+          if (field === "budgetType") {
+            updated.budgetType = value;
+            const days = Math.max(1, Number(item.durationDays) || 1);
+            if (value === "total") {
+              const currentTotal = Number(item.totalBudgetUSD) || Number(item.dailyBudgetUSD) * days || 10;
+              updated.totalBudgetUSD = currentTotal;
+              updated.dailyBudgetUSD = Number((currentTotal / days).toFixed(2));
+            } else {
+              const currentDaily = Number(item.dailyBudgetUSD) || 5;
+              updated.dailyBudgetUSD = currentDaily;
+              updated.totalBudgetUSD = Number((currentDaily * days).toFixed(2));
+            }
+          } else if (mode === "total") {
+            if (field === "totalBudgetUSD" || field === "durationDays") {
+              const total = field === "totalBudgetUSD" ? Math.max(0, Number(value) || 0) : item.totalBudgetUSD;
+              const days = Math.max(1, field === "durationDays" ? Number(value) || 1 : item.durationDays);
+              updated.totalBudgetUSD = total;
+              updated.durationDays = days;
+              updated.dailyBudgetUSD = Number((total / days).toFixed(2));
+            }
+          } else {
+            // Daily mode
+            if (field === "dailyBudgetUSD" || field === "durationDays") {
+              const daily = field === "dailyBudgetUSD" ? Math.max(0, Number(value) || 0) : item.dailyBudgetUSD;
+              const days = Math.max(1, field === "durationDays" ? Number(value) || 1 : item.durationDays);
+              updated.dailyBudgetUSD = daily;
+              updated.durationDays = days;
+              updated.totalBudgetUSD = Number((daily * days).toFixed(2));
+            }
           }
           return updated;
         }
@@ -302,6 +331,7 @@ export default function CreateOrderPage() {
         postType,
         platform: targetPlatform,
         objective: primaryObjective,
+        budgetType: items[0]?.budgetType || "daily",
         dailyBudgetUSD: items[0]?.dailyBudgetUSD || 5,
         totalBudgetUSD: totalUSD,
         durationDays: items[0]?.durationDays || 2,
@@ -642,41 +672,117 @@ export default function CreateOrderPage() {
                       </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[11px] font-medium text-slate-500 block mb-1">
-                          Daily Budget (USD)
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">$</span>
-                          <input
-                            type="number"
-                            min="1"
-                            step="0.5"
-                            value={item.dailyBudgetUSD}
-                            onChange={(e) => handleUpdateItem(item.id, "dailyBudgetUSD", e.target.value)}
-                            className="w-full text-xs pl-6 pr-3 py-2 bg-white rounded-lg border border-[#E7ECF3] focus:border-[#0866FF] focus:outline-none"
-                          />
+                    {/* Budget Strategy: Daily vs Total */}
+                    <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200/80 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                          <DollarSign className="w-3.5 h-3.5 text-[#0866FF]" />
+                          <span>Budget Strategy:</span>
+                        </span>
+                        <div className="inline-flex rounded-lg bg-slate-200/80 p-0.5 text-[11px] font-bold self-start sm:self-auto">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateItem(item.id, "budgetType", "daily")}
+                            className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                              item.budgetType !== "total"
+                                ? "bg-white text-[#0866FF] shadow-xs font-black"
+                                : "text-slate-600 hover:text-slate-900"
+                            }`}
+                          >
+                            Daily Budget
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateItem(item.id, "budgetType", "total")}
+                            className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                              item.budgetType === "total"
+                                ? "bg-white text-[#0866FF] shadow-xs font-black"
+                                : "text-slate-600 hover:text-slate-900"
+                            }`}
+                          >
+                            Total Budget (Lifetime)
+                          </button>
                         </div>
                       </div>
 
-                      <div>
-                        <label className="text-[11px] font-medium text-slate-500 block mb-1">
-                          Duration (Days)
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          max="30"
-                          value={item.durationDays}
-                          onChange={(e) => handleUpdateItem(item.id, "durationDays", e.target.value)}
-                          className="w-full text-xs px-3 py-2 bg-white rounded-lg border border-[#E7ECF3] focus:border-[#0866FF] focus:outline-none"
-                        />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {item.budgetType === "total" ? (
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="text-[11px] font-bold text-slate-700">
+                                Total Budget (USD) *
+                              </label>
+                              <span className="text-[10px] text-slate-400 font-medium">Lifetime Campaign</span>
+                            </div>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">$</span>
+                              <input
+                                type="number"
+                                min="1"
+                                step="1"
+                                value={item.totalBudgetUSD}
+                                onChange={(e) => handleUpdateItem(item.id, "totalBudgetUSD", e.target.value)}
+                                className="w-full text-xs pl-6 pr-3 py-2 bg-white rounded-lg border border-[#E7ECF3] focus:border-[#0866FF] focus:outline-none font-bold text-slate-800"
+                              />
+                            </div>
+                            <p className="text-[10px] text-slate-500 mt-1">
+                              ≈ <span className="font-bold text-[#0866FF]">${item.dailyBudgetUSD.toFixed(2)} USD</span> / day
+                            </p>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="text-[11px] font-bold text-slate-700">
+                                Daily Budget (USD) *
+                              </label>
+                              <span className="text-[10px] text-slate-400 font-medium">Per Day</span>
+                            </div>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">$</span>
+                              <input
+                                type="number"
+                                min="1"
+                                step="0.5"
+                                value={item.dailyBudgetUSD}
+                                onChange={(e) => handleUpdateItem(item.id, "dailyBudgetUSD", e.target.value)}
+                                className="w-full text-xs pl-6 pr-3 py-2 bg-white rounded-lg border border-[#E7ECF3] focus:border-[#0866FF] focus:outline-none font-bold text-slate-800"
+                              />
+                            </div>
+                            <p className="text-[10px] text-slate-500 mt-1">
+                              Total: <span className="font-bold text-[#0866FF]">${item.totalBudgetUSD.toFixed(2)} USD</span>
+                            </p>
+                          </div>
+                        )}
+
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-[11px] font-bold text-slate-700">
+                              Duration (Days) *
+                            </label>
+                            <span className="text-[10px] text-slate-400 font-medium">1 - 90 Days</span>
+                          </div>
+                          <input
+                            type="number"
+                            min="1"
+                            max="90"
+                            value={item.durationDays}
+                            onChange={(e) => handleUpdateItem(item.id, "durationDays", e.target.value)}
+                            className="w-full text-xs px-3 py-2 bg-white rounded-lg border border-[#E7ECF3] focus:border-[#0866FF] focus:outline-none font-bold text-slate-800"
+                          />
+                          <p className="text-[10px] text-slate-500 mt-1">
+                            {item.durationDays} days campaign run
+                          </p>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="text-right text-[11px] font-semibold text-slate-600">
-                      Item Total: <span className="text-[#0866FF]">${item.totalBudgetUSD.toFixed(2)} USD</span>
+                    <div className="flex items-center justify-between text-xs font-bold bg-blue-50/60 p-2.5 rounded-xl border border-blue-100">
+                      <span className="text-slate-600">
+                        {item.budgetType === "total" ? "Lifetime Campaign Budget:" : "Calculated Item Budget:"}
+                      </span>
+                      <span className="text-[#0866FF] font-black text-sm">
+                        ${item.totalBudgetUSD.toFixed(2)} USD <span className="text-slate-400 font-normal text-xs">(≈ ৳{Math.round(item.totalBudgetUSD * exchangeRateBDT).toLocaleString()} BDT)</span>
+                      </span>
                     </div>
                   </div>
                 ))}

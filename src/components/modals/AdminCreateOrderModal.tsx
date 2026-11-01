@@ -56,6 +56,7 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
   const [objective, setObjective] = useState<"Messages" | "Engagement" | "Traffic" | "Leads">("Messages");
   const [dailyBudgetUSD, setDailyBudgetUSD] = useState<number>(5);
   const [durationDays, setDurationDays] = useState<number>(7);
+  const [budgetType, setBudgetType] = useState<"daily" | "total">("daily");
   const [customTotalUSD, setCustomTotalUSD] = useState<number | null>(null);
 
   // Status & Payment controls
@@ -228,6 +229,7 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
         postType,
         objective,
         platform: "Facebook",
+        budgetType,
         dailyBudgetUSD: Number(dailyBudgetUSD),
         durationDays: Number(durationDays),
         totalBudgetUSD: Number(totalBudgetUSD),
@@ -453,66 +455,139 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
 
           {/* 3. Budget & Duration */}
           <div className="p-4 rounded-2xl bg-gradient-to-r from-[#F8FAFC] to-[#EEF4FF] border border-[#D8E4FC] space-y-3">
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-              <DollarSign className="w-3.5 h-3.5 text-[#3858F6]" />
-              Budget & Schedule
-            </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-blue-200/50">
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <DollarSign className="w-3.5 h-3.5 text-[#3858F6]" />
+                Budget & Schedule
+              </h3>
+              <div className="inline-flex rounded-lg bg-white p-0.5 border border-slate-200 text-[11px] font-bold self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBudgetType("daily");
+                    setCustomTotalUSD(null);
+                  }}
+                  className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                    budgetType === "daily"
+                      ? "bg-[#3858F6] text-white shadow-xs font-black"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Daily Budget
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBudgetType("total");
+                    setCustomTotalUSD(totalBudgetUSD);
+                  }}
+                  className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                    budgetType === "total"
+                      ? "bg-[#3858F6] text-white shadow-xs font-black"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Total Budget (Lifetime)
+                </button>
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Daily Budget (USD)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">$</span>
-                  <input
-                    type="number"
-                    min="1"
-                    step="0.5"
-                    value={dailyBudgetUSD}
-                    onChange={(e) => {
-                      setDailyBudgetUSD(parseFloat(e.target.value) || 0);
-                      setCustomTotalUSD(null);
-                    }}
-                    className="w-full pl-7 pr-3 py-2 bg-white border border-[#CBD5E1] rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#3858F6]"
-                  />
+              {budgetType === "total" ? (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Total Budget (USD) *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">$</span>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={totalBudgetUSD}
+                      onChange={(e) => {
+                        const total = parseFloat(e.target.value) || 0;
+                        setCustomTotalUSD(total);
+                        if (durationDays > 0) {
+                          setDailyBudgetUSD(parseFloat((total / durationDays).toFixed(2)));
+                        }
+                      }}
+                      className="w-full pl-7 pr-3 py-2 bg-white border border-[#CBD5E1] rounded-xl text-xs font-black text-[#3858F6] focus:outline-none focus:border-[#3858F6]"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Lifetime campaign budget
+                  </p>
                 </div>
-              </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Daily Budget (USD) *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">$</span>
+                    <input
+                      type="number"
+                      min="1"
+                      step="0.5"
+                      value={dailyBudgetUSD}
+                      onChange={(e) => {
+                        const daily = parseFloat(e.target.value) || 0;
+                        setDailyBudgetUSD(daily);
+                        setCustomTotalUSD(null);
+                      }}
+                      className="w-full pl-7 pr-3 py-2 bg-white border border-[#CBD5E1] rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#3858F6]"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Calculated per day
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Duration (Days)
+                  Duration (Days) *
                 </label>
                 <div className="relative">
                   <input
                     type="number"
                     min="1"
+                    max="90"
                     step="1"
                     value={durationDays}
                     onChange={(e) => {
-                      setDurationDays(parseInt(e.target.value, 10) || 1);
-                      setCustomTotalUSD(null);
+                      const days = parseInt(e.target.value, 10) || 1;
+                      setDurationDays(days);
+                      if (budgetType === "total" && customTotalUSD !== null) {
+                        setDailyBudgetUSD(parseFloat((customTotalUSD / days).toFixed(2)));
+                      }
                     }}
                     className="w-full px-3 py-2 bg-white border border-[#CBD5E1] rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#3858F6]"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-medium">Days</span>
                 </div>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Active delivery days
+                </p>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Total Budget (USD)
+                  {budgetType === "total" ? "Calculated Daily (USD)" : "Calculated Total (USD)"}
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">$</span>
                   <input
                     type="number"
-                    step="0.5"
-                    value={totalBudgetUSD}
-                    onChange={(e) => setCustomTotalUSD(parseFloat(e.target.value) || 0)}
-                    className="w-full pl-7 pr-3 py-2 bg-white border border-[#CBD5E1] rounded-xl text-xs font-black text-[#3858F6] focus:outline-none focus:border-[#3858F6]"
+                    readOnly
+                    value={budgetType === "total" ? dailyBudgetUSD : totalBudgetUSD}
+                    className="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-700 focus:outline-none cursor-default"
                   />
                 </div>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  {budgetType === "total" ? "Daily pace equivalent" : "Total USD amount"}
+                </p>
               </div>
             </div>
 
