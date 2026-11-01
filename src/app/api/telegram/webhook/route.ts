@@ -81,6 +81,13 @@ export async function POST(req: Request) {
       ).trim();
 
       if (action === "confirm") {
+        // Immediately answer callback query so Telegram client stops spinning instantly
+        answerTelegramCallbackQuery(
+          callbackId,
+          `✅ Order #${order.id} verified & activated successfully!`,
+          false
+        ).catch(() => {});
+
         // Update Order in MongoDB Atlas
         await OrderModel.findOneAndUpdate(
           { id: order.id },
@@ -91,13 +98,6 @@ export async function POST(req: Request) {
         await PaymentModel.findOneAndUpdate(
           { orderId: order.id },
           { $set: { status: "Verified" } }
-        );
-
-        // Feedback alert popup to admin in Telegram
-        await answerTelegramCallbackQuery(
-          callbackId,
-          `✅ Order #${order.id} verified & activated successfully!`,
-          false
         );
 
         // Updated Message with verification badge
@@ -124,6 +124,13 @@ ${originalBody}
           inlineKeyboard: updatedButtons,
         });
       } else if (action === "reject") {
+        // Immediately answer callback query so Telegram client stops spinning instantly
+        answerTelegramCallbackQuery(
+          callbackId,
+          `❌ Order #${order.id} marked as Rejected.`,
+          false
+        ).catch(() => {});
+
         // Update Order to Rejected
         await OrderModel.findOneAndUpdate(
           { id: order.id },
@@ -134,12 +141,6 @@ ${originalBody}
         await PaymentModel.findOneAndUpdate(
           { orderId: order.id },
           { $set: { status: "Failed" } }
-        );
-
-        await answerTelegramCallbackQuery(
-          callbackId,
-          `❌ Order #${order.id} marked as Rejected.`,
-          false
         );
 
         const updatedMessage = `

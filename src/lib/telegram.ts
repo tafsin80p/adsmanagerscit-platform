@@ -357,7 +357,7 @@ export async function getTelegramWebhookInfo(
  * Formats and broadcasts an instant alert when a new order is received,
  * equipped with interactive one-click Confirm & Reject buttons for Telegram group admins.
  */
-export async function notifyNewOrderTelegram(order: any): Promise<boolean> {
+export async function notifyNewOrderTelegram(order: any, originOverride?: string): Promise<boolean> {
   try {
     const orderId = order.id || "NEW-ORDER";
     const campaignName = order.campaignName || "Untitled Campaign";
@@ -405,27 +405,47 @@ ${notes ? `\n📝 <b>Specialist Note:</b>\n<i>${escapeHtml(notes)}</i>` : ""}
 `.trim();
 
     const config = await getTelegramConfig();
-    let siteOrigin = "https://shopnocareerit.com";
-    if (config.webhookUrl && config.webhookUrl.startsWith("http")) {
-      try {
-        const parsed = new URL(config.webhookUrl);
-        siteOrigin = parsed.origin;
-      } catch { }
-    } else if (process.env.NEXTAUTH_URL) {
-      siteOrigin = process.env.NEXTAUTH_URL.replace(/\/$/, "");
+    let siteOrigin = originOverride || "";
+
+    if (!siteOrigin) {
+      if (config.webhookUrl && config.webhookUrl.startsWith("http")) {
+        try {
+          const parsed = new URL(config.webhookUrl);
+          siteOrigin = parsed.origin;
+        } catch { }
+      } else if (process.env.NEXTAUTH_URL) {
+        siteOrigin = process.env.NEXTAUTH_URL.replace(/\/$/, "");
+      } else if (process.env.NEXT_PUBLIC_APP_URL) {
+        siteOrigin = process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
+      } else if (process.env.VERCEL_URL) {
+        siteOrigin = `https://${process.env.VERCEL_URL}`;
+      } else {
+        siteOrigin = "https://adsmanager.shopnocareerit.com";
+      }
     }
+
+    // Auto-ensure Telegram webhook is set to this live production URL
+    if (siteOrigin.startsWith("https://") && config.botToken) {
+      const expectedWebhook = `${siteOrigin}/api/telegram/webhook`;
+      if (config.webhookUrl !== expectedWebhook) {
+        setTelegramWebhook(expectedWebhook, config.botToken).catch(() => {});
+      }
+    }
+
+    const confirmUrl = `${siteOrigin}/api/telegram/action?action=confirm&orderId=${encodeURIComponent(orderId)}`;
+    const rejectUrl = `${siteOrigin}/api/telegram/action?action=reject&orderId=${encodeURIComponent(orderId)}`;
 
     // Interactive Action Buttons (both Callback & Direct 1-Click URL)
     const inlineKeyboard: TelegramInlineButton[][] = [
       [
-        { text: "✅ Confirm & Activate Order", callback_data: `confirm:${orderId}` },
-        { text: "❌ Reject", callback_data: `reject:${orderId}` },
+        {
+          text: "⚡ 1-Click Confirm & Activate (Instant)",
+          url: confirmUrl,
+        },
       ],
       [
-        {
-          text: "⚡ 1-Click Instant Confirm (No Login)",
-          url: `${siteOrigin}/api/telegram/action?action=confirm&orderId=${encodeURIComponent(orderId)}`,
-        },
+        { text: "✅ Confirm & Activate Order", callback_data: `confirm:${orderId}` },
+        { text: "❌ Reject", callback_data: `reject:${orderId}` },
       ],
     ];
 

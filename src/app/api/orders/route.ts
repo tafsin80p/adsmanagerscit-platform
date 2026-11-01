@@ -117,8 +117,16 @@ export async function POST(req: Request) {
       }
     }
 
+    // Extract real origin from request headers to construct bulletproof 1-click confirmation links
+    const reqOrigin =
+      req.headers.get("origin") ||
+      (req.headers.get("referer") ? new URL(req.headers.get("referer")!).origin : null) ||
+      (req.headers.get("host")
+        ? `${req.headers.get("x-forwarded-proto") || "https"}://${req.headers.get("x-forwarded-host") || req.headers.get("host")}`
+        : "https://adsmanager.shopnocareerit.com");
+
     // Broadcast instant Telegram alert to bot & group
-    notifyNewOrderTelegram(order).catch((telErr) => {
+    notifyNewOrderTelegram(order, reqOrigin).catch((telErr) => {
       console.warn("[Orders API] Telegram notification background trigger failed:", telErr);
     });
 

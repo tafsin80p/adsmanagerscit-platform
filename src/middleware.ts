@@ -37,6 +37,7 @@ export function middleware(req: NextRequest) {
   // 1. PUBLIC API ROUTES (Authentication endpoints & public checks)
   const isPublicApi =
     pathname.startsWith("/api/auth/") ||
+    pathname.startsWith("/api/telegram/") ||
     pathname === "/api/test-db" ||
     pathname === "/api/facebook/page-info";
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import { OrderModel, PaymentModel } from "@/models";
-import { editTelegramMessage, getTelegramConfig, escapeHtml } from "@/lib/telegram";
+import { editTelegramMessage, sendTelegramMessage, getTelegramConfig, escapeHtml } from "@/lib/telegram";
 
 export async function GET(req: Request) {
   try {
@@ -56,7 +56,8 @@ export async function GET(req: Request) {
         { $set: { status: "Verified" } }
       );
 
-      // 3. Try editing Telegram message if chatId & messageId provided
+      // 3. Notify Telegram group that order was confirmed
+      const config = await getTelegramConfig();
       if (chatId && messageIdStr) {
         const msgId = parseInt(messageIdStr, 10);
         if (!isNaN(msgId)) {
@@ -67,6 +68,11 @@ export async function GET(req: Request) {
             { parseMode: "HTML" }
           ).catch((e) => console.warn("[Telegram Action] Could not edit message:", e));
         }
+      } else if (config.chatId && config.enabled) {
+        sendTelegramMessage(
+          `✅ <b>ORDER #${escapeHtml(order.id)} CONFIRMED & ACTIVATED!</b>\n🏷️ Campaign: <b>${escapeHtml(order.campaignName)}</b>\n👤 Client: <b>${escapeHtml(order.clientName || order.businessName || "")}</b>\n💰 Total: <b>$${Number(order.totalBudgetUSD || 0).toFixed(2)} USD (৳${Number(order.paidAmountBDT || 0).toLocaleString()} BDT)</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n⚡ <i>Payment marked as Verified in database. Order is now Active.</i>\n🕒 <b>Time:</b> ${nowFormatted}`,
+          { parseMode: "HTML" }
+        ).catch(() => {});
       }
 
       return new Response(renderHtmlPage({
