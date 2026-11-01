@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import { OrderModel, PaymentModel } from "@/models";
 import { notifyNewOrderTelegram } from "@/lib/telegram";
+import { scanReceiptImage } from "@/lib/receiptOcr";
 
 
 export async function GET() {
@@ -61,12 +62,28 @@ export async function POST(req: Request) {
     body.id = finalId;
     body.source = body.source || "portal_order";
     body.isExternalBoost = body.isExternalBoost !== undefined ? body.isExternalBoost : false;
+
+    // If no transaction ID provided manually, but screenshotUrl is present, run OCR to extract exact TrxID
+    if (!body.transactionId?.trim() && body.screenshotUrl) {
+      try {
+        const ocrResult = await scanReceiptImage(body.screenshotUrl);
+        if (ocrResult?.trxId) {
+          body.transactionId = ocrResult.trxId;
+          if (!body.senderNumber && ocrResult.senderNumber) {
+            body.senderNumber = ocrResult.senderNumber;
+          }
+        }
+      } catch (ocrErr) {
+        console.warn("[Orders API] OCR fallback scan failed:", ocrErr);
+      }
+    }
+
     const order = await OrderModel.create(body);
 
     // If order has payment details and is not Unpaid, auto-log to PaymentModel
     if (body.paymentMethod && body.paymentStatus && body.paymentStatus !== "Unpaid") {
       try {
-        const trxId = body.transactionId || `TRX-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+        const trxId = body.transactionId?.trim() || "Pending Verification";
         const payStatus = body.paymentStatus === "Verified" ? "Verified" : "Under Review";
 
         const allPayments = await PaymentModel.find({}, { id: 1 }).lean();

@@ -971,8 +971,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
         campaignName: savedOrder.campaignName,
         method: savedOrder.paymentMethod || "bKash",
         transactionId:
-          savedOrder.transactionId ||
-          `TRX${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+          savedOrder.transactionId || "Pending Verification",
         amountUSD: savedOrder.totalBudgetUSD,
         amountBDT: bdtAmount,
         exchangeRate: exchangeRateBDT,

@@ -99,12 +99,18 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
       if (res.ok && data.success && data.url) {
         setScreenshotUrl(data.url);
         setScreenshotPreview(data.url);
-        setUploadSuccess(
-          data.storage === "cloudinary"
-            ? "Payment screenshot uploaded to Cloudinary!"
-            : "Screenshot uploaded successfully!"
-        );
-        setTimeout(() => setUploadSuccess(null), 3500);
+
+        if (data.detectedTrxId) {
+          setTransactionId(data.detectedTrxId);
+          setUploadSuccess(`Screenshot uploaded & TrxID scraped: ${data.detectedTrxId}`);
+        } else {
+          setUploadSuccess(
+            data.storage === "cloudinary"
+              ? "Payment screenshot uploaded to Cloudinary!"
+              : "Screenshot uploaded successfully!"
+          );
+        }
+        setTimeout(() => setUploadSuccess(null), 4500);
       } else {
         setUploadError(data.error || "Failed to upload image. Please check file format and size.");
       }

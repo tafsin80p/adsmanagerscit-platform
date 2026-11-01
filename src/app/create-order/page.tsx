@@ -91,7 +91,7 @@ export default function CreateOrderPage() {
   const [isUploadingScreenshot, setIsUploadingScreenshot] = useState(false);
   const [uploadStorageSource, setUploadStorageSource] = useState<"cloudinary" | "local_fallback" | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [ocrStatus, setOcrStatus] = useState<"idle" | "scanning" | "success">("idle");
+  const [ocrStatus, setOcrStatus] = useState<"idle" | "scanning" | "success" | "not_found">("idle");
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderCreatedSuccess, setOrderCreatedSuccess] = useState<string | null>(null);
@@ -104,8 +104,8 @@ export default function CreateOrderPage() {
     paymentMethod === "bKash"
       ? bkashCashoutPercent
       : paymentMethod === "Nagad"
-      ? nagadCashoutPercent
-      : 0;
+        ? nagadCashoutPercent
+        : 0;
   const cashoutChargeBDT = Math.round((baseBDT * cashoutPercent) / 100);
   const finalPayableBDT = baseBDT + cashoutChargeBDT;
 
@@ -174,12 +174,17 @@ export default function CreateOrderPage() {
         setUploadedImage(data.url);
         setUploadStorageSource(data.storage === "cloudinary" ? "cloudinary" : "local_fallback");
 
-        // Simulate reading receipt
-        setTimeout(() => {
-          const detectedTrx = `TRX${Math.floor(100000 + Math.random() * 900000)}`;
-          setTransactionId(detectedTrx);
+        // Real dynamic OCR scraping from the receipt image
+        if (data.detectedTrxId) {
+          setTransactionId(data.detectedTrxId);
           setOcrStatus("success");
-        }, 800);
+        } else {
+          setOcrStatus("not_found");
+        }
+
+        if (data.detectedSenderNumber && !senderNumber) {
+          setSenderNumber(data.detectedSenderNumber);
+        }
       } else {
         setUploadError(data.error || "Failed to upload receipt to cloud");
         setOcrStatus("idle");
@@ -327,7 +332,7 @@ export default function CreateOrderPage() {
             duration: 4500,
           })
         );
-      } catch {}
+      } catch { }
     } catch (err: unknown) {
       const error = err as Error;
       setIsSubmitting(false);
@@ -492,11 +497,10 @@ export default function CreateOrderPage() {
                     key={item.type}
                     type="button"
                     onClick={() => setPostType(item.type)}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                      postType === item.type
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${postType === item.type
                         ? "bg-[#EBF2FF] text-[#0866FF] border-[#0866FF] shadow-2xs ring-1 ring-[#0866FF]/30"
                         : "bg-white text-slate-700 border-[#E7ECF3] hover:border-slate-300"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-1.5 font-black text-xs">
                       <span>{item.icon}</span>
@@ -693,22 +697,21 @@ export default function CreateOrderPage() {
                     method === "bKash"
                       ? `+${bkashCashoutPercent}%`
                       : method === "Nagad"
-                      ? `+${nagadCashoutPercent}%`
-                      : "0% fee";
+                        ? `+${nagadCashoutPercent}%`
+                        : "0% fee";
                   return (
                     <button
                       key={method}
                       type="button"
                       onClick={() => setPaymentMethod(method)}
-                      className={`p-2 sm:p-2.5 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1 text-center min-w-0 ${
-                        isSelected
+                      className={`p-2 sm:p-2.5 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1 text-center min-w-0 ${isSelected
                           ? method === "bKash"
                             ? "border-[#E2136E] bg-[#FFF5F8] text-[#E2136E] shadow-2xs"
                             : method === "Nagad"
-                            ? "border-[#EA580C] bg-[#FFF7ED] text-[#EA580C] shadow-2xs"
-                            : "border-[#0866FF] bg-[#F0F7FF] text-[#0866FF] shadow-2xs"
+                              ? "border-[#EA580C] bg-[#FFF7ED] text-[#EA580C] shadow-2xs"
+                              : "border-[#0866FF] bg-[#F0F7FF] text-[#0866FF] shadow-2xs"
                           : "border-slate-200 hover:border-slate-300 bg-white text-slate-700"
-                      }`}
+                        }`}
                     >
                       <div className="h-5 sm:h-6 flex items-center justify-center">
                         {method === "bKash" && <BkashLogo className="w-7 sm:w-8 h-4 sm:h-5" />}
@@ -719,9 +722,8 @@ export default function CreateOrderPage() {
                         {method}
                       </span>
                       <span
-                        className={`text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded-full ${
-                          isSelected ? "bg-white/90" : "bg-slate-100 text-slate-500"
-                        }`}
+                        className={`text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded-full ${isSelected ? "bg-white/90" : "bg-slate-100 text-slate-500"
+                          }`}
                       >
                         {feeTag}
                       </span>
@@ -760,11 +762,10 @@ export default function CreateOrderPage() {
                         <div
                           key={bank.id}
                           onClick={() => handleBankSelect(bank)}
-                          className={`group relative p-3 rounded-xl border transition-all cursor-pointer flex flex-col items-center text-center justify-between gap-2 ${
-                            isSelected
+                          className={`group relative p-3 rounded-xl border transition-all cursor-pointer flex flex-col items-center text-center justify-between gap-2 ${isSelected
                               ? "bg-white border-[#0866FF] shadow-2xs ring-2 ring-[#0866FF]/20"
                               : "bg-white hover:bg-slate-50 border-[#E7ECF3] hover:border-slate-300"
-                          }`}
+                            }`}
                         >
                           {isSelected && (
                             <span className="absolute top-2 right-2 flex items-center gap-0.5 text-[9px] font-bold text-[#0866FF] bg-[#EBF2FF] px-1.5 py-0.2 rounded-full">
@@ -798,11 +799,10 @@ export default function CreateOrderPage() {
                               e.stopPropagation();
                               handleBankSelect(bank);
                             }}
-                            className={`w-full py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                              isSelected
+                            className={`w-full py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${isSelected
                                 ? "bg-[#0866FF] text-white"
                                 : "bg-[#F6F8FC] text-slate-700 hover:bg-[#EBF2FF] hover:text-[#0866FF]"
-                            }`}
+                              }`}
                           >
                             <span>Account Details</span>
                             <ExternalLink className="w-3 h-3" />
@@ -1052,18 +1052,24 @@ export default function CreateOrderPage() {
                 {ocrStatus === "scanning" && (
                   <div className="flex items-center gap-2 text-xs text-[#0866FF] bg-[#EBF2FF] p-2.5 rounded-xl font-medium border border-[#0866FF]/20 animate-pulse">
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0866FF] shrink-0" />
-                    <span>Scanning receipt to detect Transaction ID...</span>
+                    <span>Scraping payment screenshot to detect exact Transaction ID...</span>
                   </div>
                 )}
                 {ocrStatus === "success" && (
-                  <div className="flex items-center justify-between text-xs text-emerald-800 bg-emerald-50 p-2.5 rounded-xl font-medium border border-emerald-200">
+                  <div className="flex items-center justify-between text-xs text-emerald-800 bg-emerald-50 p-2.5 rounded-xl font-medium border border-emerald-200 animate-in fade-in">
                     <div className="flex items-center gap-2 min-w-0">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                      <span className="truncate">Detected TrxID: <strong className="font-mono text-emerald-950 font-bold">{transactionId}</strong></span>
+                      <span className="truncate">Scraped TrxID: <strong className="font-mono text-emerald-950 font-bold">{transactionId}</strong></span>
                     </div>
-                    <span className="text-[9px] bg-white px-1.5 py-0.5 rounded font-bold text-emerald-700 border border-emerald-200 shrink-0">
-                      Auto-Filled
+                    <span className="text-[9px] bg-white px-2 py-0.5 rounded-full font-bold text-emerald-700 border border-emerald-200 shrink-0">
+                      ✓ Auto-Filled
                     </span>
+                  </div>
+                )}
+                {ocrStatus === "not_found" && (
+                  <div className="flex items-center gap-2 text-xs text-amber-800 bg-amber-50 p-2.5 rounded-xl font-medium border border-amber-200 animate-in fade-in">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span>Could not automatically read TrxID from this screenshot. Please enter your TrxID below manually.</span>
                   </div>
                 )}
               </div>

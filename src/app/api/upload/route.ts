@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { uploadToCloudinary, isCloudinaryConfigured } from "@/lib/cloudinary";
+import { scanReceiptImage, ParsedReceiptData } from "@/lib/receiptOcr";
 import path from "path";
 import fs from "fs/promises";
 
@@ -65,6 +66,20 @@ export async function POST(req: Request) {
     const safeFolder = requestedFolder.replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase() || "assets";
     const cloudinaryFolder = `meta_ads/${safeFolder}`;
 
+    // Optional OCR Receipt parsing for payments & receipts
+    let ocrData: ParsedReceiptData | null = null;
+    const shouldRunOcr =
+      (safeFolder === "payments" || safeFolder === "receipts" || formData.get("ocr") === "true") &&
+      file.type.startsWith("image/");
+
+    if (shouldRunOcr) {
+      try {
+        ocrData = await scanReceiptImage(buffer);
+      } catch (ocrErr) {
+        console.error("[Upload] OCR parsing error:", ocrErr);
+      }
+    }
+
     // 1. If Cloudinary credentials are provided, upload to Cloudinary
     if (isCloudinaryConfigured()) {
       try {
@@ -82,6 +97,11 @@ export async function POST(req: Request) {
           bytes: result.bytes,
           storage: "cloudinary",
           message: "Uploaded to Cloudinary successfully",
+          detectedTrxId: ocrData?.trxId || null,
+          detectedSenderNumber: ocrData?.senderNumber || null,
+          detectedAmount: ocrData?.amount || null,
+          detectedGateway: ocrData?.gateway || null,
+          ocrConfidence: ocrData?.confidence || 0,
         });
       } catch (cloudErr: unknown) {
         const cErr = cloudErr as Error;
@@ -122,6 +142,11 @@ export async function POST(req: Request) {
       storage: "local_fallback",
       message: "Uploaded locally. Add CLOUDINARY credentials in .env.local for Cloudinary hosting.",
       warning: "CLOUDINARY_NOT_CONFIGURED",
+      detectedTrxId: ocrData?.trxId || null,
+      detectedSenderNumber: ocrData?.senderNumber || null,
+      detectedAmount: ocrData?.amount || null,
+      detectedGateway: ocrData?.gateway || null,
+      ocrConfidence: ocrData?.confidence || 0,
     });
   } catch (error: unknown) {
     const err = error as Error;
