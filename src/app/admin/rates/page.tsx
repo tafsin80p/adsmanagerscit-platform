@@ -33,6 +33,11 @@ import {
   X,
   Phone,
   ArrowUpDown,
+  Send,
+  MessageSquare,
+  Bot,
+  BellRing,
+  Loader2,
 } from "lucide-react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { usePortal, DEFAULT_BANKS } from "@/context/PortalContext";
@@ -65,6 +70,9 @@ export default function AdminExchangeRatesPage() {
     bankDetails,
     bankAccounts: contextBankAccounts,
     ratesLastUpdated,
+    telegramBotToken,
+    telegramChatId,
+    telegramEnabled,
     isLoadingSettings,
     refreshSettings,
     updateRates,
@@ -76,14 +84,22 @@ export default function AdminExchangeRatesPage() {
       ? profile.name
       : "Shopno IT Admin";
 
-  // Active top tab: "accounts" (bKash, Nagad, Banks) vs "rates" (FX & Fees)
-  const [activeTab, setActiveTab] = useState<"accounts" | "rates">("accounts");
+  // Active top tab: "accounts" (bKash, Nagad, Banks) vs "rates" (FX & Fees) vs "telegram" (Bot & Alerts)
+  const [activeTab, setActiveTab] = useState<"accounts" | "rates" | "telegram">("accounts");
 
   // Local Form state for Exchange Rate & Fees
   const [rate, setRate] = useState<number>(exchangeRateBDT || 150);
   const [bkashFee, setBkashFee] = useState<number>(bkashCashoutPercent ?? 2);
   const [nagadFee, setNagadFee] = useState<number>(nagadCashoutPercent ?? 1.5);
   const [serviceFee, setServiceFee] = useState<number>(serviceChargePercent ?? 0);
+
+  // Telegram Integration State
+  const [telegramTokenInput, setTelegramTokenInput] = useState<string>(telegramBotToken || "");
+  const [telegramChatIdInput, setTelegramChatIdInput] = useState<string>(telegramChatId || "");
+  const [telegramEnabledState, setTelegramEnabledState] = useState<boolean>(telegramEnabled ?? true);
+  const [isTestingTelegram, setIsTestingTelegram] = useState<boolean>(false);
+  const [telegramTestFeedback, setTelegramTestFeedback] = useState<{ success: boolean; message: string } | null>(null);
+  const [isSavingTelegram, setIsSavingTelegram] = useState<boolean>(false);
 
   // bKash Account State
   const [bkashPhone, setBkashPhone] = useState<string>(bkashNumber || "01712-345678");
@@ -232,7 +248,68 @@ export default function AdminExchangeRatesPage() {
     if (contextBankAccounts && contextBankAccounts.length > 0) {
       setBankList(contextBankAccounts);
     }
+    setTelegramTokenInput(telegramBotToken || "");
+    setTelegramChatIdInput(telegramChatId || "");
+    setTelegramEnabledState(telegramEnabled ?? true);
     showNotification("Form reset to currently active database settings.");
+  };
+
+  useEffect(() => {
+    if (telegramBotToken !== undefined) setTelegramTokenInput(telegramBotToken);
+    if (telegramChatId !== undefined) setTelegramChatIdInput(telegramChatId);
+    if (telegramEnabled !== undefined) setTelegramEnabledState(telegramEnabled);
+  }, [telegramBotToken, telegramChatId, telegramEnabled]);
+
+  const handleTestTelegram = async () => {
+    setIsTestingTelegram(true);
+    setTelegramTestFeedback(null);
+    try {
+      const res = await fetch("/api/telegram/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          botToken: telegramTokenInput.trim(),
+          chatId: telegramChatIdInput.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setTelegramTestFeedback({
+          success: true,
+          message: data.message || "Test alert sent to Telegram successfully!",
+        });
+      } else {
+        setTelegramTestFeedback({
+          success: false,
+          message: data.error || "Failed to deliver test message. Please verify Bot Token and Chat/Group ID.",
+        });
+      }
+    } catch (err: unknown) {
+      const error = err as Error;
+      setTelegramTestFeedback({
+        success: false,
+        message: error.message || "Network error sending Telegram test alert.",
+      });
+    } finally {
+      setIsTestingTelegram(false);
+    }
+  };
+
+  const handleSaveTelegram = async () => {
+    setIsSavingTelegram(true);
+    setTelegramTestFeedback(null);
+    try {
+      await updateRates({
+        telegramBotToken: telegramTokenInput.trim(),
+        telegramChatId: telegramChatIdInput.trim(),
+        telegramEnabled: telegramEnabledState,
+      });
+      showNotification("Telegram notification settings saved to MongoDB Atlas!");
+    } catch {
+      showNotification("Failed to save Telegram settings. Please try again.");
+    } finally {
+      setIsSavingTelegram(false);
+    }
   };
 
   // Live calculations for simulator
@@ -596,6 +673,30 @@ export default function AdminExchangeRatesPage() {
               }`}
             >
               ৳{rate}/$
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("telegram")}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === "telegram"
+                ? "bg-[#3858F6] text-white shadow-sm shadow-[#3858F6]/25"
+                : "bg-white text-slate-600 hover:bg-slate-100 border border-[#E9EDF4]"
+            }`}
+          >
+            <Send className="w-4 h-4" />
+            <span>Telegram Bot & Group Alerts</span>
+            <span
+              className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                activeTab === "telegram"
+                  ? "bg-white/20 text-white"
+                  : telegramBotToken && telegramChatId && telegramEnabled
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  : "bg-slate-100 text-slate-500"
+              }`}
+            >
+              {telegramBotToken && telegramChatId ? "Active" : "Setup Bot"}
             </span>
           </button>
         </div>
@@ -1439,6 +1540,291 @@ export default function AdminExchangeRatesPage() {
                   <div className="flex items-center justify-between">
                     <span>Storage Engine:</span>
                     <span className="font-bold text-emerald-600">MongoDB Atlas (SettingModel)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 3: Telegram Bot & Group Alerts */}
+        {activeTab === "telegram" && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Top Telegram Bot Hero Card */}
+            <div className="bg-gradient-to-r from-[#0088cc] via-[#0077b5] to-[#172033] rounded-[28px] p-6 sm:p-8 text-white relative overflow-hidden shadow-xl shadow-[#0088cc]/15">
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="space-y-2 max-w-xl">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-bold border border-white/20">
+                    <Bot className="w-3.5 h-3.5" />
+                    <span>Instant Telegram Webhook Integration</span>
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                    Automated Order Alerts to Telegram Group
+                  </h2>
+                  <p className="text-xs sm:text-sm text-blue-100/90 leading-relaxed">
+                    Instantly receive real-time alerts whenever a client places an order or admin creates a campaign. Full order details, client info, BDT budget, TrxID, and payment screenshots will be sent to your team group immediately.
+                  </p>
+                </div>
+
+                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 flex flex-col items-start gap-2 shrink-0">
+                  <div className="text-[11px] font-semibold text-blue-200 uppercase tracking-wider">
+                    Current Bot Status
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`w-3 h-3 rounded-full ${
+                        telegramTokenInput && telegramChatIdInput && telegramEnabledState
+                          ? "bg-emerald-400 animate-pulse shadow-md shadow-emerald-400/50"
+                          : "bg-amber-400"
+                      }`}
+                    />
+                    <span className="text-sm font-black text-white">
+                      {telegramTokenInput && telegramChatIdInput && telegramEnabledState
+                        ? "Active & Broadcasting"
+                        : "Requires Token & Group ID"}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-blue-200/80">
+                    {telegramChatIdInput
+                      ? `Broadcasting to: ${telegramChatIdInput.split(/[,;\s]+/).filter(Boolean).length} Chat/Group(s)`
+                      : "No Chat or Group ID configured yet"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Main Configuration Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left Column: Form Settings (7 Cols) */}
+              <div className="lg:col-span-7 space-y-6">
+                <div className="bg-white p-6 sm:p-7 rounded-[28px] border border-[#E9EDF4] shadow-[0_4px_25px_rgba(0,0,0,0.03)] space-y-5">
+                  <div className="flex items-center justify-between pb-4 border-b border-[#F0F3F7]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-[#EEF2FF] text-[#0088cc] flex items-center justify-center font-black">
+                        <Send className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm sm:text-base font-black text-[#121826]">
+                          Telegram Bot Credentials
+                        </h3>
+                        <p className="text-xs text-[#8A94A6]">
+                          Configure your Telegram bot token and recipient chat or group IDs.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Enable / Disable Switch */}
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <span className="text-xs font-bold text-slate-700">Alerts:</span>
+                      <div className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={telegramEnabledState}
+                          onChange={(e) => setTelegramEnabledState(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0088cc]"></div>
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Feedback Message */}
+                  {telegramTestFeedback && (
+                    <div
+                      className={`p-4 rounded-2xl border text-xs flex items-center gap-2.5 animate-in fade-in ${
+                        telegramTestFeedback.success
+                          ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                          : "bg-rose-50 border-rose-200 text-rose-800"
+                      }`}
+                    >
+                      {telegramTestFeedback.success ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                      )}
+                      <span className="font-semibold">{telegramTestFeedback.message}</span>
+                    </div>
+                  )}
+
+                  {/* Form Fields */}
+                  <div className="space-y-4">
+                    {/* Bot Token */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-bold text-slate-700">
+                          Telegram Bot Token *
+                        </label>
+                        <a
+                          href="https://t.me/BotFather"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] font-bold text-[#0088cc] hover:underline flex items-center gap-1"
+                        >
+                          <span>Get token from @BotFather</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                      <input
+                        type="text"
+                        value={telegramTokenInput}
+                        onChange={(e) => setTelegramTokenInput(e.target.value)}
+                        placeholder="e.g. 789218293:AAEi43U0_aBCdeFGhiJkLMnoPQrStuvwxYZ"
+                        className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-mono font-medium text-slate-900 focus:bg-white focus:border-[#0088cc] focus:outline-none"
+                      />
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Token provided by Telegram's official @BotFather bot when creating your bot.
+                      </p>
+                    </div>
+
+                    {/* Chat ID / Group ID */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-bold text-slate-700">
+                          Telegram Chat ID / Group ID *
+                        </label>
+                        <span className="text-[11px] text-slate-400">
+                          Supports multiple IDs (comma-separated)
+                        </span>
+                      </div>
+                      <input
+                        type="text"
+                        value={telegramChatIdInput}
+                        onChange={(e) => setTelegramChatIdInput(e.target.value)}
+                        placeholder="e.g. -1001928374650, 589123456"
+                        className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-mono font-bold text-slate-900 focus:bg-white focus:border-[#0088cc] focus:outline-none"
+                      />
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Enter your Telegram Supergroup ID (typically starts with <code>-100</code>) or User Chat ID. Separate multiple IDs with commas to notify both your personal account and your agency group simultaneously.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[#F0F3F7]">
+                    <button
+                      type="button"
+                      onClick={handleTestTelegram}
+                      disabled={isTestingTelegram || !telegramTokenInput.trim() || !telegramChatIdInput.trim()}
+                      className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {isTestingTelegram ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Sending Test Message...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-3.5 h-3.5 text-[#0088cc]" />
+                          <span>Send Test Message</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleSaveTelegram}
+                      disabled={isSavingTelegram}
+                      className="px-6 py-2.5 bg-[#0088cc] hover:bg-[#0077b5] text-white text-xs font-black rounded-xl transition-all shadow-md shadow-[#0088cc]/25 flex items-center gap-2 cursor-pointer disabled:opacity-60"
+                    >
+                      {isSavingTelegram ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Saving to Database...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          <span>Save Telegram Configuration</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Setup Guide & Sample Preview (5 Cols) */}
+              <div className="lg:col-span-5 space-y-6">
+                {/* 3-Minute Setup Guide */}
+                <div className="bg-white p-6 sm:p-7 rounded-[28px] border border-[#E9EDF4] shadow-[0_4px_25px_rgba(0,0,0,0.03)] space-y-4">
+                  <h3 className="text-sm font-black text-[#121826] flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    How to Setup Telegram in 3 Minutes
+                  </h3>
+
+                  <div className="space-y-3.5 text-xs">
+                    <div className="flex gap-3">
+                      <div className="w-6 h-6 rounded-full bg-[#EEF2FF] text-[#0088cc] font-black text-xs flex items-center justify-center shrink-0">
+                        1
+                      </div>
+                      <div>
+                        <span className="font-bold text-slate-900 block">Create your Bot</span>
+                        <p className="text-slate-500 text-[11px] mt-0.5">
+                          Open Telegram, search for <strong className="text-slate-800">@BotFather</strong>, send <code>/newbot</code>, give it a name (e.g. <em>Shopno IT Alerts</em>), and copy the HTTP API token.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <div className="w-6 h-6 rounded-full bg-[#EEF2FF] text-[#0088cc] font-black text-xs flex items-center justify-center shrink-0">
+                        2
+                      </div>
+                      <div>
+                        <span className="font-bold text-slate-900 block">Create Team Group & Add Bot</span>
+                        <p className="text-slate-500 text-[11px] mt-0.5">
+                          Create a Telegram group for your agency team, add your newly created bot into the group, and grant it permission to post messages.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <div className="w-6 h-6 rounded-full bg-[#EEF2FF] text-[#0088cc] font-black text-xs flex items-center justify-center shrink-0">
+                        3
+                      </div>
+                      <div>
+                        <span className="font-bold text-slate-900 block">Find your Group ID</span>
+                        <p className="text-slate-500 text-[11px] mt-0.5">
+                          Add <strong className="text-slate-800">@RawDataBot</strong> to the group temporarily. It will output a message containing the group's <code>chat.id</code> (starts with <code>-100...</code>). Copy that ID and paste it in the field on the left.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <div className="w-6 h-6 rounded-full bg-[#EEF2FF] text-[#0088cc] font-black text-xs flex items-center justify-center shrink-0">
+                        4
+                      </div>
+                      <div>
+                        <span className="font-bold text-slate-900 block">Test & Go Live</span>
+                        <p className="text-slate-500 text-[11px] mt-0.5">
+                          Click <strong className="text-slate-800">"Send Test Message"</strong>. Once verified, click <strong className="text-slate-800">"Save Telegram Configuration"</strong>. All new orders will now ping your group!
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sample Notification Preview Card */}
+                <div className="bg-[#172033] rounded-[28px] p-5 text-white space-y-3 border border-slate-800 shadow-lg">
+                  <div className="flex items-center justify-between text-xs text-slate-400">
+                    <span className="flex items-center gap-1.5 font-bold text-blue-400">
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      Sample Group Message Preview
+                    </span>
+                    <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded font-mono">Telegram HTML</span>
+                  </div>
+
+                  <div className="p-3.5 bg-slate-900/80 rounded-2xl border border-slate-700/60 font-mono text-[11px] text-slate-300 space-y-1 leading-relaxed">
+                    <div className="text-amber-400 font-bold">🚀 NEW META ADS ORDER RECEIVED!</div>
+                    <div className="text-slate-500">━━━━━━━━━━━━━━━━━━━━━━━━━━</div>
+                    <div>📦 <b>Order ID:</b> <span className="text-cyan-400">#BOOST-1006</span></div>
+                    <div>🏷️ <b>Campaign:</b> Summer Eid Collection Boost</div>
+                    <div>🎯 <b>Category:</b> Boost Post (Messages)</div>
+                    <div>👤 <b>Client:</b> Rahim Ahmed (Min Mart BD)</div>
+                    <div>💰 <b>Total Budget:</b> <span className="text-emerald-400">$35.00 USD (≈ ৳5,250 BDT)</span></div>
+                    <div>💳 <b>Payment:</b> bKash • <span className="text-emerald-400">Verified</span></div>
+                    <div>🆔 <b>TrxID:</b> 89JKA9812</div>
+                    <div>📸 <b>Payment Proof:</b> [Receipt Photo Attached]</div>
+                    <div className="text-slate-500">━━━━━━━━━━━━━━━━━━━━━━━━━━</div>
+                    <div className="text-[10px] text-slate-400 italic">⚡ Shopno IT • Automated Agency Notification</div>
                   </div>
                 </div>
               </div>

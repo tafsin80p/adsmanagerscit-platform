@@ -56,6 +56,9 @@ export interface ISetting extends Document {
   metaAccountName?: string;
   metaApiConnected?: boolean;
   metaAdAccounts?: IMetaAdAccount[];
+  telegramBotToken?: string;
+  telegramChatId?: string;
+  telegramEnabled?: boolean;
   lastUpdated: Date;
 }
 
@@ -122,6 +125,9 @@ const SettingSchema = new Schema<ISetting>(
     metaAccountName: { type: String, default: "" },
     metaApiConnected: { type: Boolean, default: false },
     metaAdAccounts: [MetaAdAccountSchema],
+    telegramBotToken: { type: String, default: "" },
+    telegramChatId: { type: String, default: "" },
+    telegramEnabled: { type: Boolean, default: true },
     lastUpdated: { type: Date, default: Date.now },
   },
   {

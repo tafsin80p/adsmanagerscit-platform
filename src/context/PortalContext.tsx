@@ -100,6 +100,9 @@ interface PortalContextType {
   metaAccountName: string;
   metaAdAccountId: string;
   metaAdAccounts: MetaAdAccount[];
+  telegramBotToken: string;
+  telegramChatId: string;
+  telegramEnabled: boolean;
   isLoadingSettings: boolean;
   refreshSettings: () => Promise<void>;
   disconnectMetaApi: () => Promise<void>;
@@ -160,6 +163,9 @@ interface PortalContextType {
       routingNumber?: string;
     };
     bankAccounts?: BankAccount[];
+    telegramBotToken?: string;
+    telegramChatId?: string;
+    telegramEnabled?: boolean;
   }) => Promise<any>;
   dbConnected: boolean;
   isAuthenticated: boolean;
@@ -612,6 +618,9 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
   const [metaAccountName, setMetaAccountName] = useState<string>("");
   const [metaAdAccountId, setMetaAdAccountId] = useState<string>("");
   const [metaAdAccounts, setMetaAdAccounts] = useState<MetaAdAccount[]>([]);
+  const [telegramBotToken, setTelegramBotToken] = useState<string>("");
+  const [telegramChatId, setTelegramChatId] = useState<string>("");
+  const [telegramEnabled, setTelegramEnabled] = useState<boolean>(true);
   const [isLoadingSettings, setIsLoadingSettings] = useState<boolean>(false);
   const [dbConnected, setDbConnected] = useState<boolean>(false);
 
@@ -687,6 +696,10 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
     if (s.metaAdAccountId !== undefined) setMetaAdAccountId(s.metaAdAccountId);
     if (s.metaAdAccounts && Array.isArray(s.metaAdAccounts)) setMetaAdAccounts(s.metaAdAccounts);
     else if (!s.metaAdAccounts || s.metaAdAccounts.length === 0) setMetaAdAccounts([]);
+
+    if (s.telegramBotToken !== undefined) setTelegramBotToken(s.telegramBotToken);
+    if (s.telegramChatId !== undefined) setTelegramChatId(s.telegramChatId);
+    if (s.telegramEnabled !== undefined) setTelegramEnabled(Boolean(s.telegramEnabled));
 
     if (s.lastUpdated) {
       try {
@@ -1182,6 +1195,9 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
       routingNumber?: string;
     };
     bankAccounts?: BankAccount[];
+    telegramBotToken?: string;
+    telegramChatId?: string;
+    telegramEnabled?: boolean;
   }) => {
     if (rates.exchangeRateBDT !== undefined) setExchangeRateBDT(rates.exchangeRateBDT);
     if (rates.serviceChargePercent !== undefined) setServiceChargePercent(rates.serviceChargePercent);
@@ -1197,6 +1213,9 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
     if (rates.nagadAccountName !== undefined) setNagadAccountName(rates.nagadAccountName);
     if (rates.nagadInstructions !== undefined) setNagadInstructions(rates.nagadInstructions);
     if (rates.nagadActive !== undefined) setNagadActive(rates.nagadActive);
+    if (rates.telegramBotToken !== undefined) setTelegramBotToken(rates.telegramBotToken);
+    if (rates.telegramChatId !== undefined) setTelegramChatId(rates.telegramChatId);
+    if (rates.telegramEnabled !== undefined) setTelegramEnabled(rates.telegramEnabled);
 
     let syncBankDetails = rates.bankDetails;
     if (rates.bankAccounts !== undefined) {
@@ -1387,6 +1406,9 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
         metaAccountName,
         metaAdAccountId,
         metaAdAccounts,
+        telegramBotToken,
+        telegramChatId,
+        telegramEnabled,
         isLoadingSettings,
         refreshSettings,
         isSyncing,

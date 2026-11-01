@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import { OrderModel, PaymentModel } from "@/models";
+import { notifyNewOrderTelegram } from "@/lib/telegram";
 
 
 export async function GET() {
@@ -97,6 +98,11 @@ export async function POST(req: Request) {
         console.warn("Could not auto-create payment entry for order:", payErr);
       }
     }
+
+    // Broadcast instant Telegram alert to bot & group
+    notifyNewOrderTelegram(order).catch((telErr) => {
+      console.warn("[Orders API] Telegram notification background trigger failed:", telErr);
+    });
 
     return NextResponse.json(
       { success: true, message: "Order created successfully", order },
