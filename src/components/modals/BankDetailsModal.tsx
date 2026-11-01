@@ -141,11 +141,20 @@ export const BankDetailsModal: React.FC<BankDetailsModalProps> = ({
 
           <div className="flex items-center gap-4 pr-10">
             {/* Authentic brand logo in white container */}
-            <div className="w-20 h-14 bg-white rounded-2xl border border-[#E7ECF3] p-2 shadow-sm flex items-center justify-center shrink-0">
-              {isCity && <CityBankLogo className="w-full h-full" />}
-              {isBrac && <BracBankLogo className="w-full h-full" />}
-              {isDbbl && <DbblLogo className="w-full h-full" />}
-              {!isCity && !isBrac && !isDbbl && (
+            <div className="w-20 h-14 bg-white rounded-2xl border border-[#E7ECF3] p-2 shadow-sm flex items-center justify-center shrink-0 overflow-hidden">
+              {bankAccount?.logoUrl ? (
+                <img
+                  src={bankAccount.logoUrl}
+                  alt={current.name}
+                  className="w-full h-full object-contain"
+                />
+              ) : isCity ? (
+                <CityBankLogo className="w-full h-full" />
+              ) : isBrac ? (
+                <BracBankLogo className="w-full h-full" />
+              ) : isDbbl ? (
+                <DbblLogo className="w-full h-full" />
+              ) : (
                 <div className="w-10 h-10 rounded-xl bg-[#EEF2FF] text-[#3858F6] flex items-center justify-center">
                   <Building className="w-6 h-6" />
                 </div>

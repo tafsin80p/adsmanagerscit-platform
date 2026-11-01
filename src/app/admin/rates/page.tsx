@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Sliders,
@@ -38,6 +38,8 @@ import {
   Bot,
   BellRing,
   Loader2,
+  Upload,
+  ImagePlus,
 } from "lucide-react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { usePortal, DEFAULT_BANKS } from "@/context/PortalContext";
@@ -141,8 +143,13 @@ export default function AdminExchangeRatesPage() {
   // Modal State for Adding or Editing Bank Account
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
   const [editingBankId, setEditingBankId] = useState<string | null>(null);
+  const [isUploadingBankLogo, setIsUploadingBankLogo] = useState(false);
+  const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
+  const bankLogoInputRef = useRef<HTMLInputElement>(null);
+
   const [bankForm, setBankForm] = useState<{
     bankName: string;
+    logoUrl: string;
     accountName: string;
     accountNumber: string;
     branch: string;
@@ -154,6 +161,7 @@ export default function AdminExchangeRatesPage() {
     isPrimary: boolean;
   }>({
     bankName: "",
+    logoUrl: "",
     accountName: "Shopno IT / Meta Ads Agency BD",
     accountNumber: "",
     branch: "Dhaka Branch",
@@ -413,11 +421,52 @@ export default function AdminExchangeRatesPage() {
   const activeOrdersCount = orders.filter((o) => o.status === "Active").length;
   const pendingOrdersCount = orders.filter((o) => o.status === "Pending").length;
 
+  // Bank Logo Upload & Remove Handlers
+  const handleBankLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingBankLogo(true);
+    setLogoUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "banks");
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success && data.url) {
+        setBankForm((prev) => ({ ...prev, logoUrl: data.url }));
+      } else {
+        setLogoUploadError(data.error || "Failed to upload bank logo.");
+      }
+    } catch (err: unknown) {
+      const error = err as Error;
+      setLogoUploadError(error.message || "Failed to upload bank logo.");
+    } finally {
+      setIsUploadingBankLogo(false);
+      if (bankLogoInputRef.current) {
+        bankLogoInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleRemoveBankLogo = () => {
+    setBankForm((prev) => ({ ...prev, logoUrl: "" }));
+  };
+
   // Open modal to add a brand new bank
   const handleOpenAddBank = () => {
     setEditingBankId(null);
+    setLogoUploadError(null);
     setBankForm({
       bankName: "",
+      logoUrl: "",
       accountName: "Shopno IT / Meta Ads Agency BD",
       accountNumber: "",
       branch: "Gulshan Branch, Dhaka",
@@ -434,8 +483,10 @@ export default function AdminExchangeRatesPage() {
   // Open modal with pre-filled details to edit existing bank
   const handleOpenEditBank = (bank: BankAccount) => {
     setEditingBankId(bank.id);
+    setLogoUploadError(null);
     setBankForm({
       bankName: bank.bankName,
+      logoUrl: bank.logoUrl || "",
       accountName: bank.accountName,
       accountNumber: bank.accountNumber,
       branch: bank.branch || "",
@@ -458,8 +509,10 @@ export default function AdminExchangeRatesPage() {
     instructions: string;
   }) => {
     setEditingBankId(null);
+    setLogoUploadError(null);
     setBankForm({
       bankName: preset.name,
+      logoUrl: "",
       accountName: "Shopno IT / Meta Ads Agency BD",
       accountNumber: "",
       branch: preset.branch,
@@ -494,6 +547,7 @@ export default function AdminExchangeRatesPage() {
           return {
             ...b,
             bankName: bankForm.bankName.trim(),
+            logoUrl: bankForm.logoUrl.trim(),
             accountName: bankForm.accountName.trim(),
             accountNumber: bankForm.accountNumber.trim(),
             branch: bankForm.branch.trim(),
@@ -513,6 +567,7 @@ export default function AdminExchangeRatesPage() {
       const newBank: BankAccount = {
         id: `bank_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         bankName: bankForm.bankName.trim(),
+        logoUrl: bankForm.logoUrl.trim(),
         accountName: bankForm.accountName.trim(),
         accountNumber: bankForm.accountNumber.trim(),
         branch: bankForm.branch.trim(),
@@ -552,7 +607,7 @@ export default function AdminExchangeRatesPage() {
     try {
       await updateRates({ bankAccounts: updated });
       showNotification("Bank status updated successfully.");
-    } catch {}
+    } catch { }
   };
 
   // Set as primary bank account
@@ -565,7 +620,7 @@ export default function AdminExchangeRatesPage() {
     try {
       await updateRates({ bankAccounts: updated });
       showNotification("Primary receiving bank account set.");
-    } catch {}
+    } catch { }
   };
 
   // Confirm delete bank account
@@ -582,7 +637,7 @@ export default function AdminExchangeRatesPage() {
     try {
       await updateRates({ bankAccounts: updated });
       showNotification(`Bank '${bankToDelete.bankName}' deleted successfully.`);
-    } catch {}
+    } catch { }
   };
 
   // Save all settings to MongoDB Atlas
@@ -619,12 +674,12 @@ export default function AdminExchangeRatesPage() {
         bankAccounts: bankList,
         bankDetails: primaryBank
           ? {
-              bankName: primaryBank.bankName,
-              accountName: primaryBank.accountName,
-              accountNumber: primaryBank.accountNumber,
-              branch: primaryBank.branch || "",
-              routingNumber: primaryBank.routingNumber || "",
-            }
+            bankName: primaryBank.bankName,
+            accountName: primaryBank.accountName,
+            accountNumber: primaryBank.accountNumber,
+            branch: primaryBank.branch || "",
+            routingNumber: primaryBank.routingNumber || "",
+          }
           : undefined,
       });
       showNotification("All payment accounts and rates published live to MongoDB Atlas!");
@@ -724,18 +779,16 @@ export default function AdminExchangeRatesPage() {
           <button
             type="button"
             onClick={() => setActiveTab("accounts")}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === "accounts"
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === "accounts"
                 ? "bg-[#3858F6] text-white shadow-sm shadow-[#3858F6]/25"
                 : "bg-white text-slate-600 hover:bg-slate-100 border border-[#E9EDF4]"
-            }`}
+              }`}
           >
             <CreditCard className="w-4 h-4" />
             <span>Receiving Accounts (bKash, Nagad, Banks)</span>
             <span
-              className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                activeTab === "accounts" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
-              }`}
+              className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${activeTab === "accounts" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+                }`}
             >
               2 Mobile • {bankList.length} Bank{bankList.length !== 1 ? "s" : ""}
             </span>
@@ -744,18 +797,16 @@ export default function AdminExchangeRatesPage() {
           <button
             type="button"
             onClick={() => setActiveTab("rates")}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === "rates"
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === "rates"
                 ? "bg-[#3858F6] text-white shadow-sm shadow-[#3858F6]/25"
                 : "bg-white text-slate-600 hover:bg-slate-100 border border-[#E9EDF4]"
-            }`}
+              }`}
           >
             <Sliders className="w-4 h-4" />
             <span>Exchange Rates & Simulator</span>
             <span
-              className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                activeTab === "rates" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
-              }`}
+              className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${activeTab === "rates" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+                }`}
             >
               ৳{rate}/$
             </span>
@@ -764,22 +815,20 @@ export default function AdminExchangeRatesPage() {
           <button
             type="button"
             onClick={() => setActiveTab("telegram")}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === "telegram"
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === "telegram"
                 ? "bg-[#3858F6] text-white shadow-sm shadow-[#3858F6]/25"
                 : "bg-white text-slate-600 hover:bg-slate-100 border border-[#E9EDF4]"
-            }`}
+              }`}
           >
             <Send className="w-4 h-4" />
             <span>Telegram Bot & Group Alerts</span>
             <span
-              className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                activeTab === "telegram"
+              className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${activeTab === "telegram"
                   ? "bg-white/20 text-white"
                   : telegramBotToken && telegramChatId && telegramEnabled
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                  : "bg-slate-100 text-slate-500"
-              }`}
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    : "bg-slate-100 text-slate-500"
+                }`}
             >
               {telegramBotToken && telegramChatId ? "Active" : "Setup Bot"}
             </span>
@@ -821,14 +870,12 @@ export default function AdminExchangeRatesPage() {
                       className="sr-only"
                     />
                     <div
-                      className={`w-10 h-5 rounded-full transition-colors relative ${
-                        bkashIsEnabled ? "bg-[#E2136E]" : "bg-slate-300"
-                      }`}
+                      className={`w-10 h-5 rounded-full transition-colors relative ${bkashIsEnabled ? "bg-[#E2136E]" : "bg-slate-300"
+                        }`}
                     >
                       <div
-                        className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-0.5 left-0.5 shadow-sm ${
-                          bkashIsEnabled ? "translate-x-5" : ""
-                        }`}
+                        className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-0.5 left-0.5 shadow-sm ${bkashIsEnabled ? "translate-x-5" : ""
+                          }`}
                       />
                     </div>
                   </label>
@@ -969,14 +1016,12 @@ export default function AdminExchangeRatesPage() {
                       className="sr-only"
                     />
                     <div
-                      className={`w-10 h-5 rounded-full transition-colors relative ${
-                        nagadIsEnabled ? "bg-[#EA580C]" : "bg-slate-300"
-                      }`}
+                      className={`w-10 h-5 rounded-full transition-colors relative ${nagadIsEnabled ? "bg-[#EA580C]" : "bg-slate-300"
+                        }`}
                     >
                       <div
-                        className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-0.5 left-0.5 shadow-sm ${
-                          nagadIsEnabled ? "translate-x-5" : ""
-                        }`}
+                        className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-0.5 left-0.5 shadow-sm ${nagadIsEnabled ? "translate-x-5" : ""
+                          }`}
                       />
                     </div>
                   </label>
@@ -1157,21 +1202,25 @@ export default function AdminExchangeRatesPage() {
                   return (
                     <div
                       key={bank.id}
-                      className={`relative p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-4 shadow-3xs ${
-                        bank.isPrimary
+                      className={`relative p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-4 shadow-3xs ${bank.isPrimary
                           ? "bg-white border-[#3858F6] ring-2 ring-[#3858F6]/15"
                           : bank.isActive
-                          ? "bg-white border-[#E9EDF4] hover:border-slate-300"
-                          : "bg-slate-50 border-slate-200 opacity-60"
-                      }`}
+                            ? "bg-white border-[#E9EDF4] hover:border-slate-300"
+                            : "bg-slate-50 border-slate-200 opacity-60"
+                        }`}
                     >
                       {/* Top Row: Logo & Badges */}
                       <div className="flex items-start justify-between gap-2">
-                        <div className="w-14 h-10 bg-white rounded-xl border border-slate-200 p-1 flex items-center justify-center shrink-0 shadow-3xs">
-                          {isCity && <CityBankLogo className="w-full h-full" />}
-                          {isBrac && <BracBankLogo className="w-full h-full" />}
-                          {isDbbl && <DbblLogo className="w-full h-full" />}
-                          {!isCity && !isBrac && !isDbbl && (
+                        <div className="w-14 h-10 bg-white rounded-xl border border-slate-200 p-1 flex items-center justify-center shrink-0 shadow-3xs overflow-hidden">
+                          {bank.logoUrl ? (
+                            <img src={bank.logoUrl} alt={bank.bankName} className="w-full h-full object-contain" />
+                          ) : isCity ? (
+                            <CityBankLogo className="w-full h-full" />
+                          ) : isBrac ? (
+                            <BracBankLogo className="w-full h-full" />
+                          ) : isDbbl ? (
+                            <DbblLogo className="w-full h-full" />
+                          ) : (
                             <Building className="w-6 h-6 text-[#3858F6]" />
                           )}
                         </div>
@@ -1183,11 +1232,10 @@ export default function AdminExchangeRatesPage() {
                             </span>
                           )}
                           <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                              bank.isActive
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${bank.isActive
                                 ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                 : "bg-slate-100 text-slate-500"
-                            }`}
+                              }`}
                           >
                             {bank.isActive ? "Active on Checkout" : "Disabled"}
                           </span>
@@ -1257,11 +1305,10 @@ export default function AdminExchangeRatesPage() {
                         <button
                           type="button"
                           onClick={() => handleToggleBankActive(bank.id)}
-                          className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${
-                            bank.isActive
+                          className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${bank.isActive
                               ? "text-slate-500 hover:text-rose-600 hover:bg-rose-50"
                               : "text-emerald-600 hover:bg-emerald-50"
-                          }`}
+                            }`}
                         >
                           {bank.isActive ? "Disable" : "Enable"}
                         </button>
@@ -1376,11 +1423,10 @@ export default function AdminExchangeRatesPage() {
                           key={r}
                           type="button"
                           onClick={() => setRate(r)}
-                          className={`text-xs font-bold px-3 py-1 rounded-xl transition-all cursor-pointer ${
-                            rate === r
+                          className={`text-xs font-bold px-3 py-1 rounded-xl transition-all cursor-pointer ${rate === r
                               ? "bg-[#3858F6] text-white shadow-sm shadow-[#3858F6]/30"
                               : "bg-[#F8FAFC] text-slate-600 hover:bg-slate-200 border border-[#E2E8F0]"
-                          }`}
+                            }`}
                         >
                           ৳{r}
                         </button>
@@ -1414,11 +1460,10 @@ export default function AdminExchangeRatesPage() {
                           key={v}
                           type="button"
                           onClick={() => setServiceFee(v)}
-                          className={`text-[10px] font-bold px-2.5 py-0.5 rounded cursor-pointer ${
-                            serviceFee === v
+                          className={`text-[10px] font-bold px-2.5 py-0.5 rounded cursor-pointer ${serviceFee === v
                               ? "bg-[#3858F6] text-white"
                               : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                          }`}
+                            }`}
                         >
                           {v === 0 ? "0% (Free)" : `${v}%`}
                         </button>
@@ -1507,11 +1552,10 @@ export default function AdminExchangeRatesPage() {
                           key={b}
                           type="button"
                           onClick={() => setCalcBudgetUSD(b)}
-                          className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md cursor-pointer transition-colors ${
-                            calcBudgetUSD === b
+                          className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md cursor-pointer transition-colors ${calcBudgetUSD === b
                               ? "bg-[#3858F6] text-white"
                               : "bg-white/10 text-slate-300 hover:bg-white/15"
-                          }`}
+                            }`}
                         >
                           ${b}
                         </button>
@@ -1529,11 +1573,10 @@ export default function AdminExchangeRatesPage() {
                           key={gw}
                           type="button"
                           onClick={() => setSelectedGateway(gw)}
-                          className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                            selectedGateway === gw
+                          className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${selectedGateway === gw
                               ? "bg-[#3858F6] text-white shadow-md shadow-[#3858F6]/30"
                               : "bg-white/5 text-slate-400 hover:bg-white/10"
-                          }`}
+                            }`}
                         >
                           {gw === "Bank" ? "Bank Transfer" : gw}
                         </button>
@@ -1576,9 +1619,8 @@ export default function AdminExchangeRatesPage() {
                 <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-[11px] text-slate-300 flex items-center justify-between">
                   <span>Versus ৳125 Baseline:</span>
                   <span
-                    className={`font-mono font-bold ${
-                      differenceBDT >= 0 ? "text-emerald-400" : "text-amber-400"
-                    }`}
+                    className={`font-mono font-bold ${differenceBDT >= 0 ? "text-emerald-400" : "text-amber-400"
+                      }`}
                   >
                     {differenceBDT >= 0
                       ? `+৳${differenceBDT.toLocaleString()} (+${((differenceBDT / baselineBDT) * 100).toFixed(1)}%)`
@@ -1657,11 +1699,10 @@ export default function AdminExchangeRatesPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span
-                      className={`w-3 h-3 rounded-full ${
-                        telegramTokenInput && telegramChatIdInput && telegramEnabledState
+                      className={`w-3 h-3 rounded-full ${telegramTokenInput && telegramChatIdInput && telegramEnabledState
                           ? "bg-emerald-400 animate-pulse shadow-md shadow-emerald-400/50"
                           : "bg-amber-400"
-                      }`}
+                        }`}
                     />
                     <span className="text-sm font-black text-white">
                       {telegramTokenInput && telegramChatIdInput && telegramEnabledState
@@ -1716,11 +1757,10 @@ export default function AdminExchangeRatesPage() {
                   {/* Feedback Message */}
                   {telegramTestFeedback && (
                     <div
-                      className={`p-4 rounded-2xl border text-xs flex items-center gap-2.5 animate-in fade-in ${
-                        telegramTestFeedback.success
+                      className={`p-4 rounded-2xl border text-xs flex items-center gap-2.5 animate-in fade-in ${telegramTestFeedback.success
                           ? "bg-emerald-50 border-emerald-200 text-emerald-800"
                           : "bg-rose-50 border-rose-200 text-rose-800"
-                      }`}
+                        }`}
                     >
                       {telegramTestFeedback.success ? (
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -1865,7 +1905,7 @@ export default function AdminExchangeRatesPage() {
                       <span>How 1-Click Approval Works</span>
                     </div>
                     <p className="text-[11px] text-emerald-900/80 leading-relaxed">
-                      When an order notification arrives in your Telegram group, it now includes interactive buttons: 
+                      When an order notification arrives in your Telegram group, it now includes interactive buttons:
                       <strong className="text-emerald-950"> [ ✅ Confirm & Activate Order ]</strong> and <strong className="text-rose-900"> [ ❌ Reject ]</strong>.
                       Tapping the confirm button instantly marks the order as <b>Active</b> and payment as <b>Verified</b> in MongoDB Atlas, and tags the admin who confirmed it. You don&apos;t have to log into this website!
                     </p>
@@ -1874,11 +1914,10 @@ export default function AdminExchangeRatesPage() {
                   {/* Webhook Feedback Message */}
                   {webhookFeedback && (
                     <div
-                      className={`p-4 rounded-2xl border text-xs flex items-center gap-2.5 animate-in fade-in ${
-                        webhookFeedback.success
+                      className={`p-4 rounded-2xl border text-xs flex items-center gap-2.5 animate-in fade-in ${webhookFeedback.success
                           ? "bg-emerald-50 border-emerald-200 text-emerald-800"
                           : "bg-rose-50 border-rose-200 text-rose-800"
-                      }`}
+                        }`}
                     >
                       {webhookFeedback.success ? (
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -1896,11 +1935,10 @@ export default function AdminExchangeRatesPage() {
                         Telegram Webhook Connection
                       </span>
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          webhookInfo?.url
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${webhookInfo?.url
                             ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
                             : "bg-amber-100 text-amber-700 border border-amber-200"
-                        }`}
+                          }`}
                       >
                         {webhookInfo?.url ? "Active & Registered" : "Not Registered"}
                       </span>
@@ -2111,6 +2149,96 @@ export default function AdminExchangeRatesPage() {
                   required
                   className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:border-[#3858F6] focus:outline-none"
                 />
+              </div>
+
+              {/* Bank Logo Upload & Preview */}
+              <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/90 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <ImagePlus className="w-3.5 h-3.5 text-[#3858F6]" />
+                    <span>Bank Logo (Optional)</span>
+                  </label>
+                  {bankForm.logoUrl && (
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      Logo Uploaded
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  {/* Logo Preview Box */}
+                  <div className="w-20 h-14 rounded-xl bg-white border border-slate-200 p-1.5 flex items-center justify-center shrink-0 shadow-3xs overflow-hidden">
+                    {isUploadingBankLogo ? (
+                      <RefreshCw className="w-5 h-5 animate-spin text-[#3858F6]" />
+                    ) : bankForm.logoUrl ? (
+                      <img
+                        src={bankForm.logoUrl}
+                        alt="Bank Logo Preview"
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-slate-300">
+                        <Building className="w-6 h-6" />
+                        <span className="text-[8px] uppercase tracking-wider font-bold text-slate-400 mt-0.5">No Logo</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions & File Input */}
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <input
+                        type="file"
+                        ref={bankLogoInputRef}
+                        accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif"
+                        onChange={handleBankLogoUpload}
+                        className="hidden"
+                        id="bank-logo-upload-input"
+                      />
+                      <label
+                        htmlFor="bank-logo-upload-input"
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-3xs cursor-pointer ${isUploadingBankLogo
+                            ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                            : "bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-slate-300"
+                          }`}
+                      >
+                        {isUploadingBankLogo ? (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#3858F6]" />
+                            <span>Uploading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-3.5 h-3.5 text-[#3858F6]" />
+                            <span>{bankForm.logoUrl ? "Change Logo" : "Upload Logo"}</span>
+                          </>
+                        )}
+                      </label>
+
+                      {bankForm.logoUrl && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveBankLogo}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Remove</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <p className="text-[11px] text-slate-400">
+                      Upload bank icon or logo (PNG, SVG, JPG, WebP). Appears on checkout and receipt.
+                    </p>
+
+                    {logoUploadError && (
+                      <p className="text-[11px] text-rose-600 font-semibold flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3 shrink-0" />
+                        <span>{logoUploadError}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Account Title & Account Number Grid */}

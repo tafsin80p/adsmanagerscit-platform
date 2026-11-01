@@ -279,6 +279,7 @@ export interface BankAccount {
   instructions?: string;
   isActive: boolean;
   isPrimary?: boolean;
+  logoUrl?: string;
 }
 
 export interface NotificationItem {

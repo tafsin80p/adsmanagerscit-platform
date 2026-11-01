@@ -537,8 +537,8 @@ export default function CreateOrderPage() {
                     type="button"
                     onClick={() => setPostType(item.type)}
                     className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${postType === item.type
-                        ? "bg-[#EBF2FF] text-[#0866FF] border-[#0866FF] shadow-2xs ring-1 ring-[#0866FF]/30"
-                        : "bg-white text-slate-700 border-[#E7ECF3] hover:border-slate-300"
+                      ? "bg-[#EBF2FF] text-[#0866FF] border-[#0866FF] shadow-2xs ring-1 ring-[#0866FF]/30"
+                      : "bg-white text-slate-700 border-[#E7ECF3] hover:border-slate-300"
                       }`}
                   >
                     <div className="flex items-center gap-1.5 font-black text-xs">
@@ -683,22 +683,20 @@ export default function CreateOrderPage() {
                           <button
                             type="button"
                             onClick={() => handleUpdateItem(item.id, "budgetType", "daily")}
-                            className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
-                              item.budgetType !== "total"
+                            className={`px-3 py-1 rounded-md transition-all cursor-pointer ${item.budgetType !== "total"
                                 ? "bg-white text-[#0866FF] shadow-xs font-black"
                                 : "text-slate-600 hover:text-slate-900"
-                            }`}
+                              }`}
                           >
                             Daily Budget
                           </button>
                           <button
                             type="button"
                             onClick={() => handleUpdateItem(item.id, "budgetType", "total")}
-                            className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
-                              item.budgetType === "total"
+                            className={`px-3 py-1 rounded-md transition-all cursor-pointer ${item.budgetType === "total"
                                 ? "bg-white text-[#0866FF] shadow-xs font-black"
                                 : "text-slate-600 hover:text-slate-900"
-                            }`}
+                              }`}
                           >
                             Total Budget (Lifetime)
                           </button>
@@ -820,12 +818,12 @@ export default function CreateOrderPage() {
                       type="button"
                       onClick={() => setPaymentMethod(method)}
                       className={`p-2 sm:p-2.5 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1 text-center min-w-0 ${isSelected
-                          ? method === "bKash"
-                            ? "border-[#E2136E] bg-[#FFF5F8] text-[#E2136E] shadow-2xs"
-                            : method === "Nagad"
-                              ? "border-[#EA580C] bg-[#FFF7ED] text-[#EA580C] shadow-2xs"
-                              : "border-[#0866FF] bg-[#F0F7FF] text-[#0866FF] shadow-2xs"
-                          : "border-slate-200 hover:border-slate-300 bg-white text-slate-700"
+                        ? method === "bKash"
+                          ? "border-[#E2136E] bg-[#FFF5F8] text-[#E2136E] shadow-2xs"
+                          : method === "Nagad"
+                            ? "border-[#EA580C] bg-[#FFF7ED] text-[#EA580C] shadow-2xs"
+                            : "border-[#0866FF] bg-[#F0F7FF] text-[#0866FF] shadow-2xs"
+                        : "border-slate-200 hover:border-slate-300 bg-white text-slate-700"
                         }`}
                     >
                       <div className="h-5 sm:h-6 flex items-center justify-center">
@@ -878,8 +876,8 @@ export default function CreateOrderPage() {
                           key={bank.id}
                           onClick={() => handleBankSelect(bank)}
                           className={`group relative p-3 rounded-xl border transition-all cursor-pointer flex flex-col items-center text-center justify-between gap-2 ${isSelected
-                              ? "bg-white border-[#0866FF] shadow-2xs ring-2 ring-[#0866FF]/20"
-                              : "bg-white hover:bg-slate-50 border-[#E7ECF3] hover:border-slate-300"
+                            ? "bg-white border-[#0866FF] shadow-2xs ring-2 ring-[#0866FF]/20"
+                            : "bg-white hover:bg-slate-50 border-[#E7ECF3] hover:border-slate-300"
                             }`}
                         >
                           {isSelected && (
@@ -888,11 +886,20 @@ export default function CreateOrderPage() {
                             </span>
                           )}
 
-                          <div className="w-full h-14 bg-white rounded-lg p-1.5 flex items-center justify-center border border-slate-100">
-                            {isCity && <CityBankLogo className="w-full h-full max-h-10" />}
-                            {isBrac && <BracBankLogo className="w-full h-full max-h-8" />}
-                            {isDbbl && <DbblLogo className="w-full h-full max-h-10" />}
-                            {!isCity && !isBrac && !isDbbl && (
+                          <div className="w-full h-14 bg-white rounded-lg p-1.5 flex items-center justify-center border border-slate-100 overflow-hidden">
+                            {bank.logoUrl ? (
+                              <img
+                                src={bank.logoUrl}
+                                alt={bank.bankName}
+                                className="w-full h-full max-h-12 object-contain"
+                              />
+                            ) : isCity ? (
+                              <CityBankLogo className="w-full h-full max-h-10" />
+                            ) : isBrac ? (
+                              <BracBankLogo className="w-full h-full max-h-8" />
+                            ) : isDbbl ? (
+                              <DbblLogo className="w-full h-full max-h-10" />
+                            ) : (
                               <div className="w-10 h-10 rounded-xl bg-[#EEF2FF] text-[#3858F6] flex items-center justify-center">
                                 <Building className="w-6 h-6" />
                               </div>
@@ -915,8 +922,8 @@ export default function CreateOrderPage() {
                               handleBankSelect(bank);
                             }}
                             className={`w-full py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${isSelected
-                                ? "bg-[#0866FF] text-white"
-                                : "bg-[#F6F8FC] text-slate-700 hover:bg-[#EBF2FF] hover:text-[#0866FF]"
+                              ? "bg-[#0866FF] text-white"
+                              : "bg-[#F6F8FC] text-slate-700 hover:bg-[#EBF2FF] hover:text-[#0866FF]"
                               }`}
                           >
                             <span>Account Details</span>

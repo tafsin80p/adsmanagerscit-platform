@@ -23,6 +23,7 @@ export interface IBankAccount {
   instructions?: string;
   isActive: boolean;
   isPrimary?: boolean;
+  logoUrl?: string;
 }
 
 export interface ISetting extends Document {
@@ -90,6 +91,7 @@ const BankAccountSchema = new Schema<IBankAccount>(
     instructions: { type: String, default: "" },
     isActive: { type: Boolean, default: true },
     isPrimary: { type: Boolean, default: false },
+    logoUrl: { type: String, default: "" },
   },
   { _id: false, strict: false }
 );
