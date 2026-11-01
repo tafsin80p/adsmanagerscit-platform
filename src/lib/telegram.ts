@@ -108,14 +108,16 @@ export async function sendTelegramMessage(
 
   for (const targetChatId of chatIds) {
     let sentPhotoSuccess = false;
+    const hasPhoto = Boolean(options?.photoUrl && options.photoUrl.startsWith("http"));
+    const isLongText = (text || "").length > 1000;
 
-    // 1. If photoUrl is supplied, attempt sendPhoto first
-    if (options?.photoUrl && options.photoUrl.startsWith("http")) {
+    // 1. If photoUrl is supplied and text fits inside 1000 chars, send as single photo with caption
+    if (hasPhoto && !isLongText) {
       try {
         const photoPayload: Record<string, any> = {
           chat_id: targetChatId,
-          photo: options.photoUrl,
-          caption: text.slice(0, 1024), // Telegram caption max limit is 1024 chars
+          photo: options!.photoUrl,
+          caption: text,
           parse_mode: options?.parseMode || "HTML",
         };
 
@@ -137,21 +139,37 @@ export async function sendTelegramMessage(
           sentPhotoSuccess = true;
         } else {
           console.warn(
-            `[Telegram] sendPhoto failed for ${targetChatId} (${photoData.description}). Falling back to text message.`
+            `[Telegram] sendPhoto failed for ${targetChatId} (${photoData.description}). Falling back to separate text message.`
           );
         }
       } catch (err: unknown) {
         console.warn(`[Telegram] sendPhoto exception for ${targetChatId}:`, err);
       }
+    } else if (hasPhoto && isLongText) {
+      // 2. Long text: send photo preview first with a concise caption, then send full detailed message with buttons
+      try {
+        await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: targetChatId,
+            photo: options!.photoUrl,
+            caption: "📸 <b>Attached Payment Receipt / Screenshot Proof</b>",
+            parse_mode: "HTML",
+          }),
+        });
+      } catch (photoErr) {
+        console.warn(`[Telegram] Long-text photo preview failed for ${targetChatId}:`, photoErr);
+      }
     }
 
-    // 2. If photo wasn't sent (or not provided), send as standard sendMessage
+    // 3. If photo wasn't sent with the full text, send full text message
     if (!sentPhotoSuccess) {
       try {
         let messageText = text;
-        // If photoUrl was provided but sendPhoto failed, append image link
-        if (options?.photoUrl && options.photoUrl.startsWith("http")) {
-          messageText += `\n\n📸 <a href="${options.photoUrl}">View Attached Screenshot / Proof</a>`;
+        // If photo was provided but not sent as photo, append link
+        if (hasPhoto && !isLongText) {
+          messageText += `\n\n📸 <a href="${options!.photoUrl}">View Attached Screenshot / Proof</a>`;
         }
 
         const msgPayload: Record<string, any> = {
@@ -354,8 +372,38 @@ export async function getTelegramWebhookInfo(
 }
 
 /**
+ * Constructs inline URL buttons for all post creatives associated with an order.
+ * If the order contains multiple items, it creates labeled buttons for each post.
+ */
+export function buildPostCreativeButtons(order: any): TelegramInlineButton[][] {
+  const buttons: TelegramInlineButton[][] = [];
+  const items: any[] = Array.isArray(order?.items) && order.items.length > 0 ? order.items : [];
+
+  if (items.length > 0) {
+    const postButtons: TelegramInlineButton[] = [];
+    items.forEach((item, idx) => {
+      const url = (item.postUrl || "").trim();
+      if (url && (url.startsWith("http://") || url.startsWith("https://"))) {
+        const title = items.length === 1 ? "🔗 View Post Creative" : `🔗 Post #${idx + 1} Creative`;
+        postButtons.push({ text: title, url });
+      }
+    });
+
+    // Group buttons into rows of max 2 buttons per row for mobile readability
+    for (let i = 0; i < postButtons.length; i += 2) {
+      buttons.push(postButtons.slice(i, i + 2));
+    }
+  } else if (order?.postUrl && (order.postUrl.startsWith("http://") || order.postUrl.startsWith("https://"))) {
+    buttons.push([{ text: "🔗 View Post Creative", url: order.postUrl.trim() }]);
+  }
+
+  return buttons;
+}
+
+/**
  * Formats and broadcasts an instant alert when a new order is received,
  * equipped with interactive one-click Confirm & Reject buttons for Telegram group admins.
+ * If multiple posts are included, clearly outlines post count and each individual post's details.
  */
 export async function notifyNewOrderTelegram(order: any, originOverride?: string): Promise<boolean> {
   try {
@@ -376,6 +424,58 @@ export async function notifyNewOrderTelegram(order: any, originOverride?: string
     const transactionId = order.transactionId || "N/A";
     const postUrl = order.postUrl || "";
     const notes = Array.isArray(order.notes) && order.notes.length > 0 ? order.notes[0] : "";
+    const items: any[] = Array.isArray(order.items) && order.items.length > 0 ? order.items : [];
+    const postCount = items.length > 0 ? items.length : 1;
+
+    // Build targeted posts section with rich details for each individual post
+    let postsSection = "";
+    if (items.length > 1) {
+      postsSection = `\n📋 <b>TARGET POSTS TO BOOST (${items.length} Posts):</b>\n`;
+      items.forEach((item, idx) => {
+        const itemNum = idx + 1;
+        const itemName = item.name ? item.name : `Post #${itemNum}`;
+        const itemObj = item.objective || objective;
+        const itemDaily = Number(item.dailyBudgetUSD || 0).toFixed(2);
+        const itemDays = Number(item.durationDays || durationDays);
+        const itemTotal = Number(
+          item.totalBudgetUSD || (Number(itemDaily) * itemDays)
+        ).toFixed(2);
+        const itemUrl = (item.postUrl || "").trim();
+
+        postsSection += `\n📌 <b>Post #${itemNum}: ${escapeHtml(itemName)}</b>\n`;
+        postsSection += `• Objective: <b>${escapeHtml(itemObj)}</b>\n`;
+        if (item.budgetType === "total") {
+          postsSection += `• Budget: <b>Total $${itemTotal} USD</b> (${itemDays}d, ~$${itemDaily}/day)\n`;
+        } else {
+          postsSection += `• Budget: <b>$${itemDaily}/day × ${itemDays}d = $${itemTotal} USD</b>\n`;
+        }
+        if (itemUrl && (itemUrl.startsWith("http://") || itemUrl.startsWith("https://"))) {
+          postsSection += `• Creative: <a href="${escapeHtml(itemUrl)}">Open Facebook Post ↗</a>\n`;
+        } else {
+          postsSection += `• Creative: <i>No link provided</i>\n`;
+        }
+      });
+    } else if (items.length === 1) {
+      const singleItem = items[0];
+      const singleUrl = (singleItem.postUrl || postUrl || "").trim();
+      const singleName = singleItem.name || campaignName;
+      const singleObj = singleItem.objective || objective;
+      postsSection = `\n📋 <b>TARGET POST CREATIVE (1 Post):</b>\n`;
+      postsSection += `📌 <b>${escapeHtml(singleName)}</b>\n`;
+      postsSection += `• Objective: <b>${escapeHtml(singleObj)}</b>\n`;
+      if (singleUrl && (singleUrl.startsWith("http://") || singleUrl.startsWith("https://"))) {
+        postsSection += `• Creative: <a href="${escapeHtml(singleUrl)}">Open Facebook Post ↗</a>\n`;
+      } else {
+        postsSection += `• Creative: <i>No link provided</i>\n`;
+      }
+    } else {
+      postsSection = `\n🔗 <b>Target Post Creative:</b>\n`;
+      if (postUrl && (postUrl.startsWith("http://") || postUrl.startsWith("https://"))) {
+        postsSection += `• Creative: <a href="${escapeHtml(postUrl)}">Open Facebook Post ↗</a>\n`;
+      } else {
+        postsSection += `• Creative: <i>No link provided</i>\n`;
+      }
+    }
 
     const message = `
 🚀 <b>NEW META ADS ORDER RECEIVED!</b>
@@ -383,13 +483,15 @@ export async function notifyNewOrderTelegram(order: any, originOverride?: string
 📦 <b>Order ID:</b> <code>#${escapeHtml(orderId)}</code>
 🏷️ <b>Campaign:</b> <b>${escapeHtml(campaignName)}</b>
 🎯 <b>Category:</b> ${escapeHtml(postType)} (${escapeHtml(objective)})
+📊 <b>Posts Count:</b> <b>${postCount} Post${postCount > 1 ? "s to Boost" : " to Boost"}</b>
 
 👤 <b>Client:</b> ${escapeHtml(clientName)}
 🏢 <b>Brand / Page:</b> ${escapeHtml(pageName)}${pageId ? `\n🆔 <b>Page ID:</b> <code>${escapeHtml(pageId)}</code>` : ""}
 📧 <b>Email:</b> <code>${escapeHtml(clientEmail)}</code>
+${postsSection.trim()}
 
-💰 <b>Budget & Schedule:</b>
-• Strategy: <b>${order.budgetType === "total" ? "Lifetime / Total Budget" : "Daily Budget"}</b>
+💰 <b>Overall Order Budget:</b>
+• Strategy: <b>${order.budgetType === "total" ? "Lifetime / Total Budget" : "Daily Pace"}</b>
 • Duration: ${durationDays} Days
 • Daily Pace: $${dailyBudget} USD / Day
 • Total USD: <b>$${totalUSD} USD</b>
@@ -449,8 +551,10 @@ ${notes ? `\n📝 <b>Specialist Note:</b>\n<i>${escapeHtml(notes)}</i>` : ""}
       ],
     ];
 
-    if (postUrl && postUrl.startsWith("http")) {
-      inlineKeyboard.push([{ text: "🔗 View Post Creative", url: postUrl }]);
+    // Append individual post creative buttons
+    const postButtons = buildPostCreativeButtons(order);
+    if (postButtons.length > 0) {
+      inlineKeyboard.push(...postButtons);
     }
 
     const result = await sendTelegramMessage(message, {
@@ -561,8 +665,9 @@ ${originalBody}
                 const updatedButtons: any[][] = [
                   [{ text: "🟢 Order Active & Verified", callback_data: "info_done" }],
                 ];
-                if (order.postUrl && order.postUrl.startsWith("http")) {
-                  updatedButtons.push([{ text: "🔗 View Post Creative", url: order.postUrl }]);
+                const postButtons = buildPostCreativeButtons(order);
+                if (postButtons.length > 0) {
+                  updatedButtons.push(...postButtons);
                 }
 
                 await editTelegramMessage(chatId, messageId, updatedMessage, {

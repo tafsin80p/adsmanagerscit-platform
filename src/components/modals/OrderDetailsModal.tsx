@@ -16,6 +16,7 @@ import {
   FileText,
   AlertCircle,
   Trash2,
+  Layers,
 } from "lucide-react";
 import { usePortal } from "@/context/PortalContext";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -163,6 +164,62 @@ export const OrderDetailsModal: React.FC = () => {
                 campaignName={order.campaignName}
                 objective={order.objective}
               />
+            </div>
+          )}
+
+          {/* Multiple Boost Items Breakdown (if applicable) */}
+          {order.items && order.items.length > 1 && (
+            <div className="p-4 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0] space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-[#3858F6]" />
+                  Campaign Creatives ({order.items.length} Posts)
+                </span>
+                <span className="text-[10px] font-bold bg-[#EEF2FF] text-[#3858F6] px-2 py-0.5 rounded-full border border-[#C7D2FE]">
+                  Multi-Post Order
+                </span>
+              </div>
+              <div className="space-y-2">
+                {order.items.map((item, idx) => (
+                  <div
+                    key={item.id || idx}
+                    className="p-3 bg-white rounded-xl border border-slate-200/80 shadow-3xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs"
+                  >
+                    <div className="min-w-0 space-y-0.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-black flex items-center justify-center shrink-0">
+                          #{idx + 1}
+                        </span>
+                        <span className="font-bold text-slate-800 truncate">
+                          {item.name || `Post #${idx + 1}`}
+                        </span>
+                        <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
+                          {item.objective}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 pl-7">
+                        Budget:{" "}
+                        {item.budgetType === "total"
+                          ? `Total $${Number(item.totalBudgetUSD || 0).toFixed(2)} (${item.durationDays || 1}d)`
+                          : `$${Number(item.dailyBudgetUSD || 0).toFixed(2)}/day × ${item.durationDays || 1}d = $${Number(item.totalBudgetUSD || 0).toFixed(2)}`}
+                      </div>
+                    </div>
+                    {item.postUrl ? (
+                      <a
+                        href={item.postUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-[#3858F6] bg-[#EEF2FF] hover:bg-[#E0E7FF] px-2.5 py-1.5 rounded-lg transition-colors self-start sm:self-auto shrink-0"
+                      >
+                        <span>Open Post</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    ) : (
+                      <span className="text-[11px] text-slate-400 italic">No URL</span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

@@ -3,6 +3,7 @@ import connectDB from "@/lib/mongodb";
 import { OrderModel, PaymentModel } from "@/models";
 import {
   answerTelegramCallbackQuery,
+  buildPostCreativeButtons,
   editTelegramMessage,
   escapeHtml,
 } from "@/lib/telegram";
@@ -114,8 +115,9 @@ ${originalBody}
           [{ text: "🟢 Order Active & Verified", callback_data: "info_done" }],
         ];
 
-        if (order.postUrl && order.postUrl.startsWith("http")) {
-          updatedButtons.push([{ text: "🔗 View Post Creative", url: order.postUrl }]);
+        const postButtons = buildPostCreativeButtons(order);
+        if (postButtons.length > 0) {
+          updatedButtons.push(...postButtons);
         }
 
         await editTelegramMessage(chatId, messageId, updatedMessage, {

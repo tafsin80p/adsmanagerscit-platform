@@ -764,8 +764,15 @@ export default function AdminOrdersPage() {
                                 </span>
                               )}
                             </div>
-                            <div className="font-bold text-[#121826] text-sm mt-0.5 truncate max-w-[200px]">
-                              {order.campaignName}
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="font-bold text-[#121826] text-sm truncate max-w-[180px]">
+                                {order.campaignName}
+                              </span>
+                              {order.items && order.items.length > 1 && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-[#EEF2FF] text-[#3858F6] border border-[#C7D2FE] shrink-0">
+                                  {order.items.length} Posts
+                                </span>
+                              )}
                             </div>
                             <div className="text-[11px] text-slate-400">
                               {order.objective} • {order.postType}
