@@ -31,6 +31,7 @@ import {
   MessageSquare,
   Info,
   Flame,
+  Trash2,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { usePortal } from "@/context/PortalContext";
@@ -43,6 +44,7 @@ function MyOrdersContent() {
     orders,
     isLoadingOrders,
     refreshOrders,
+    deleteOrder,
     exchangeRateBDT,
     setSelectedOrderForModal,
     setSelectedOrderForRenew,
@@ -54,6 +56,9 @@ function MyOrdersContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Sync search and status filter from URL search params
   useEffect(() => {
@@ -162,6 +167,28 @@ function MyOrdersContent() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  // Delete Order
+  const handleDeleteOrder = async () => {
+    if (!orderToDelete) return;
+    setIsDeleting(true);
+    try {
+      const ok = await deleteOrder(orderToDelete.id);
+      if (ok) {
+        setToastMessage(`Order #${orderToDelete.id} deleted successfully.`);
+        setTimeout(() => setToastMessage(null), 3000);
+        setOrderToDelete(null);
+      } else {
+        setToastMessage(`Failed to delete order #${orderToDelete.id}.`);
+        setTimeout(() => setToastMessage(null), 3000);
+      }
+    } catch {
+      setToastMessage("Error deleting order.");
+      setTimeout(() => setToastMessage(null), 3000);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // Filtered & Sorted orders
   const filteredOrders = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -218,6 +245,14 @@ function MyOrdersContent() {
 
   return (
     <DashboardLayout pageTitle="My Orders">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-5 right-5 z-50 bg-[#121826] text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-top-4">
+          <CheckCircle2 className="w-5 h-5 text-[#10B981] shrink-0" />
+          <span className="text-xs font-bold">{toastMessage}</span>
+        </div>
+      )}
+
       <div className="space-y-6 sm:space-y-7">
         {/* Page Top Header with Live Actions */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -571,7 +606,7 @@ function MyOrdersContent() {
           /* Orders Table & Cards */
           <div className="bg-white rounded-[28px] border border-[#E9EDF4] shadow-[0_4px_25px_rgba(0,0,0,0.03)] overflow-hidden">
             {/* Desktop Table View */}
-            <div className="hidden lg:block overflow-x-auto">
+            <div className="hidden lg:block overflow-x-auto min-h-[260px] pb-16">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-[#E9EDF4] bg-[#F8FAFD] text-[11px] font-bold text-[#8A94A6] uppercase tracking-wider">
@@ -585,7 +620,9 @@ function MyOrdersContent() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F0F3F8] text-xs">
-                  {filteredOrders.map((order) => (
+                  {filteredOrders.map((order, idx) => {
+                    const isNearBottom = idx >= filteredOrders.length - 2 && filteredOrders.length > 2;
+                    return (
                     <tr
                       key={order.id}
                       className="hover:bg-[#F9FAFC] transition-colors group cursor-default"
@@ -706,9 +743,10 @@ function MyOrdersContent() {
                       </td>
 
                       {/* Actions */}
-                      <td className="py-4 px-6 text-right">
+                      <td className="py-4 px-6 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2 relative">
                           <button
+                            type="button"
                             onClick={() => setSelectedOrderForModal(order)}
                             className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-[#E2E8F0] text-slate-700 font-bold rounded-xl shadow-2xs hover:border-[#3858F6]/40 transition-all cursor-pointer text-xs"
                           >
@@ -717,6 +755,7 @@ function MyOrdersContent() {
 
                           {order.isEligibleForRenew && (
                             <button
+                              type="button"
                               onClick={() => {
                                 setSelectedOrderForRenew(order);
                                 setIsRenewModalOpen(true);
@@ -731,6 +770,7 @@ function MyOrdersContent() {
 
                           {/* Dropdown Menu Toggle */}
                           <button
+                            type="button"
                             onClick={() =>
                               setActiveMenuId(activeMenuId === order.id ? null : order.id)
                             }
@@ -742,61 +782,87 @@ function MyOrdersContent() {
 
                           {/* Dropdown Menu */}
                           {activeMenuId === order.id && (
-                            <div className="absolute right-0 top-full mt-1.5 w-48 bg-white rounded-2xl shadow-xl border border-[#E9EDF4] py-1.5 z-30 animate-in fade-in zoom-in-95 duration-100 text-left">
-                              <button
-                                onClick={() => {
-                                  setSelectedOrderForModal(order);
-                                  setActiveMenuId(null);
-                                }}
-                                className="w-full px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-[#F6F8FC] hover:text-[#3858F6] flex items-center gap-2"
+                            <>
+                              <div
+                                className="fixed inset-0 z-40"
+                                onClick={() => setActiveMenuId(null)}
+                              />
+                              <div
+                                className={`absolute right-0 ${
+                                  isNearBottom ? "bottom-full mb-1.5" : "top-full mt-1.5"
+                                } w-48 bg-white rounded-2xl shadow-2xl border border-[#E9EDF4] py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100 text-left`}
                               >
-                                <Eye className="w-3.5 h-3.5 text-slate-400" />
-                                <span>View Details</span>
-                              </button>
-
-                              <button
-                                onClick={(e) => {
-                                  handleCopyOrderId(order.id, e);
-                                  setActiveMenuId(null);
-                                }}
-                                className="w-full px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-[#F6F8FC] flex items-center gap-2"
-                              >
-                                <Copy className="w-3.5 h-3.5 text-slate-400" />
-                                <span>Copy Order ID</span>
-                              </button>
-
-                              {order.postUrl && (
-                                <a
-                                  href={order.postUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={() => setActiveMenuId(null)}
-                                  className="w-full px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-[#F6F8FC] flex items-center justify-between"
-                                >
-                                  <span>Open on Meta</span>
-                                  <ExternalLink className="w-3 h-3 text-slate-400" />
-                                </a>
-                              )}
-
-                              {order.isEligibleForRenew && (
                                 <button
+                                  type="button"
                                   onClick={() => {
-                                    setSelectedOrderForRenew(order);
-                                    setIsRenewModalOpen(true);
+                                    setSelectedOrderForModal(order);
                                     setActiveMenuId(null);
                                   }}
-                                  className="w-full px-3.5 py-2 text-xs font-semibold text-[#3858F6] hover:bg-[#EEF2FF] flex items-center gap-2"
+                                  className="w-full px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-[#F6F8FC] hover:text-[#3858F6] flex items-center gap-2 cursor-pointer"
                                 >
-                                  <Repeat className="w-3.5 h-3.5" />
-                                  <span>Renew Boost</span>
+                                  <Eye className="w-3.5 h-3.5 text-slate-400" />
+                                  <span>View Details</span>
                                 </button>
-                              )}
-                            </div>
+
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    handleCopyOrderId(order.id, e);
+                                    setActiveMenuId(null);
+                                  }}
+                                  className="w-full px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-[#F6F8FC] flex items-center gap-2 cursor-pointer"
+                                >
+                                  <Copy className="w-3.5 h-3.5 text-slate-400" />
+                                  <span>Copy Order ID</span>
+                                </button>
+
+                                {order.postUrl && (
+                                  <a
+                                    href={order.postUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={() => setActiveMenuId(null)}
+                                    className="w-full px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-[#F6F8FC] flex items-center justify-between"
+                                  >
+                                    <span>Open on Meta</span>
+                                    <ExternalLink className="w-3 h-3 text-slate-400" />
+                                  </a>
+                                )}
+
+                                {order.isEligibleForRenew && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedOrderForRenew(order);
+                                      setIsRenewModalOpen(true);
+                                      setActiveMenuId(null);
+                                    }}
+                                    className="w-full px-3.5 py-2 text-xs font-semibold text-[#3858F6] hover:bg-[#EEF2FF] flex items-center gap-2 cursor-pointer"
+                                  >
+                                    <Repeat className="w-3.5 h-3.5" />
+                                    <span>Renew Boost</span>
+                                  </button>
+                                )}
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    setOrderToDelete(order);
+                                  }}
+                                  className="w-full px-3.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 border-t border-slate-100 mt-1 pt-1.5 cursor-pointer"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                  <span>Delete Order</span>
+                                </button>
+                              </div>
+                            </>
                           )}
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -895,27 +961,109 @@ function MyOrdersContent() {
 
                     <div className="flex items-center gap-2">
                       <button
+                        type="button"
                         onClick={() => setSelectedOrderForModal(order)}
-                        className="px-3.5 py-1.5 bg-white hover:bg-slate-50 border border-[#E2E8F0] text-xs font-bold text-slate-800 rounded-xl shadow-xs"
+                        className="px-3.5 py-1.5 bg-white hover:bg-slate-50 border border-[#E2E8F0] text-xs font-bold text-slate-800 rounded-xl shadow-xs cursor-pointer"
                       >
                         View Details
                       </button>
                       {order.isEligibleForRenew && (
                         <button
+                          type="button"
                           onClick={() => {
                             setSelectedOrderForRenew(order);
                             setIsRenewModalOpen(true);
                           }}
-                          className="p-2 text-[#3858F6] bg-[#EEF2FF] hover:bg-[#E0E7FF] rounded-xl font-bold"
+                          className="p-2 text-[#3858F6] bg-[#EEF2FF] hover:bg-[#E0E7FF] rounded-xl font-bold cursor-pointer"
                           title="Renew Boost"
                         >
                           <Repeat className="w-3.5 h-3.5" />
                         </button>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => setOrderToDelete(order)}
+                        className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-rose-200/60 rounded-xl font-bold cursor-pointer transition-colors"
+                        title="Delete Order"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Delete Order Confirmation Dialog */}
+        {orderToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <div
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+              onClick={() => !isDeleting && setOrderToDelete(null)}
+            />
+            <div className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-7 z-10 border border-slate-200 space-y-5 animate-in fade-in zoom-in-95 duration-200 text-left">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center border border-rose-200">
+                <Trash2 className="w-6 h-6 stroke-[2]" />
+              </div>
+
+              <div>
+                <h3 className="text-lg font-black text-slate-900">
+                  Delete Order #{orderToDelete.id}?
+                </h3>
+                <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                  Are you sure you want to delete order{" "}
+                  <strong className="text-slate-800">
+                    &ldquo;{orderToDelete.campaignName}&rdquo;
+                  </strong>{" "}
+                  (${orderToDelete.totalBudgetUSD.toFixed(2)} USD)? This will permanently remove this order from your portal.
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1.5">
+                <div className="flex justify-between text-slate-500">
+                  <span>Status:</span>
+                  <span className="font-bold text-slate-700">{orderToDelete.status}</span>
+                </div>
+                <div className="flex justify-between text-slate-500">
+                  <span>Payment Method:</span>
+                  <strong className="text-slate-800">{orderToDelete.paymentMethod || "Portal Direct"}</strong>
+                </div>
+                <div className="flex justify-between text-slate-500">
+                  <span>TRX ID:</span>
+                  <span className="font-mono text-slate-700">{orderToDelete.transactionId || "N/A"}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => setOrderToDelete(null)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={handleDeleteOrder}
+                  className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-600/25 transition-all cursor-pointer inline-flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                >
+                  {isDeleting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      <span>Delete Order</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}

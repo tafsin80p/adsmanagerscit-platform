@@ -15,6 +15,7 @@ import {
   Repeat,
   FileText,
   AlertCircle,
+  Trash2,
 } from "lucide-react";
 import { usePortal } from "@/context/PortalContext";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -22,16 +23,29 @@ import { FacebookPostPreview } from "@/components/ui/FacebookPostPreview";
 
 export const OrderDetailsModal: React.FC = () => {
   const [showPreview, setShowPreview] = React.useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   const {
     selectedOrderForModal,
     setSelectedOrderForModal,
     setSelectedOrderForRenew,
     setIsRenewModalOpen,
+    deleteOrder,
   } = usePortal();
 
   if (!selectedOrderForModal) return null;
 
   const order = selectedOrderForModal;
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteOrder(order.id);
+      setSelectedOrderForModal(null);
+    } catch {
+      setIsDeleting(false);
+    }
+  };
 
   const handleRenewClick = () => {
     const toRenew = order;
@@ -308,21 +322,35 @@ export const OrderDetailsModal: React.FC = () => {
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 py-4 bg-slate-50 border-t border-[#E7ECF3] flex items-center justify-between gap-3">
-          <div className="text-xs text-slate-500 font-mono">
-            TRX: {order.transactionId || "N/A"} ({order.paymentMethod || "Pending"})
+        <div className="px-6 py-4 bg-slate-50 border-t border-[#E7ECF3] flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-slate-500 font-mono">
+              TRX: {order.transactionId || "N/A"} ({order.paymentMethod || "Pending"})
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(!showDeleteConfirm)}
+              className="inline-flex items-center gap-1 text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2 py-1 rounded-lg transition-colors cursor-pointer"
+              title="Delete this order"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete Order</span>
+            </button>
           </div>
+
           <div className="flex items-center gap-2.5">
             <button
+              type="button"
               onClick={() => setSelectedOrderForModal(null)}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl hover:bg-slate-200/50 transition-colors"
+              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl hover:bg-slate-200/50 transition-colors cursor-pointer"
             >
               Close
             </button>
             {order.isEligibleForRenew && (
               <button
+                type="button"
                 onClick={handleRenewClick}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-[#3858F6] hover:bg-[#2542D9] text-white rounded-xl shadow-xs transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-[#3858F6] hover:bg-[#2542D9] text-white rounded-xl shadow-xs transition-colors cursor-pointer"
               >
                 <Repeat className="w-3.5 h-3.5" />
                 Renew Boost
@@ -330,6 +358,33 @@ export const OrderDetailsModal: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Delete Confirmation Alert Banner */}
+        {showDeleteConfirm && (
+          <div className="p-4 bg-rose-50 border-t border-rose-200 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-2">
+            <div className="text-xs text-rose-800">
+              <strong>Are you sure?</strong> This will permanently delete order #{order.id} and cannot be undone.
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-white rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleDelete}
+                className="px-3.5 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-xs transition-colors cursor-pointer"
+              >
+                {isDeleting ? "Deleting..." : "Yes, Delete Order"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

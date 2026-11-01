@@ -30,6 +30,7 @@ import {
   MapPin,
   Target,
   Check,
+  Trash2,
 } from "lucide-react";
 import {
   BarChart,
@@ -318,6 +319,7 @@ export default function DashboardPage() {
     setIsSupportModalOpen,
     setSelectedOrderForRenew,
     setIsRenewModalOpen,
+    deleteOrder,
     exchangeRateBDT,
     profile,
     isAuthenticated,
@@ -1239,7 +1241,9 @@ export default function DashboardPage() {
                 </Link>
               </div>
             ) : (
-              recentOrders.map((order) => (
+              recentOrders.map((order, idx) => {
+                const isNearBottom = idx >= recentOrders.length - 2 && recentOrders.length > 2;
+                return (
                 <div
                   key={order.id}
                   className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 hover:bg-[#F9FAFC] px-3 rounded-2xl transition-all"
@@ -1358,7 +1362,12 @@ export default function DashboardPage() {
 
                       {/* Dropdown Menu */}
                       {activeMenuOrderId === order.id && (
-                        <div className="absolute right-0 top-full mt-1.5 w-48 bg-white rounded-2xl shadow-xl border border-[#E8ECF2] py-1.5 z-30 animate-in fade-in zoom-in-95 duration-100">
+                        <>
+                          <div
+                            className="fixed inset-0 z-40"
+                            onClick={() => setActiveMenuOrderId(null)}
+                          />
+                          <div className={`absolute right-0 ${isNearBottom ? "bottom-full mb-1.5" : "top-full mt-1.5"} w-48 bg-white rounded-2xl shadow-2xl border border-[#E8ECF2] py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100 text-left`}>
                           <button
                             onClick={() => {
                               setSelectedOrderForModal(order);
@@ -1390,12 +1399,27 @@ export default function DashboardPage() {
                             <span>Open on Meta</span>
                             <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
                           </a>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setActiveMenuOrderId(null);
+                              if (confirm(`Delete order #${order.id}? This cannot be undone.`)) {
+                                await deleteOrder(order.id);
+                              }
+                            }}
+                            className="w-full text-left px-3.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 border-t border-slate-100 mt-1 pt-1.5 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                            <span>Delete Order</span>
+                          </button>
                         </div>
-                      )}
-                    </div>
+                      </>
+                    )}
                   </div>
                 </div>
-              ))
+              </div>
+              );
+            })
             )}
           </div>
         </div>

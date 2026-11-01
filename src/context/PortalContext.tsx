@@ -125,6 +125,7 @@ interface PortalContextType {
   ) => Promise<Order>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   updateOrder: (orderId: string, updates: Partial<Order>) => void;
+  deleteOrder: (orderId: string) => Promise<boolean>;
   updatePaymentStatus: (paymentId: string, status: "Verified" | "Under Review" | "Failed") => void;
   renewOrder: (orderId: string, additionalDays: number) => void;
   syncMetaMetrics: () => Promise<void>;
@@ -1124,6 +1125,29 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const deleteOrder = async (orderId: string): Promise<boolean> => {
+    // Optimistically remove from state
+    setOrders((prev) => prev.filter((order) => order.id !== orderId));
+    setPayments((prev) => prev.filter((p) => p.orderId !== orderId));
+    if (selectedOrderForModal?.id === orderId) {
+      setSelectedOrderForModal(null);
+    }
+    if (selectedOrderForRenew?.id === orderId) {
+      setSelectedOrderForRenew(null);
+    }
+
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      return !!data.success;
+    } catch (err) {
+      console.error("Failed to delete order from MongoDB:", err);
+      return false;
+    }
+  };
+
   const syncMetaMetrics = async () => {
     setIsSyncing(true);
     try {
@@ -1435,6 +1459,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
         addOrder,
         updateOrderStatus,
         updateOrder,
+        deleteOrder,
         updatePaymentStatus,
         renewOrder,
         syncMetaMetrics,

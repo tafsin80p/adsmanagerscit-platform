@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
-import { OrderModel } from "@/models";
+import { OrderModel, PaymentModel } from "@/models";
 
 
 export async function GET(
@@ -80,6 +80,9 @@ export async function DELETE(
         { status: 404 }
       );
     }
+
+    // Clean up any linked payment transactions
+    await PaymentModel.deleteMany({ orderId: id });
 
     return NextResponse.json({
       success: true,

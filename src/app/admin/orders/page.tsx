@@ -33,6 +33,7 @@ import {
   Save,
   Share2,
   Plus,
+  Trash2,
 } from "lucide-react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { usePortal } from "@/context/PortalContext";
@@ -45,6 +46,7 @@ export default function AdminOrdersPage() {
     orders,
     updateOrderStatus,
     updateOrder,
+    deleteOrder,
     exchangeRateBDT,
     profile,
     isLoadingOrders,
@@ -65,6 +67,8 @@ export default function AdminOrdersPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCreateOrderModalOpen, setIsCreateOrderModalOpen] = useState(false);
   const [preselectedClientId, setPreselectedClientId] = useState<string | undefined>(undefined);
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -198,6 +202,25 @@ export default function AdminOrdersPage() {
       updateOrder(orderId, { paymentStatus: "Verified" });
     }
     showNotification(`Order #${orderId} status updated to ${newStatus}`);
+  };
+
+  // Permanently delete order
+  const handleDeleteOrder = async () => {
+    if (!orderToDelete) return;
+    setIsDeleting(true);
+    try {
+      const ok = await deleteOrder(orderToDelete.id);
+      if (ok) {
+        showNotification(`Order #${orderToDelete.id} deleted permanently.`);
+        setOrderToDelete(null);
+      } else {
+        showNotification(`Failed to delete order #${orderToDelete.id}.`);
+      }
+    } catch {
+      showNotification("Error deleting order.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   // One-click copy
@@ -828,30 +851,46 @@ export default function AdminOrdersPage() {
                       </td>
 
                       {/* Actions */}
-                      <td className="py-4 px-6 text-right space-x-2">
-                        {order.status === "Pending" && (
+                      <td className="py-4 px-6 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {order.status === "Pending" && (
+                            <button
+                              type="button"
+                              onClick={() => handleStatusChange(order.id, "Active")}
+                              className="px-2.5 py-1.5 bg-[#10B981] hover:bg-[#059669] text-white rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                              title="Approve and activate campaign"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Approve</span>
+                            </button>
+                          )}
                           <button
-                            onClick={() => handleStatusChange(order.id, "Active")}
-                            className="px-2.5 py-1.5 bg-[#10B981] hover:bg-[#059669] text-white rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1"
+                            type="button"
+                            onClick={() => handleOpenMetricsModal(order)}
+                            className="px-2.5 py-1.5 bg-[#EEF2FF] hover:bg-[#E0E7FF] text-[#3858F6] rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 shadow-2xs hover:scale-105 active:scale-95"
+                            title="Publish / Update live delivery results (Reach, Spend, Views, Messages) to customer"
                           >
-                            <Check className="w-3 h-3" />
-                            <span>Approve</span>
+                            <TrendingUp className="w-3.5 h-3.5" />
+                            <span>Results</span>
                           </button>
-                        )}
-                        <button
-                          onClick={() => handleOpenMetricsModal(order)}
-                          className="px-2.5 py-1.5 bg-[#EEF2FF] hover:bg-[#E0E7FF] text-[#3858F6] rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 shadow-2xs hover:scale-105 active:scale-95"
-                          title="Publish / Update live delivery results (Reach, Spend, Views, Messages) to customer"
-                        >
-                          <TrendingUp className="w-3.5 h-3.5" />
-                          <span>Results</span>
-                        </button>
-                        <button
-                          onClick={() => setSelectedOrderForModal(order)}
-                          className="px-2.5 py-1.5 bg-[#F5F7FB] hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-                        >
-                          Inspect
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedOrderForModal(order)}
+                            className="px-2.5 py-1.5 bg-[#F5F7FB] hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1"
+                            title="Inspect order specification & payment proof"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Inspect</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setOrderToDelete(order)}
+                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors cursor-pointer border border-rose-200 shadow-2xs hover:scale-105 active:scale-95"
+                            title="Delete this order"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -1106,6 +1145,80 @@ export default function AdminOrdersPage() {
             </div>
           </div>
         )}
+
+        {/* Delete Order Confirmation Dialog */}
+        {orderToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <div
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+              onClick={() => !isDeleting && setOrderToDelete(null)}
+            />
+            <div className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-7 z-10 border border-slate-200 space-y-5 animate-in fade-in zoom-in-95 duration-200 text-left">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center border border-rose-200">
+                <Trash2 className="w-6 h-6 stroke-[2]" />
+              </div>
+
+              <div>
+                <h3 className="text-lg font-black text-slate-900">
+                  Delete Order #{orderToDelete.id}?
+                </h3>
+                <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                  Are you sure you want to permanently delete this order?
+                  This will remove the campaign{" "}
+                  <strong className="text-slate-800">
+                    &ldquo;{orderToDelete.campaignName}&rdquo;
+                  </strong>{" "}
+                  (${orderToDelete.totalBudgetUSD.toFixed(2)} USD) and any associated payment records from the database. This action cannot be undone.
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1.5">
+                <div className="flex justify-between text-slate-500">
+                  <span>Client / Business:</span>
+                  <strong className="text-slate-800">{orderToDelete.businessName || orderToDelete.clientEmail || "Client"}</strong>
+                </div>
+                <div className="flex justify-between text-slate-500">
+                  <span>Status:</span>
+                  <span className="font-bold text-slate-700">{orderToDelete.status}</span>
+                </div>
+                <div className="flex justify-between text-slate-500">
+                  <span>TRX / Payment:</span>
+                  <span className="font-mono text-slate-700">{orderToDelete.transactionId || "N/A"}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => setOrderToDelete(null)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={handleDeleteOrder}
+                  className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-600/25 transition-all cursor-pointer inline-flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                >
+                  {isDeleting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      <span>Permanently Delete</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Admin Create Order on Behalf of Client Modal */}
         <AdminCreateOrderModal
           isOpen={isCreateOrderModalOpen}
