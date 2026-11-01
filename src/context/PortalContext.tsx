@@ -177,7 +177,7 @@ interface PortalContextType {
     email: string;
     password: string;
     accountType?: "client" | "specialist";
-  }) => Promise<{ success: boolean; error?: string; redirectUrl?: string }>;
+  }) => Promise<{ success: boolean; error?: string; redirectUrl?: string; user?: any }>;
   logout: () => Promise<void>;
 }
 
@@ -824,10 +824,11 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
         if (data.success && data.user) {
           const u = data.user;
           const isMinMart =
-            u.email === "minmartbd@gmail.com" ||
-            u.email === "tafsin@fashionhubbd.com" ||
-            u.name?.toLowerCase().includes("min mart") ||
-            u.connectedPage?.name?.toLowerCase().includes("min mart");
+            (u.role === "client" || !u.role) &&
+            (u.email === "minmartbd@gmail.com" ||
+              u.email === "tafsin@fashionhubbd.com" ||
+              u.name?.toLowerCase().includes("min mart") ||
+              u.connectedPage?.name?.toLowerCase().includes("min mart"));
 
           const realMinMartAvatar = "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=100090491619527";
           const defaultPageName = isMinMart ? "MIN Mart BD" : (u.businessName || u.name || "My Facebook Page");
@@ -838,7 +839,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
             phone: u.phone || "",
             businessName: isMinMart ? "MIN Mart BD" : (u.businessName || u.name || "My Business"),
             avatar: isMinMart ? realMinMartAvatar : (u.connectedPage?.avatar || u.avatar || "/images/avatar.jpg"),
-            role: u.role === "admin" ? "Specialist" : "Client",
+            role: u.role === "admin" ? "Specialist" : u.role === "representative" ? "representative" : "Client",
             connectedPage: isMinMart
               ? {
                   name: "MIN Mart BD",
@@ -1359,7 +1360,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
           phone: data.user.phone || profile.phone,
           businessName: data.user.businessName || profile.businessName,
           avatar: data.user.avatar || profile.avatar,
-          role: data.user.role === "admin" ? "Specialist" : "Client",
+          role: data.user.role === "admin" ? "Specialist" : data.user.role === "representative" ? "representative" : "Client",
           connectedPage: data.user.connectedPage || profile.connectedPage,
           currency: data.user.currency || "USD",
           notifications: data.user.notifications || profile.notifications,
@@ -1372,7 +1373,14 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
 
       return {
         success: true,
-        redirectUrl: data.redirectUrl || (credentials.accountType === "specialist" ? "/admin" : "/"),
+        user: data.user,
+        redirectUrl:
+          data.redirectUrl ||
+          (data.user?.role === "representative"
+            ? "/admin/live-chat"
+            : credentials.accountType === "specialist"
+            ? "/admin"
+            : "/"),
       };
     } catch (err: unknown) {
       const e = err as Error;

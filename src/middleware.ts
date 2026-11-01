@@ -119,12 +119,15 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(clientHomeUrl);
     }
 
-    // C: Support representative restrictions (cannot access currency rates, Meta API tokens, or user management)
+    // C: Support representative restrictions (cannot access currency rates, Meta API tokens, user management, or admin console root)
     if (userRole === "representative") {
       const isRestrictedForRep =
+        pathname === "/admin" ||
         pathname === "/admin/rates" ||
         pathname === "/admin/meta-integration" ||
-        pathname === "/admin/clients";
+        pathname === "/admin/clients" ||
+        pathname === "/admin/pending" ||
+        pathname === "/admin/payments";
       if (isRestrictedForRep) {
         return NextResponse.redirect(new URL("/admin/live-chat", req.url));
       }
@@ -142,6 +145,11 @@ export function middleware(req: NextRequest) {
       clientLoginUrl.searchParams.set("callbackUrl", pathname);
     }
     return NextResponse.redirect(clientLoginUrl);
+  }
+
+  // Support representative should NOT be in client dashboard - redirect directly to Live Support Chat desk!
+  if (userRole === "representative") {
+    return NextResponse.redirect(new URL("/admin/live-chat", req.url));
   }
 
   return NextResponse.next();

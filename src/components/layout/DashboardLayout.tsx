@@ -22,7 +22,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   pageTitle = "Dashboard",
 }) => {
   const router = useRouter();
-  const { isAuthenticated, isAuthLoading } = usePortal();
+  const { profile, isAuthenticated, isAuthLoading } = usePortal();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [landingToast, setLandingToast] = useState<ToastData | null>(null);
 
@@ -52,10 +52,12 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   }, []);
 
   useEffect(() => {
-    if (!isAuthLoading && !isAuthenticated) {
+    if (!isAuthLoading && isAuthenticated && (profile.role as string) === "representative") {
+      router.replace("/admin/live-chat");
+    } else if (!isAuthLoading && !isAuthenticated) {
       router.replace("/login");
     }
-  }, [isAuthLoading, isAuthenticated, router]);
+  }, [isAuthLoading, isAuthenticated, profile.role, router]);
 
   if (isAuthLoading) {
     return (
@@ -97,7 +99,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       <RenewOrderModal />
       <SupportModal />
       <NotificationDrawer isAdmin={false} />
-      <ClientLiveChatWidget />
+      {profile.role !== "representative" && <ClientLiveChatWidget />}
 
       {/* Landing Toast Notification */}
       <AnimatedToast toast={landingToast} onClose={() => setLandingToast(null)} />

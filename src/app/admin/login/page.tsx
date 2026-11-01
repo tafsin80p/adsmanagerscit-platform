@@ -69,11 +69,14 @@ export default function AdminLoginPage() {
         return;
       }
 
+      const isRep = res.user?.role === "representative";
       setIsLoading(false);
       setToast({
         type: "admin",
-        title: "Admin Access Granted 🛡️",
-        message: "Authorized Specialist session verified. Redirecting to Operations Console...",
+        title: isRep ? "Support Desk Verified 🎧" : "Admin Access Granted 🛡️",
+        message: isRep
+          ? "Authorized Representative session verified. Redirecting to Live Chat Desk..."
+          : "Authorized Specialist session verified. Redirecting to Operations Console...",
         duration: 3500,
       });
 
@@ -82,15 +85,21 @@ export default function AdminLoginPage() {
           "scit_auth_toast",
           JSON.stringify({
             type: "admin",
-            title: "🛡️ Admin Operations Active",
-            message: "Authorized Specialist console verified. Live Meta API and database connected.",
+            title: isRep ? "🎧 Live Support Desk Ready" : "🛡️ Admin Operations Active",
+            message: isRep
+              ? "Support desk is online. You can now chat with customers and inspect orders."
+              : "Authorized Specialist console verified. Live Meta API and database connected.",
             duration: 4000,
           })
         );
       } catch {}
 
+      const dest =
+        res.redirectUrl ||
+        (isRep ? "/admin/live-chat" : "/admin");
+
       setTimeout(() => {
-        router.push(res.redirectUrl || "/admin");
+        router.push(dest);
       }, 900);
     } catch (err: unknown) {
       const e = err as Error;

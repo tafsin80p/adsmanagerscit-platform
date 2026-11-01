@@ -128,7 +128,12 @@ export async function POST(req: Request) {
       notifications: user.notifications,
     };
 
-    const redirectUrl = user.role === "admin" ? "/admin" : "/";
+    const redirectUrl =
+      user.role === "admin"
+        ? "/admin"
+        : user.role === "representative"
+        ? "/admin/live-chat"
+        : "/";
 
     const response = NextResponse.json({
       success: true,

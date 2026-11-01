@@ -109,11 +109,17 @@ function ClientLoginContent() {
         return;
       }
 
+      const isRep = res.user?.role === "representative";
+      const isAdmin = res.user?.role === "admin";
       setIsLoading(false);
       setToast({
-        type: "success",
-        title: "Signed In Successfully! 🎉",
-        message: "Welcome back! Redirecting you to your client dashboard...",
+        type: isRep ? "info" : "success",
+        title: isRep ? "Support Desk Session 🎧" : "Signed In Successfully! 🎉",
+        message: isRep
+          ? "Welcome! Redirecting you to Support Live Chat desk..."
+          : isAdmin
+          ? "Welcome Admin! Redirecting to Operations Console..."
+          : "Welcome back! Redirecting you to your client dashboard...",
         duration: 3500,
       });
 
@@ -122,15 +128,21 @@ function ClientLoginContent() {
           "scit_auth_toast",
           JSON.stringify({
             type: "success",
-            title: "Welcome Back! 🚀",
-            message: "Signed in successfully. Your campaigns and live metrics are synced.",
+            title: isRep ? "🎧 Support Desk Online" : "Welcome Back! 🚀",
+            message: isRep
+              ? "Live Support Chat desk is active. Customer inquiries will appear in your queue."
+              : "Signed in successfully. Your campaigns and live metrics are synced.",
             duration: 4000,
           })
         );
       } catch {}
 
+      const dest =
+        res.redirectUrl ||
+        (isRep ? "/admin/live-chat" : isAdmin ? "/admin" : "/");
+
       setTimeout(() => {
-        router.push(res.redirectUrl || "/");
+        router.push(dest);
       }, 900);
     } catch (err: unknown) {
       const e = err as Error;
