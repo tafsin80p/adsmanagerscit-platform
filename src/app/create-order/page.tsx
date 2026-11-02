@@ -354,6 +354,7 @@ export default function CreateOrderPage() {
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!campaignTitle.trim()) {
       setToast({
         type: "error",

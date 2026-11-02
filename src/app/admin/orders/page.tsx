@@ -60,7 +60,7 @@ export default function AdminOrdersPage() {
   } = usePortal();
 
   // Search & Filters State
-  const [sourceTab, setSourceTab] = useState<"portal" | "facebook_page">("portal");
+  const [sourceTab, setSourceTab] = useState<"all" | "portal" | "facebook_page">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [shiftFilter, setShiftFilter] = useState<string>("All");
@@ -246,7 +246,11 @@ export default function AdminOrdersPage() {
     [orders]
   );
 
-  const activeDataset = sourceTab === "portal" ? portalOrders : pageBoosts;
+  const activeDataset = useMemo(() => {
+    if (sourceTab === "portal") return portalOrders;
+    if (sourceTab === "facebook_page") return pageBoosts;
+    return orders;
+  }, [sourceTab, portalOrders, pageBoosts, orders]);
 
   // Dynamic KPI counts for active dataset
   const totalCount = activeDataset.length;
@@ -446,9 +450,31 @@ export default function AdminOrdersPage() {
           </div>
         </div>
 
-        {/* Dataset Switcher Tabs: Portal Orders vs Connected Facebook Page Boosts */}
+        {/* Dataset Switcher Tabs: All vs Portal Orders vs Connected Facebook Page Boosts */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-2xl border border-[#E9EDF4] shadow-2xs">
           <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => {
+                setSourceTab("all");
+                setStatusFilter("All");
+              }}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                sourceTab === "all"
+                  ? "bg-[#3858F6] text-white shadow-md shadow-[#3858F6]/25"
+                  : "bg-[#F5F7FB] text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              <Layers className="w-4 h-4" />
+              <span>All Client Orders</span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                  sourceTab === "all" ? "bg-white/20 text-white" : "bg-blue-100 text-[#3858F6]"
+                }`}
+              >
+                {orders.length}
+              </span>
+            </button>
+
             <button
               onClick={() => {
                 setSourceTab("portal");
@@ -495,7 +521,9 @@ export default function AdminOrdersPage() {
           </div>
 
           <p className="text-[11px] text-slate-500 font-medium">
-            {sourceTab === "portal"
+            {sourceTab === "all"
+              ? "All boost orders submitted through portal or synced via Meta."
+              : sourceTab === "portal"
               ? "Verified orders placed by clients directly through this web application."
               : "Boost campaigns running on client Facebook pages directly from Meta Ads Manager."}
           </p>

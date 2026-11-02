@@ -69,7 +69,7 @@ export default function AdminDashboardPage() {
   } = usePortal();
 
   const [dateFilter, setDateFilter] = useState("Last 7 Days");
-  const [sourceTab, setSourceTab] = useState<"portal" | "facebook_page">("portal");
+  const [sourceTab, setSourceTab] = useState<"all" | "portal" | "facebook_page">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
@@ -82,6 +82,7 @@ export default function AdminDashboardPage() {
   const [clients, setClients] = useState<ClientAccount[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState<boolean>(true);
   const [clientTabFilter, setClientTabFilter] = useState<"client" | "all">("client");
+  const [expandedClientId, setExpandedClientId] = useState<string | null>(null);
   const [isCreateOrderModalOpen, setIsCreateOrderModalOpen] = useState(false);
   const [orderModalClientId, setOrderModalClientId] = useState("");
 
@@ -129,8 +130,8 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Helper to count orders placed by a specific client
-  const getClientOrdersCount = (client: ClientAccount): number => {
+  // Helper to get all matching orders placed by a specific client
+  const getClientOrdersList = (client: ClientAccount): Order[] => {
     const brandLower = (client.businessName || "").toLowerCase().trim();
     const ownerLower = (client.name || "").toLowerCase().trim();
     const emailLower = (client.email || "").toLowerCase().trim();
@@ -144,7 +145,11 @@ export default function AdminDashboardPage() {
       if (pageNameLower && o.facebookPageName && o.facebookPageName.toLowerCase().trim() === pageNameLower) return true;
       if (pageId && o.facebookPageId && o.facebookPageId === pageId) return true;
       return false;
-    }).length;
+    });
+  };
+
+  const getClientOrdersCount = (client: ClientAccount): number => {
+    return getClientOrdersList(client).length;
   };
 
   const handleApproveOrder = (orderId: string) => {
@@ -253,7 +258,11 @@ export default function AdminDashboardPage() {
   }, [liveMetrics, orders, totalAudienceReach]);
 
   // Dataset currently active in table
-  const activeDataset = sourceTab === "portal" ? portalOrders : pageBoosts;
+  const activeDataset = useMemo(() => {
+    if (sourceTab === "portal") return portalOrders;
+    if (sourceTab === "facebook_page") return pageBoosts;
+    return orders;
+  }, [sourceTab, portalOrders, pageBoosts, orders]);
 
   // Status mapping for tab badges
   const statuses = ["All", "Pending", "Active", "Paused", "Completed"];
@@ -859,16 +868,16 @@ export default function AdminDashboardPage() {
                         )}
 
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-slate-500">In-App Orders:</span>
-                          <span className="font-bold text-[#3858F6]">
-                            {clientOrdersCount} Orders Active
+                          <span className="text-slate-500">Boost Orders:</span>
+                          <span className={`font-bold ${clientOrdersCount > 0 ? "text-[#3858F6] font-extrabold" : "text-slate-400"}`}>
+                            {clientOrdersCount > 0 ? `${clientOrdersCount} Boost Orders` : "0 Orders"}
                           </span>
                         </div>
                       </div>
                     </div>
 
                     {/* Quick Action Buttons */}
-                    <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center gap-1.5">
+                    <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center gap-1.5 flex-wrap">
                       {client.phone && (
                         <a
                           href={`https://wa.me/${client.phone.replace(/[^0-9]/g, "")}`}
@@ -879,6 +888,24 @@ export default function AdminDashboardPage() {
                         >
                           <MessageSquare className="w-3.5 h-3.5" />
                         </a>
+                      )}
+                      {clientOrdersCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cId = client._id || client.id || client.email;
+                            setExpandedClientId(expandedClientId === cId ? null : cId);
+                          }}
+                          className={`py-2 px-2.5 text-xs font-bold rounded-xl border transition-colors cursor-pointer flex items-center gap-1 ${
+                            expandedClientId === (client._id || client.id || client.email)
+                              ? "bg-[#3858F6] text-white border-[#3858F6]"
+                              : "bg-blue-50 hover:bg-blue-100 text-[#3858F6] border-blue-200"
+                          }`}
+                          title="Toggle Client Boost Orders"
+                        >
+                          <ShoppingBag className="w-3.5 h-3.5" />
+                          <span>Ads ({clientOrdersCount})</span>
+                        </button>
                       )}
                       <button
                         type="button"
@@ -898,6 +925,44 @@ export default function AdminDashboardPage() {
                         Profile
                       </Link>
                     </div>
+
+                    {/* Expandable Client Orders Preview */}
+                    {expandedClientId === (client._id || client.id || client.email) && (
+                      <div className="mt-3 pt-3 border-t border-slate-200 space-y-2 animate-in fade-in duration-150">
+                        <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                          <span>Client Boost Orders ({clientOrdersCount})</span>
+                          <Link
+                            href={`/admin/orders?search=${encodeURIComponent(client.businessName || client.name)}`}
+                            className="text-[11px] text-[#3858F6] hover:underline"
+                          >
+                            All Orders →
+                          </Link>
+                        </div>
+                        <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                          {getClientOrdersList(client).map((ad) => (
+                            <div
+                              key={ad.id}
+                              className="p-2 rounded-xl bg-white border border-slate-200 flex items-center justify-between text-xs gap-2 shadow-3xs"
+                            >
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-mono font-bold text-[10px] text-[#3858F6] bg-blue-50 px-1.5 py-0.2 rounded">
+                                    #{ad.id}
+                                  </span>
+                                  <span className="text-[11px] font-bold text-slate-800 truncate block max-w-[130px]">
+                                    {ad.campaignName}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] text-slate-400">
+                                  ${ad.totalBudgetUSD.toFixed(2)} USD • {ad.postType}
+                                </span>
+                              </div>
+                              <StatusBadge status={ad.status} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -1037,7 +1102,17 @@ export default function AdminDashboardPage() {
                   Master Client Campaign Operations
                 </h3>
                 {/* Segmented dataset switcher */}
-                <div className="flex items-center gap-1.5 bg-[#F6F8FC] p-1 rounded-xl border border-slate-200 ml-2">
+                <div className="flex items-center gap-1.5 bg-[#F6F8FC] p-1 rounded-xl border border-slate-200 ml-2 flex-wrap">
+                  <button
+                    onClick={() => { setSourceTab("all"); setStatusFilter("All"); }}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      sourceTab === "all"
+                        ? "bg-[#3858F6] text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    All Client Orders ({orders.length})
+                  </button>
                   <button
                     onClick={() => { setSourceTab("portal"); setStatusFilter("All"); }}
                     className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
@@ -1046,7 +1121,7 @@ export default function AdminDashboardPage() {
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    Portal Orders ({portalOrders.length})
+                    Portal In-App ({portalOrders.length})
                   </button>
                   <button
                     onClick={() => { setSourceTab("facebook_page"); setStatusFilter("All"); }}
@@ -1056,12 +1131,14 @@ export default function AdminDashboardPage() {
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    FB Page Boosts ({pageBoosts.length})
+                    FB Page Direct ({pageBoosts.length})
                   </button>
                 </div>
               </div>
               <p className="text-xs text-[#8A94A6] mt-1">
-                {sourceTab === "portal"
+                {sourceTab === "all"
+                  ? "Real-time master control panel showing all client boost orders placed directly or synced via Meta."
+                  : sourceTab === "portal"
                   ? "Real-time control panel for orders placed directly via this web application."
                   : "Boost campaigns synced directly from Meta Ads Manager for the client's Facebook page."}
               </p>

@@ -130,6 +130,7 @@ export function generateMetaPrompt(order: Order, exchangeRateBDT: number = 131.2
 }
 
 export interface Order {
+  _id?: string;
   id: string; // e.g. "AD-1001"
   campaignName: string;
   postUrl: string;

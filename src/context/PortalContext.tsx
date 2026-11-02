@@ -636,7 +636,16 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.orders)) {
-          setOrders(data.orders);
+          const uniqueOrders: Order[] = [];
+          const seen = new Set<string>();
+          for (const o of data.orders) {
+            const key = o.id || String((o as any)._id);
+            if (!seen.has(key)) {
+              seen.add(key);
+              uniqueOrders.push(o);
+            }
+          }
+          setOrders(uniqueOrders);
           setDbConnected(true);
         }
       }
@@ -654,7 +663,16 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.payments)) {
-          setPayments(data.payments);
+          const uniquePayments: PaymentTransaction[] = [];
+          const seen = new Set<string>();
+          for (const p of data.payments) {
+            const key = p.id || String((p as any)._id);
+            if (!seen.has(key)) {
+              seen.add(key);
+              uniquePayments.push(p);
+            }
+          }
+          setPayments(uniquePayments);
         }
       }
     } catch (err) {
@@ -948,65 +966,17 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
       console.warn("Failed to persist order to MongoDB:", err);
     }
 
-    setOrders((prev) => [savedOrder, ...prev]);
-
-    // Also create and persist corresponding payment transaction record
-    if (savedOrder.totalBudgetUSD) {
-      const isAdsCampaign =
-        savedOrder.postType === "Ads Campaign" ||
-        savedOrder.postType === "Ads" ||
-        getOrderCategory(savedOrder.postType) === "Ads";
-
-      const activeOrderRate = isAdsCampaign
-        ? 155
-        : profile.role !== "Specialist" && profile.role !== "admin" && profile.role !== "representative" && profile.dollarRate
-          ? profile.dollarRate
-          : exchangeRateBDT;
-      const cashoutPercent =
-        savedOrder.paymentMethod === "bKash"
-          ? bkashCashoutPercent
-          : savedOrder.paymentMethod === "Nagad"
-            ? nagadCashoutPercent
-            : 0;
-      const baseBDT = Math.round(savedOrder.totalBudgetUSD * activeOrderRate);
-      const cashoutChargeBDT = Math.round((baseBDT * cashoutPercent) / 100);
-      const bdtAmount = savedOrder.paidAmountBDT || baseBDT + cashoutChargeBDT;
-
-      const newTxn: PaymentTransaction = {
-        id: `TXN-${Math.floor(8100 + Math.random() * 800)}`,
-        orderId: savedOrder.id,
-        campaignName: savedOrder.campaignName,
-        method: savedOrder.paymentMethod || "bKash",
-        transactionId:
-          savedOrder.transactionId || "Pending Verification",
-        amountUSD: savedOrder.totalBudgetUSD,
-        amountBDT: bdtAmount,
-        exchangeRate: activeOrderRate,
-        serviceChargeBDT: cashoutChargeBDT,
-        status: "Under Review",
-        date: `${dateStr} Just now`,
-        senderNumber: newOrderData.senderNumber,
-        screenshotUrl: newOrderData.screenshotUrl,
-      };
-
-      try {
-        const payRes = await fetch("/api/payments", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(newTxn),
-        });
-        if (payRes.ok) {
-          const payData = await payRes.json();
-          if (payData.success && payData.payment) {
-            setPayments((prev) => [payData.payment, ...prev]);
-            return savedOrder;
-          }
-        }
-      } catch (err) {
-        console.warn("Failed to persist payment to MongoDB:", err);
+    setOrders((prev) => {
+      const exists = prev.some((o) => o.id === savedOrder.id || (savedOrder._id && o._id === savedOrder._id));
+      if (exists) {
+        return prev.map((o) => (o.id === savedOrder.id || (savedOrder._id && o._id === savedOrder._id) ? savedOrder : o));
       }
+      return [savedOrder, ...prev];
+    });
 
-      setPayments((prev) => [newTxn, ...prev]);
+    // Refresh payments from DB to get the authoritative payment transaction created by /api/orders
+    if (savedOrder.totalBudgetUSD) {
+      refreshPayments().catch(() => {});
     }
 
     return savedOrder;
