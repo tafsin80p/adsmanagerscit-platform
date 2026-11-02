@@ -31,6 +31,7 @@ import {
   ChevronUp,
   ArrowRight,
   Building,
+  Clock,
 } from "lucide-react";
 import { usePortal } from "@/context/PortalContext";
 import { ClientAccount, OrderStatus, PaymentStatus, PaymentMethod, getCurrentShift, ShiftType } from "@/types";
@@ -1050,6 +1051,49 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
                   onChange={(e) => setNotes(e.target.value)}
                   className="w-full px-3.5 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:bg-white focus:border-[#3858F6]"
                 />
+              </div>
+
+              {/* Order Duty Shift Selector */}
+              <div className="sm:col-span-2 p-3.5 bg-gradient-to-r from-slate-50 via-indigo-50/40 to-slate-50 rounded-2xl border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-3xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-100/80 border border-indigo-200 flex items-center justify-center text-indigo-700 shrink-0">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 block">Duty Shift for this Order (ক্যাম্পেইন শিফট)</span>
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      {selectedShift === "Day Shift" ? "☀️ ডে শিফট: সকাল ১০:০০ টা - রাত ০৮:০০ টা" : "🌙 নাইট শিফট: সন্ধ্যা ০৭:০০ টা - রাত ০২:৩০ টা"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedShift("Day Shift")}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer border ${
+                      selectedShift === "Day Shift"
+                        ? "bg-amber-400 text-amber-950 border-amber-400 shadow-xs"
+                        : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Sun className="w-3.5 h-3.5 text-amber-600" />
+                    <span>☀️ Day (10 AM - 08 PM)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedShift("Night Shift")}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer border ${
+                      selectedShift === "Night Shift"
+                        ? "bg-purple-600 text-white border-purple-600 shadow-xs"
+                        : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Moon className="w-3.5 h-3.5 text-purple-300" />
+                    <span>🌙 Night (07 PM - 02:30 AM)</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

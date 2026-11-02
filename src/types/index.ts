@@ -180,6 +180,28 @@ export interface Order {
 
 export type ShiftType = "Day Shift" | "Night Shift";
 
+export const SHIFT_SCHEDULE = {
+  day: {
+    name: "Day Shift" as const,
+    start: "10:00 AM",
+    end: "08:00 PM",
+    label: "☀️ Day Shift (10:00 AM - 08:00 PM BST)",
+    shortLabel: "10 AM - 08 PM",
+  },
+  night: {
+    name: "Night Shift" as const,
+    start: "07:00 PM",
+    end: "02:30 AM",
+    label: "🌙 Night Shift (07:00 PM - 02:30 AM BST)",
+    shortLabel: "07 PM - 02:30 AM",
+  },
+  rotational: {
+    name: "Rotational" as const,
+    label: "🔄 Rotational Shift (রোটেশনাল / উভয় শিফটে শিফটিং)",
+    shortLabel: "Rotational",
+  },
+} as const;
+
 export interface OrderAuditUser {
   name: string;
   email: string;
@@ -190,13 +212,30 @@ export interface OrderAuditUser {
   confirmedAt?: string;
 }
 
+/**
+ * Calculates current working shift according to platform schedule:
+ * - Day Shift: 10:00 AM to 08:00 PM
+ * - Night Shift: 07:00 PM to 02:30 AM
+ */
 export function getCurrentShift(date?: Date): ShiftType {
   const d = date ?? new Date();
   const hours = d.getHours();
-  if (hours >= 8 && hours < 20) {
+  const minutes = d.getMinutes();
+  const timeInMinutes = hours * 60 + minutes;
+
+  // Night shift active from 19:00 (7:00 PM = 1140 mins) through midnight until 02:30 AM (150 mins)
+  if (timeInMinutes >= 19 * 60 || timeInMinutes <= 2 * 60 + 30) {
+    return "Night Shift";
+  }
+
+  // Day shift active from 10:00 AM (600 mins) to 07:00 PM (1140 mins)
+  if (timeInMinutes >= 10 * 60 && timeInMinutes < 19 * 60) {
     return "Day Shift";
   }
-  return "Night Shift";
+
+  // Early morning buffer (02:31 AM - 09:59 AM):
+  // Before 06:00 AM counts as late night wrap-up; from 06:00 AM onward leads into day shift
+  return timeInMinutes < 6 * 60 ? "Night Shift" : "Day Shift";
 }
 
 export interface MetaAdAccount {

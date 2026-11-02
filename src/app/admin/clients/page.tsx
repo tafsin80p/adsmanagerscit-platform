@@ -232,7 +232,7 @@ export default function AdminClientsPage() {
         name: formData.name.trim(),
         email: formData.email.trim(),
         role: formData.role,
-        assignedShift: formData.role === "manager" ? (formData.assignedShift || "Day Shift") : undefined,
+        assignedShift: (formData.role === "manager" || formData.role === "representative") ? (formData.assignedShift || "Day Shift") : undefined,
         password: formData.password.trim() || "staff123",
         businessName: isStaff
           ? (formData.businessName.trim() || (formData.role === "representative" ? "Support Representative" : formData.role === "manager" ? "Ads Campaign Manager" : "Platform Admin"))
@@ -311,7 +311,7 @@ export default function AdminClientsPage() {
         name: editingClient.name.trim(),
         email: editingClient.email.trim(),
         role: editingClient.role || "client",
-        assignedShift: editingClient.role === "manager" ? (editingClient.assignedShift || "Day Shift") : undefined,
+        assignedShift: (editingClient.role === "manager" || editingClient.role === "representative") ? (editingClient.assignedShift || "Day Shift") : undefined,
         businessName: isStaff
           ? (editingClient.businessName?.trim() || (editingClient.role === "representative" ? "Support Representative" : editingClient.role === "manager" ? "Ads Campaign Manager" : "Platform Admin"))
           : editingClient.businessName.trim(),
@@ -1257,14 +1257,16 @@ export default function AdminClientsPage() {
               </div>
 
               {/* Informational banner when manager is selected */}
-              {formData.role === "manager" && (
+              {(formData.role === "manager" || formData.role === "representative") && (
                 <div className="p-3.5 bg-indigo-50/90 border border-indigo-200 rounded-2xl space-y-2.5 text-xs text-indigo-950">
                   <div className="flex items-start gap-2">
                     <Sliders className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
                     <div>
-                      <span className="font-bold text-indigo-900">Ads Campaign Manager Shift Mode</span>
+                      <span className="font-bold text-indigo-900">
+                        {formData.role === "manager" ? "Ads Campaign Manager Shift Mode" : "Support Representative Working Shift"}
+                      </span>
                       <p className="text-[11px] text-indigo-800/90 mt-0.5 leading-relaxed">
-                        ক্যাম্পেইন ম্যানেজার ডে এবং নাইট শিফটে ক্লায়েন্টদের আইডিতে সরাসরি বুস্ট ও অ্যাড তৈরি করতে পারবে এবং পেমেন্ট কনফার্ম করতে পারবে।
+                        ডে শিফট সকাল ১০:০০ টা থেকে রাত ০৮:০০ টা এবং নাইট শিফট সন্ধ্যা ০৭:০০ টা থেকে রাত ০২:৩০ টা পর্যন্ত কার্যকর থাকবে।
                       </p>
                     </div>
                   </div>
@@ -1277,8 +1279,8 @@ export default function AdminClientsPage() {
                       onChange={(e) => setFormData({ ...formData, assignedShift: e.target.value as any })}
                       className="w-full px-3 py-2 bg-white border border-indigo-300 rounded-xl text-xs font-bold text-indigo-950 focus:outline-none focus:ring-1 focus:ring-indigo-500 shadow-2xs"
                     >
-                      <option value="Day Shift">☀️ Day Shift (08:00 AM - 08:00 PM BST)</option>
-                      <option value="Night Shift">🌙 Night Shift (08:00 PM - 08:00 AM BST)</option>
+                      <option value="Day Shift">☀️ Day Shift (10:00 AM - 08:00 PM BST)</option>
+                      <option value="Night Shift">🌙 Night Shift (07:00 PM - 02:30 AM BST)</option>
                       <option value="Rotational">🔄 Rotational Shift (উভয় শিফটে শিফটিং)</option>
                     </select>
                   </div>
@@ -1653,14 +1655,16 @@ export default function AdminClientsPage() {
               </div>
 
               {/* Informational banner & Shift Selector when manager is selected */}
-              {editingClient.role === "manager" && (
+              {(editingClient.role === "manager" || editingClient.role === "representative") && (
                 <div className="p-3.5 bg-indigo-50/90 border border-indigo-200 rounded-2xl space-y-2.5 text-xs text-indigo-950">
                   <div className="flex items-start gap-2">
                     <Sliders className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
                     <div>
-                      <span className="font-bold text-indigo-900">Ads Campaign Manager Desk Mode</span>
+                      <span className="font-bold text-indigo-900">
+                        {editingClient.role === "manager" ? "Ads Campaign Manager Desk Mode" : "Support Representative Working Shift"}
+                      </span>
                       <p className="text-[11px] text-indigo-800/90 mt-0.5">
-                        এই ইউজার ক্লায়েন্টদের জন্য সরাসরি বুস্ট/অর্ডার সাবমিট ও পেমেন্ট কনফার্ম করতে পারবে।
+                        ডে শিফট সকাল ১০:০০ টা থেকে রাত ০৮:০০ টা এবং নাইট শিফট সন্ধ্যা ০৭:০০ টা থেকে রাত ০২:৩০ টা পর্যন্ত কার্যকর থাকবে।
                       </p>
                     </div>
                   </div>
@@ -1673,8 +1677,8 @@ export default function AdminClientsPage() {
                       onChange={(e) => setEditingClient({ ...editingClient, assignedShift: e.target.value as any })}
                       className="w-full px-3 py-2 bg-white border border-indigo-300 rounded-xl text-xs font-bold text-indigo-950 focus:outline-none focus:ring-1 focus:ring-indigo-500 shadow-2xs"
                     >
-                      <option value="Day Shift">☀️ Day Shift (08:00 AM - 08:00 PM BST)</option>
-                      <option value="Night Shift">🌙 Night Shift (08:00 PM - 08:00 AM BST)</option>
+                      <option value="Day Shift">☀️ Day Shift (10:00 AM - 08:00 PM BST)</option>
+                      <option value="Night Shift">🌙 Night Shift (07:00 PM - 02:30 AM BST)</option>
                       <option value="Rotational">🔄 Rotational Shift (উভয় শিফটে শিফটিং)</option>
                     </select>
                   </div>

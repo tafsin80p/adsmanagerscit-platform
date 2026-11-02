@@ -328,7 +328,7 @@ export default function ManagerDashboardPage() {
                   }`}
                 >
                   <Sun className="w-3.5 h-3.5 text-amber-600" />
-                  <span>☀️ Day Shift (08 AM - 08 PM)</span>
+                  <span>☀️ Day Shift (10 AM - 08 PM)</span>
                 </button>
 
                 <button
@@ -341,7 +341,7 @@ export default function ManagerDashboardPage() {
                   }`}
                 >
                   <Moon className="w-3.5 h-3.5 text-purple-300" />
-                  <span>🌙 Night Shift (08 PM - 08 AM)</span>
+                  <span>🌙 Night Shift (07 PM - 02:30 AM)</span>
                 </button>
               </div>
             </div>
