@@ -131,9 +131,20 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // Managers visiting /admin console -> Redirect to their dedicated /manager desk
+    // Campaign Manager access permissions:
+    // Managers can view and manage All Client Orders (/admin/orders) and Pending Approvals (/admin/pending)
+    // Managers visiting other admin sections (like rates, settings, users, meta integration) are redirected to /manager
     if (userRole === "manager") {
-      return NextResponse.redirect(new URL("/manager", req.url));
+      const isAllowedForManager =
+        pathname === "/admin/orders" ||
+        pathname.startsWith("/admin/orders/") ||
+        pathname === "/admin/pending" ||
+        pathname.startsWith("/admin/pending/");
+
+      if (!isAllowedForManager) {
+        return NextResponse.redirect(new URL("/manager", req.url));
+      }
+      return NextResponse.next();
     }
 
     // B: Logged-in client trying to access Admin pages -> BLOCKED & REDIRECTED TO CLIENT HOME
@@ -171,12 +182,30 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(clientLoginUrl);
   }
 
-  // Support representative and manager should NOT be in client dashboard
+  // Managers are authorized to access /create-order (full multi-boost / ads / promote order creation) and /profile (manager profile settings)
   if (userRole === "manager") {
-    return NextResponse.redirect(new URL("/manager", req.url));
+    const isAllowedForManager =
+      pathname === "/create-order" ||
+      pathname.startsWith("/create-order/") ||
+      pathname === "/profile" ||
+      pathname.startsWith("/profile/");
+
+    if (!isAllowedForManager) {
+      return NextResponse.redirect(new URL("/manager", req.url));
+    }
+    return NextResponse.next();
   }
+
+  // Support representative can also access /profile, but not other client dashboard pages
   if (userRole === "representative") {
-    return NextResponse.redirect(new URL("/admin/live-chat", req.url));
+    const isAllowedForRep =
+      pathname === "/profile" ||
+      pathname.startsWith("/profile/");
+
+    if (!isAllowedForRep) {
+      return NextResponse.redirect(new URL("/admin/live-chat", req.url));
+    }
+    return NextResponse.next();
   }
 
   return NextResponse.next();

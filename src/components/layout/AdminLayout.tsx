@@ -41,7 +41,11 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
 
   useEffect(() => {
     if (!isAuthLoading) {
-      const isAllowed = profile.role === "Specialist" || profile.role === "manager" || profile.role === "admin";
+      const isAllowed =
+        profile.role === "Specialist" ||
+        profile.role === "manager" ||
+        profile.role === "admin" ||
+        (profile.role as string) === "representative";
       if (!isAuthenticated || !isAllowed) {
         router.replace("/admin/login");
       }
@@ -59,7 +63,11 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
     );
   }
 
-  const isAllowed = profile.role === "Specialist" || profile.role === "manager" || profile.role === "admin";
+  const isAllowed =
+    profile.role === "Specialist" ||
+    profile.role === "manager" ||
+    profile.role === "admin" ||
+    (profile.role as string) === "representative";
   if (!isAuthenticated || !isAllowed) {
     return null;
   }
