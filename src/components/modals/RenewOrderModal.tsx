@@ -22,8 +22,10 @@ export const RenewOrderModal: React.FC = () => {
   if (!isRenewModalOpen || !selectedOrderForRenew) return null;
 
   const order = selectedOrderForRenew;
+  const isAds = (order.postType || "").toLowerCase().includes("ads") || (order.postType || "").toLowerCase().includes("campaign");
+  const effectiveRenewRate = isAds ? 155 : exchangeRateBDT;
   const renewalCostUSD = order.dailyBudgetUSD * days;
-  const baseRenewalCostBDT = Math.round(renewalCostUSD * exchangeRateBDT);
+  const baseRenewalCostBDT = Math.round(renewalCostUSD * effectiveRenewRate);
   const cashoutPercent =
     order.paymentMethod === "bKash"
       ? bkashCashoutPercent
@@ -123,6 +125,12 @@ export const RenewOrderModal: React.FC = () => {
 
             {/* Cost Summary Box */}
             <div className="p-3.5 bg-[#F6F8FC] rounded-xl border border-[#E7ECF3] space-y-2">
+              <div className="flex justify-between text-xs text-slate-500">
+                <span>Dollar Rate</span>
+                <span className={`font-semibold ${isAds ? "text-purple-700 font-bold" : "text-slate-700"}`}>
+                  1 USD = ৳{effectiveRenewRate} {isAds ? "(Ads Campaign ৳155 Fixed)" : "BDT"}
+                </span>
+              </div>
               <div className="flex justify-between text-xs text-slate-500">
                 <span>Daily rate</span>
                 <span className="font-semibold text-slate-700">${order.dailyBudgetUSD.toFixed(2)}/day</span>

@@ -98,9 +98,11 @@ export default function CreateOrderPage() {
   const [orderCreatedSuccess, setOrderCreatedSuccess] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastData | null>(null);
 
-  // Live Calculations
+  // Live Calculations (Ads Campaign fixed at 155 BDT/USD, other campaigns use client dollar rate)
+  const isAdsCampaign = postType === "Ads Campaign";
+  const activeOrderDollarRate = isAdsCampaign ? 155 : exchangeRateBDT;
   const totalUSD = items.reduce((sum, item) => sum + item.totalBudgetUSD, 0);
-  const baseBDT = Math.round(totalUSD * exchangeRateBDT);
+  const baseBDT = Math.round(totalUSD * activeOrderDollarRate);
   const cashoutPercent =
     paymentMethod === "bKash"
       ? bkashCashoutPercent
@@ -548,6 +550,15 @@ export default function CreateOrderPage() {
                     <div className="text-[10px] text-slate-500 mt-0.5">
                       {item.sub}
                     </div>
+                    {item.type === "Ads Campaign" ? (
+                      <span className="inline-block mt-1.5 text-[10px] font-extrabold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md">
+                        Fixed Rate: ৳155/USD
+                      </span>
+                    ) : (
+                      <span className="inline-block mt-1.5 text-[10px] font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
+                        Rate: ৳{exchangeRateBDT}/USD
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -779,7 +790,7 @@ export default function CreateOrderPage() {
                         {item.budgetType === "total" ? "Lifetime Campaign Budget:" : "Calculated Item Budget:"}
                       </span>
                       <span className="text-[#0866FF] font-black text-sm">
-                        ${item.totalBudgetUSD.toFixed(2)} USD <span className="text-slate-400 font-normal text-xs">(≈ ৳{Math.round(item.totalBudgetUSD * exchangeRateBDT).toLocaleString()} BDT)</span>
+                        ${item.totalBudgetUSD.toFixed(2)} USD <span className="text-slate-400 font-normal text-xs">(≈ ৳{Math.round(item.totalBudgetUSD * activeOrderDollarRate).toLocaleString()} BDT)</span>
                       </span>
                     </div>
                   </div>
@@ -1264,11 +1275,23 @@ export default function CreateOrderPage() {
                 <div className="flex justify-between items-center text-slate-600">
                   <span className="flex items-center gap-1">
                     <span>Dollar Rate</span>
-                    <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 font-mono">
-                      Live
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                        isAdsCampaign
+                          ? "bg-purple-100 text-purple-700 font-extrabold"
+                          : "bg-slate-100 text-slate-500 font-mono"
+                      }`}
+                    >
+                      {isAdsCampaign ? "Ads Campaign (৳155 Fixed)" : "Boost Rate"}
                     </span>
                   </span>
-                  <span className="font-medium text-slate-800">1 USD = ৳{exchangeRateBDT} BDT</span>
+                  <span
+                    className={`font-bold ${
+                      isAdsCampaign ? "text-purple-700 font-extrabold" : "text-slate-800"
+                    }`}
+                  >
+                    1 USD = ৳{activeOrderDollarRate} BDT
+                  </span>
                 </div>
 
                 <div className="flex justify-between items-center text-slate-600">

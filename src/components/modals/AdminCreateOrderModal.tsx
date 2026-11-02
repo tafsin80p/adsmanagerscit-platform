@@ -201,7 +201,10 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
   }, [clientsList, clientSearch]);
 
   // Calculated totals
-  const clientDollarRate = selectedClient?.dollarRate || exchangeRateBDT || 150;
+  const isAdsCampaign = postType === "Ads Campaign";
+  const clientDollarRate = isAdsCampaign
+    ? 155
+    : selectedClient?.dollarRate || exchangeRateBDT || 150;
   const totalBudgetUSD = customTotalUSD !== null ? customTotalUSD : dailyBudgetUSD * durationDays;
   const totalBudgetBDT = Math.round(totalBudgetUSD * clientDollarRate);
 
@@ -431,9 +434,14 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
                   className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-[#3858F6] cursor-pointer"
                 >
                   <option value="Boost Post">Boost Post (Post Engagement & Inquiries)</option>
-                  <option value="Ads Campaign">Ads Campaign (Meta Ads Manager Campaign)</option>
+                  <option value="Ads Campaign">📢 Ads Campaign (Fixed Rate: ৳155 / USD)</option>
                   <option value="Promotion">Promotion (Page Growth & Likes)</option>
                 </select>
+                {postType === "Ads Campaign" && (
+                  <p className="text-[11px] font-extrabold text-purple-700 mt-1 flex items-center gap-1">
+                    <span>💡 Ads Campaign এর জন্য ফিক্সড ডলার রেট ৳১৫৫ স্বয়ংক্রিয়ভাবে প্রযোজ্য হবে।</span>
+                  </p>
+                )}
               </div>
 
               <div>
@@ -593,7 +601,7 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
             </div>
 
             <div className="pt-1 flex items-center justify-between text-xs border-t border-blue-200/60 font-semibold text-slate-700">
-              <span>BDT Total (Client Rate: ৳{clientDollarRate}/USD):</span>
+              <span>BDT Total ({isAdsCampaign ? "Ads Campaign Fixed Rate: ৳155" : `Client Rate: ৳${clientDollarRate}`}/USD):</span>
               <span className="font-black text-[#10B981] text-sm">৳{totalBudgetBDT.toLocaleString()} BDT</span>
             </div>
           </div>

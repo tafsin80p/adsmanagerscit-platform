@@ -951,10 +951,16 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
 
     // Also create and persist corresponding payment transaction record
     if (savedOrder.totalBudgetUSD) {
-      const activeOrderRate =
-        profile.role !== "Specialist" && profile.role !== "admin" && profile.role !== "representative" && profile.dollarRate
-          ? profile.dollarRate
-          : exchangeRateBDT;
+      const isAdsCampaign =
+        savedOrder.postType === "Ads Campaign" ||
+        savedOrder.postType === "Ads" ||
+        getOrderCategory(savedOrder.postType) === "Ads";
+
+      const activeOrderRate = isAdsCampaign
+        ? 155
+        : profile.role !== "Specialist" && profile.role !== "admin" && profile.role !== "representative" && profile.dollarRate
+        ? profile.dollarRate
+        : exchangeRateBDT;
       const cashoutPercent =
         savedOrder.paymentMethod === "bKash"
           ? bkashCashoutPercent

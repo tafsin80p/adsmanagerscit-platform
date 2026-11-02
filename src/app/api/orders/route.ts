@@ -97,6 +97,9 @@ export async function POST(req: Request) {
           }
         }
 
+        const isAds = (order.postType || "").toLowerCase().includes("ads") || (order.postType || "").toLowerCase().includes("campaign");
+        const orderExchangeRate = isAds ? 155 : (Math.round((body.paidAmountBDT || 0) / (order.totalBudgetUSD || 1)) || 150);
+
         await PaymentModel.create({
           id: `TXN-${maxPayNum + 1}`,
           orderId: order.id,
@@ -105,7 +108,7 @@ export async function POST(req: Request) {
           transactionId: trxId,
           amountUSD: order.totalBudgetUSD || 0,
           amountBDT: body.paidAmountBDT || 0,
-          exchangeRate: Math.round((body.paidAmountBDT || 0) / (order.totalBudgetUSD || 1)) || 150,
+          exchangeRate: orderExchangeRate,
           serviceChargeBDT: 0,
           status: payStatus,
           date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
