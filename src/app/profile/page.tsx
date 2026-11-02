@@ -30,6 +30,7 @@ import {
   DollarSign,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { AdminLayout } from "@/components/layout/AdminLayout";
 import { usePortal } from "@/context/PortalContext";
 
 export default function ProfilePage() {
@@ -343,16 +344,28 @@ export default function ProfilePage() {
     }
   };
 
+  const isStaff = profile.role === "manager" || profile.role === "admin" || profile.role === "representative" || profile.role === "Specialist";
+  const isManager = profile.role === "manager";
+  const Layout = isStaff ? AdminLayout : DashboardLayout;
+
   return (
-    <DashboardLayout pageTitle="Profile">
+    <Layout pageTitle={isManager ? "Manager Profile" : "Profile"}>
       <div className="space-y-6 w-full">
         {/* Header */}
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#172033] tracking-tight">
-            Client Account & Settings
+            {isManager
+              ? "Campaign Manager Profile & Account"
+              : isStaff
+              ? "Staff Account & Settings"
+              : "Client Account & Settings"}
           </h1>
           <p className="text-xs sm:text-sm text-[#667085] mt-1">
-            Manage your brand profile, connected Facebook Page, and notification preferences.
+            {isManager
+              ? "Manage your manager profile photo, account credentials, and security password."
+              : isStaff
+              ? "Manage your staff credentials and security settings."
+              : "Manage your brand profile, connected Facebook Page, and notification preferences."}
           </p>
         </div>
 
@@ -391,20 +404,37 @@ export default function ProfilePage() {
           <div className="flex-1 text-center sm:text-left space-y-1">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <h2 className="text-lg font-bold text-[#172033]">{profile.name}</h2>
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#12A875] bg-[#E8F8F2] px-2.5 py-0.5 rounded-full self-center sm:self-auto">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                Verified Business Client
-              </span>
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0866FF] bg-[#EEF4FF] border border-[#D0E2FF] px-2.5 py-0.5 rounded-full self-center sm:self-auto" title="Your assigned Dollar Rate for ads & boosts">
-                <DollarSign className="w-3 h-3" />
-                1 USD = ৳{profile.dollarRate || 150} BDT
-              </span>
+              {isManager ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full self-center sm:self-auto">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" />
+                  Ads Campaign Manager • {profile.assignedShift || "Day Shift"}
+                </span>
+              ) : isStaff ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-0.5 rounded-full self-center sm:self-auto">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />
+                  {profile.role === "representative" ? "Support Agent" : "Platform Admin"}
+                </span>
+              ) : (
+                <>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#12A875] bg-[#E8F8F2] px-2.5 py-0.5 rounded-full self-center sm:self-auto">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Verified Business Client
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0866FF] bg-[#EEF4FF] border border-[#D0E2FF] px-2.5 py-0.5 rounded-full self-center sm:self-auto" title="Your assigned Dollar Rate for ads & boosts">
+                    <DollarSign className="w-3 h-3" />
+                    1 USD = ৳{profile.dollarRate || 150} BDT
+                  </span>
+                </>
+              )}
             </div>
             <p className="text-xs text-slate-500 font-medium">
-              {profile.businessName} • {profile.email}
+              {profile.businessName || profile.role} • {profile.email}
             </p>
             <div className="text-xs text-slate-400 pt-0.5">
-              Client ID: <span className="font-mono text-slate-700 font-semibold">CL-88910</span>
+              {isStaff ? "Duty Shift: " : "Client ID: "}
+              <span className="font-mono text-slate-700 font-semibold">
+                {isManager ? (profile.assignedShift || "Day Shift (10 AM - 08 PM)") : isStaff ? profile.role : "CL-88910"}
+              </span>
             </div>
 
             {/* Cloudinary Upload Action */}
@@ -510,8 +540,9 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Connected Facebook Page */}
-          <div className="bg-white p-6 rounded-2xl border border-[#E7ECF3] shadow-2xs space-y-4">
+          {/* Connected Facebook Page (Client accounts only) */}
+          {!isStaff && (
+            <div className="bg-white p-6 rounded-2xl border border-[#E7ECF3] shadow-2xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <h3 className="text-sm font-bold text-[#172033] flex items-center gap-2">
@@ -736,6 +767,7 @@ export default function ProfilePage() {
               </button>
             </div>
           </div>
+          )}
 
           {/* Notification Preferences */}
           <div className="bg-white p-6 rounded-2xl border border-[#E7ECF3] shadow-2xs space-y-4">
@@ -986,6 +1018,6 @@ export default function ProfilePage() {
           </div>
         </form>
       </div>
-    </DashboardLayout>
+    </Layout>
   );
 }

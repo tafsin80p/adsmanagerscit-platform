@@ -23,6 +23,7 @@ import {
   CreditCard,
   User,
   MessageSquare,
+  PlusCircle,
 } from "lucide-react";
 import { usePortal } from "@/context/PortalContext";
 
@@ -71,10 +72,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, onMobile
     ...(isManager
       ? [
           {
-            label: "CAMPAIGN SHIFT OPS",
+            label: "CAMPAIGN OPERATIONS",
             items: [
               {
-                name: "Shift Ads Console",
+                name: "Manager Dashboard",
                 href: "/manager",
                 icon: Sliders,
                 isLive: true,
@@ -84,13 +85,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, onMobile
                 },
               },
               {
-                name: "Pending Approvals",
-                href: "/admin/pending",
-                icon: Clock,
-                badge:
-                  pendingCount > 0
-                    ? { text: String(pendingCount), color: "bg-[#FEF3C7] text-[#D97706]" }
-                    : undefined,
+                name: "Create Order",
+                href: "/create-order",
+                icon: PlusCircle,
+                badge: { text: "Boost & Ads", color: "bg-blue-100 text-[#0866FF]" },
               },
               {
                 name: "All Client Orders",
@@ -102,15 +100,18 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, onMobile
                     : undefined,
               },
               {
-                name: "Users & Clients",
-                href: "/admin/clients",
-                icon: Users,
-                badge: { text: "IDs", color: "bg-[#EEF2FF] text-[#3858F6]" },
+                name: "Pending Approvals",
+                href: "/admin/pending",
+                icon: Clock,
+                badge:
+                  pendingCount > 0
+                    ? { text: String(pendingCount), color: "bg-[#FEF3C7] text-[#D97706]" }
+                    : undefined,
               },
               {
-                name: "Live Support Chat",
-                href: "/admin/live-chat",
-                icon: MessageSquare,
+                name: "My Profile",
+                href: "/profile",
+                icon: User,
               },
             ],
           },
@@ -171,7 +172,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, onMobile
                 : []),
             ],
           },
-          ...(!isRepresentative
+          ...(!isRepresentative && !isManager
             ? [
                 {
                   label: "SPECIALIST TOOLS",
@@ -204,22 +205,26 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, onMobile
               ]
             : []),
         ]),
-    {
-      label: "PORTAL SWITCH",
-      items: [
-        {
-          name: "View Client Portal",
-          href: "/",
-          icon: ExternalLink,
-          badge: { text: "Live", color: "bg-[#EEF2FF] text-[#3858F6]" },
-        },
-        {
-          name: "Sign Out",
-          href: "/admin/login",
-          icon: LogOut,
-        },
-      ],
-    },
+    ...(!isManager
+      ? [
+          {
+            label: "PORTAL SWITCH",
+            items: [
+              {
+                name: "View Client Portal",
+                href: "/",
+                icon: ExternalLink,
+                badge: { text: "Live", color: "bg-[#EEF2FF] text-[#3858F6]" },
+              },
+              {
+                name: "Sign Out",
+                href: "/admin/login",
+                icon: LogOut,
+              },
+            ],
+          },
+        ]
+      : []),
   ];
 
   const content = (
@@ -352,7 +357,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, onMobile
       {/* Admin Specialist Profile Card */}
       <div className="p-4 pt-2">
         <Link
-          href="/admin/profile"
+          href={isManager ? "/profile" : "/admin/profile"}
           onClick={onMobileClose}
           className="block bg-[#12151D] hover:bg-[#181C26] transition-colors text-white p-5 rounded-3xl relative overflow-hidden shadow-xl border border-white/5 space-y-3.5 group cursor-pointer"
         >

@@ -14,6 +14,8 @@ import {
   User,
   Users,
   ShieldCheck,
+  Plus,
+  ClipboardList,
 } from "lucide-react";
 import { usePortal } from "@/context/PortalContext";
 import { ClientAvatar } from "@/components/ui/ClientAvatar";
@@ -41,6 +43,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   const todayFormatted = "Tuesday, October 20th 2026";
 
   const isRepresentative = (profile.role as string) === "representative";
+  const isManager = (profile.role as string) === "manager";
 
   const adminName =
     profile.name ||
@@ -145,7 +148,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
                 {adminName}
               </div>
               <div className="text-[10px] text-slate-500 font-medium leading-tight">
-                {isRepresentative ? "Support Agent" : "Super Admin"}
+                {isManager ? "Campaign Manager" : isRepresentative ? "Support Agent" : "Super Admin"}
               </div>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden sm:block group-hover:text-slate-600" />
@@ -159,7 +162,42 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
               </div>
 
               <div className="py-1">
-                {isRepresentative ? (
+                {isManager ? (
+                  <>
+                    <Link
+                      href="/profile"
+                      onClick={() => setShowProfileMenu(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-[#F6F8FC] hover:text-[#3858F6]"
+                    >
+                      <User className="w-4 h-4 text-slate-400" />
+                      My Profile & Photo
+                    </Link>
+                    <Link
+                      href="/create-order"
+                      onClick={() => setShowProfileMenu(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-[#F6F8FC] hover:text-[#3858F6]"
+                    >
+                      <Plus className="w-4 h-4 text-[#3858F6]" />
+                      Create Order (Boost & Ads)
+                    </Link>
+                    <Link
+                      href="/manager"
+                      onClick={() => setShowProfileMenu(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-[#F6F8FC] hover:text-[#3858F6]"
+                    >
+                      <Sliders className="w-4 h-4 text-slate-400" />
+                      Manager Shift Desk
+                    </Link>
+                    <Link
+                      href="/admin/orders"
+                      onClick={() => setShowProfileMenu(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-[#F6F8FC] hover:text-[#3858F6]"
+                    >
+                      <ClipboardList className="w-4 h-4 text-slate-400" />
+                      All Client Orders
+                    </Link>
+                  </>
+                ) : isRepresentative ? (
                   <>
                     <Link
                       href="/admin/live-chat"

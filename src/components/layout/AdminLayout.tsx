@@ -14,11 +14,13 @@ import { AnimatedToast, ToastData } from "@/components/ui/AnimatedToast";
 interface AdminLayoutProps {
   children: React.ReactNode;
   pageTitle?: string;
+  bgClassName?: string;
 }
 
 export const AdminLayout: React.FC<AdminLayoutProps> = ({
   children,
   pageTitle = "Admin Operations Console",
+  bgClassName,
 }) => {
   const router = useRouter();
   const { profile, isAuthenticated, isAuthLoading } = usePortal();
@@ -34,7 +36,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
         const parsed = JSON.parse(stored);
         setLandingToast(parsed);
       }
-    } catch {}
+    } catch { }
   }, []);
 
   useEffect(() => {
@@ -63,7 +65,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   }
 
   return (
-    <div className="min-h-screen flex bg-[#EEF1F7]">
+    <div className={`min-h-screen flex ${bgClassName || "bg-[#EEF1F7]"}`}>
       {/* Admin Sidebar (Desktop Fixed 240px & Mobile Drawer) */}
       <AdminSidebar
         mobileOpen={mobileMenuOpen}

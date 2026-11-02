@@ -33,6 +33,7 @@ import {
   Globe,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { AdminLayout } from "@/components/layout/AdminLayout";
 import { usePortal } from "@/context/PortalContext";
 import { BoostItem, PaymentMethod, BankAccount, ClientAccount, getCurrentShift } from "@/types";
 import {
@@ -109,6 +110,17 @@ export default function CreateOrderPage() {
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [clientSearch, setClientSearch] = useState("");
   const [isClientPickerOpen, setIsClientPickerOpen] = useState(false);
+
+  // Auto-detect preselected client from URL query (e.g. /create-order?clientId=...)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const cId = params.get("clientId") || params.get("client");
+      if (cId) {
+        setSelectedClientId(cId);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (isStaff) {
@@ -475,9 +487,11 @@ export default function CreateOrderPage() {
     }
   };
 
+  const Layout = isStaff ? AdminLayout : DashboardLayout;
+
   if (orderCreatedSuccess) {
     return (
-      <DashboardLayout pageTitle="Order Confirmed">
+      <Layout pageTitle="Order Confirmed">
         {/* Animated Toast Notification */}
         <AnimatedToast toast={toast} onClose={() => setToast(null)} />
 
@@ -517,34 +531,55 @@ export default function CreateOrderPage() {
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-            <button
-              onClick={() => router.push("/")}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={() => router.push("/my-orders")}
-              className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl"
-            >
-              My Orders
-            </button>
-            <button
-              onClick={() => router.push("/all-boosts")}
-              className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#0866FF] hover:bg-[#0052CC] text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
-            >
-              <Flame className="w-4 h-4 text-amber-300" />
-              <span>View in All Boosts</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+            {isStaff ? (
+              <>
+                <button
+                  onClick={() => router.push(profile.role === "manager" ? "/manager" : "/admin")}
+                  className="px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl cursor-pointer"
+                >
+                  {profile.role === "manager" ? "Shift Dashboard" : "Admin Console"}
+                </button>
+                <button
+                  onClick={() => router.push("/admin/orders")}
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#0866FF] hover:bg-[#0052CC] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                >
+                  <Flame className="w-4 h-4 text-amber-300" />
+                  <span>View in All Orders</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => router.push("/")}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  Dashboard
+                </button>
+                <button
+                  onClick={() => router.push("/my-orders")}
+                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl"
+                >
+                  My Orders
+                </button>
+                <button
+                  onClick={() => router.push("/all-boosts")}
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#0866FF] hover:bg-[#0052CC] text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
+                >
+                  <Flame className="w-4 h-4 text-amber-300" />
+                  <span>View in All Boosts</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </>
+            )}
           </div>
         </div>
-      </DashboardLayout>
+      </Layout>
     );
   }
 
   return (
-    <DashboardLayout pageTitle="Create Order">
+    <Layout pageTitle="Create Order">
       {/* Animated Toast Notification */}
       <AnimatedToast toast={toast} onClose={() => setToast(null)} />
 
@@ -1649,6 +1684,6 @@ export default function CreateOrderPage() {
           </div>
         </form>
       </div>
-    </DashboardLayout>
+    </Layout>
   );
 }

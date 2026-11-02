@@ -133,10 +133,10 @@ export async function POST(req: Request) {
       user.role === "admin"
         ? "/admin"
         : user.role === "manager"
-        ? "/manager"
-        : user.role === "representative"
-        ? "/admin/live-chat"
-        : "/";
+          ? "/manager"
+          : user.role === "representative"
+            ? "/admin/live-chat"
+            : "/";
 
     const response = NextResponse.json({
       success: true,
