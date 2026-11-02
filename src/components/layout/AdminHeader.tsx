@@ -16,6 +16,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { usePortal } from "@/context/PortalContext";
+import { ClientAvatar } from "@/components/ui/ClientAvatar";
 
 interface AdminHeaderProps {
   onMobileMenuToggle: () => void;
@@ -133,9 +134,12 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             onClick={() => setShowProfileMenu(!showProfileMenu)}
             className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-full hover:bg-slate-100 transition-colors cursor-pointer group"
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white font-extrabold text-xs flex items-center justify-center shadow-xs">
-              {adminInitials}
-            </div>
+            <ClientAvatar
+              avatarUrl={profile?.avatar}
+              name={adminName}
+              className="w-8 h-8 rounded-full"
+              textSize="text-xs"
+            />
             <div className="hidden sm:block text-left">
               <div className="text-xs font-bold text-[#121826] leading-tight">
                 {adminName}

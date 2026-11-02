@@ -38,6 +38,7 @@ import { usePortal } from "@/context/PortalContext";
 import { Order, OrderStatus, ClientAccount, getCurrentShift, ShiftType } from "@/types";
 import { AdminCreateOrderModal } from "@/components/modals/AdminCreateOrderModal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { ClientAvatar } from "@/components/ui/ClientAvatar";
 
 export default function ManagerDashboardPage() {
   const {
@@ -511,9 +512,13 @@ export default function ManagerDashboardPage() {
                   className="inline-flex items-center gap-2 px-3 py-2 bg-[#F8FAFC] hover:bg-[#EEF2FF] border border-[#E2E8F0] hover:border-[#C7D2FE] rounded-2xl text-xs font-bold text-slate-800 hover:text-[#3858F6] shrink-0 transition-all cursor-pointer shadow-3xs"
                   title={`Click to add order for ${name}`}
                 >
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#3858F6] to-[#2542D9] text-white flex items-center justify-center text-[10px] font-black shrink-0">
-                    {name.slice(0, 2).toUpperCase()}
-                  </div>
+                  <ClientAvatar
+                    avatarUrl={c.avatar}
+                    fallbackUrl={c.connectedPage?.avatar}
+                    name={name}
+                    className="w-7 h-7 rounded-lg"
+                    textSize="text-[10px]"
+                  />
                   <div className="text-left min-w-0">
                     <div className="truncate max-w-[120px] font-bold">{name}</div>
                     <div className="text-[10px] text-slate-400 font-normal truncate max-w-[120px]">
@@ -693,15 +698,23 @@ export default function ManagerDashboardPage() {
 
                         {/* Client / Page */}
                         <td className="py-3.5 px-4">
-                          <div className="min-w-0">
-                            <div className="font-bold text-[#121826] truncate max-w-[150px]">
-                              {order.businessName || order.clientName || "Direct Client"}
-                            </div>
-                            <div className="text-[11px] text-[#3858F6] font-medium truncate max-w-[150px]">
-                              {order.facebookPageName || "Connected Page"}
-                            </div>
-                            <div className="text-[10px] text-slate-400 font-mono truncate max-w-[150px]">
-                              {order.clientEmail}
+                          <div className="flex items-center gap-2.5">
+                            <ClientAvatar
+                              avatarUrl={order.thumbnail}
+                              name={order.businessName || order.clientName || "Direct Client"}
+                              className="w-8 h-8 rounded-lg"
+                              textSize="text-xs"
+                            />
+                            <div className="min-w-0">
+                              <div className="font-bold text-[#121826] truncate max-w-[150px]">
+                                {order.businessName || order.clientName || "Direct Client"}
+                              </div>
+                              <div className="text-[11px] text-[#3858F6] font-medium truncate max-w-[150px]">
+                                {order.facebookPageName || "Connected Page"}
+                              </div>
+                              <div className="text-[10px] text-slate-400 font-mono truncate max-w-[150px]">
+                                {order.clientEmail}
+                              </div>
                             </div>
                           </div>
                         </td>

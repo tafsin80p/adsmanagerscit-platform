@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -27,10 +27,14 @@ import {
   Loader2,
   FileUp,
   Flame,
+  User,
+  Search,
+  X,
+  Globe,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { usePortal } from "@/context/PortalContext";
-import { BoostItem, PaymentMethod, BankAccount } from "@/types";
+import { BoostItem, PaymentMethod, BankAccount, ClientAccount, getCurrentShift } from "@/types";
 import {
   CityBankLogo,
   BracBankLogo,
@@ -41,6 +45,7 @@ import {
 import { BankDetailsModal } from "@/components/modals/BankDetailsModal";
 import { FacebookPostPreview } from "@/components/ui/FacebookPostPreview";
 import { AnimatedToast, ToastData } from "@/components/ui/AnimatedToast";
+import { ClientAvatar } from "@/components/ui/ClientAvatar";
 
 export default function CreateOrderPage() {
   const router = useRouter();
@@ -98,9 +103,51 @@ export default function CreateOrderPage() {
   const [orderCreatedSuccess, setOrderCreatedSuccess] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastData | null>(null);
 
+  // Staff / Manager Target Client Picker State
+  const isStaff = profile.role === "manager" || profile.role === "Specialist" || profile.role === "admin";
+  const [clients, setClients] = useState<ClientAccount[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [clientSearch, setClientSearch] = useState("");
+  const [isClientPickerOpen, setIsClientPickerOpen] = useState(false);
+
+  useEffect(() => {
+    if (isStaff) {
+      fetch("/api/clients?role=client")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.clients)) {
+            setClients(data.clients);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isStaff]);
+
+  const selectedClient = useMemo(() => {
+    if (!isStaff || !selectedClientId) return null;
+    return clients.find((c) => (c._id || c.id || c.email) === selectedClientId) || null;
+  }, [isStaff, selectedClientId, clients]);
+
+  const filteredClientsForPage = useMemo(() => {
+    if (!clientSearch.trim()) return clients;
+    const q = clientSearch.toLowerCase();
+    return clients.filter(
+      (c) =>
+        c.name?.toLowerCase().includes(q) ||
+        c.businessName?.toLowerCase().includes(q) ||
+        c.email?.toLowerCase().includes(q) ||
+        c.phone?.includes(q) ||
+        c.connectedPage?.name?.toLowerCase().includes(q)
+    );
+  }, [clients, clientSearch]);
+
   // Live Calculations (Ads Campaign fixed at 155 BDT/USD, other campaigns use client dollar rate)
   const isAdsCampaign = postType === "Ads Campaign";
-  const activeOrderDollarRate = isAdsCampaign ? 155 : exchangeRateBDT;
+  const activeOrderDollarRate = isAdsCampaign
+    ? 155
+    : isStaff && selectedClient?.dollarRate
+    ? selectedClient.dollarRate
+    : exchangeRateBDT;
   const totalUSD = items.reduce((sum, item) => sum + item.totalBudgetUSD, 0);
   const baseBDT = Math.round(totalUSD * activeOrderDollarRate);
   const cashoutPercent =
@@ -324,9 +371,32 @@ export default function CreateOrderPage() {
       return;
     }
 
+    if (isStaff && !selectedClient) {
+      setToast({
+        type: "error",
+        title: "Please Select Client",
+        message: "Please select which client this boost/ad campaign is being run for.",
+        duration: 4500,
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
+      const orderShift = getCurrentShift();
+      const orderClientEmail = isStaff && selectedClient ? selectedClient.email : profile.email;
+      const orderClientName = isStaff && selectedClient ? selectedClient.name : profile.name;
+      const orderBusinessName = isStaff && selectedClient
+        ? (selectedClient.businessName || selectedClient.connectedPage?.name || selectedClient.name)
+        : (profile.businessName || profile.connectedPage?.name || profile.name);
+      const orderPageName = isStaff && selectedClient
+        ? (selectedClient.connectedPage?.name || selectedClient.businessName)
+        : (profile.connectedPage?.name || profile.businessName);
+      const orderPageId = isStaff && selectedClient
+        ? (selectedClient.connectedPage?.id || "")
+        : (profile.connectedPage?.id || "");
+
       const created = await addOrder({
         campaignName: campaignTitle.trim(),
         postUrl: firstUrl,
@@ -343,13 +413,15 @@ export default function CreateOrderPage() {
         paidAmountBDT: finalPayableBDT,
         thumbnail: uploadedImage || "/images/winter-collection.jpg",
         items,
-        clientEmail: profile.email,
-        clientName: profile.name,
-        businessName: profile.businessName || profile.connectedPage?.name || profile.name,
-        facebookPageName: profile.connectedPage?.name || profile.businessName,
-        facebookPageId: profile.connectedPage?.id || "",
+        clientEmail: orderClientEmail,
+        clientName: orderClientName,
+        businessName: orderBusinessName,
+        facebookPageName: orderPageName,
+        facebookPageId: orderPageId,
         notes: [
-          `Client submitted boost order for ${items.length} item(s).`,
+          isStaff
+            ? `Order created by ${profile.name} (${profile.role}) in ${orderShift} for ${orderBusinessName}.`
+            : `Client submitted boost order for ${items.length} item(s).`,
           `Target objective: ${primaryObjective} on ${targetPlatform}.`,
           `Payment submitted via ${paymentMethod}${paymentMethod === "Bank Transfer" ? ` (${selectedBankAccount?.bankName || "Bank"})` : ""}${cashoutChargeBDT > 0 ? ` with ${cashoutPercent}% cashout charge (+৳${cashoutChargeBDT} BDT)` : ""} (${transactionId || "pending confirmation"}).`,
           senderNumber ? `Sender Account: ${senderNumber}` : "",
@@ -357,6 +429,18 @@ export default function CreateOrderPage() {
         senderNumber: senderNumber || undefined,
         screenshotUrl: uploadedImage || undefined,
         isEligibleForRenew: false,
+        ...(isStaff
+          ? {
+              addedBy: {
+                name: profile.name || "Ads Specialist",
+                email: profile.email || "staff@shopnocareerit.com",
+                role: profile.role || "manager",
+                shift: orderShift,
+                at: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+              },
+              shift: orderShift,
+            }
+          : {}),
       });
 
       setIsSubmitting(false);
@@ -477,34 +561,233 @@ export default function CreateOrderPage() {
           </div>
         </div>
 
-        {/* Connected Facebook Page Header Banner */}
-        <div className="bg-gradient-to-r from-[#EEF4FF] via-white to-[#F6F8FC] p-4 rounded-2xl border border-[#D8E4FC] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#0866FF] text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm">
-              f
-            </div>
-            <div>
+        {/* If Staff (Manager/Admin): Target Client Selector | If Client: Connected Page Banner */}
+        {isStaff ? (
+          <div className="p-5 rounded-2xl bg-gradient-to-br from-[#F8FAFC] via-[#EEF4FF]/50 to-[#F1F5F9] border border-blue-200/80 shadow-2xs space-y-4">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-[#172033]">
-                  Boosting For: {profile.connectedPage?.name || profile.businessName || "My Facebook Page"}
-                </span>
-                <span className="text-[10px] bg-[#E8F8F2] text-[#12A875] px-2 py-0.5 rounded-full font-bold">
-                  Connected
-                </span>
+                <div className="w-8 h-8 rounded-xl bg-[#3858F6] text-white flex items-center justify-center font-black">
+                  <User className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-tight flex items-center gap-1.5">
+                    <span>Select Target Client (কোন ক্লায়েন্টের জন্য বুস্ট রান করবেন) *</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    ম্যানেজার / অ্যাডমিন ডেস্ক মোড: যে ক্লায়েন্টের জন্য বিজ্ঞাপন রান হবে তাকে সিলেক্ট করুন।
+                  </p>
+                </div>
               </div>
-              <div className="text-[11px] text-slate-500">
-                {profile.connectedPage?.category || "Shopping & Retail"} • Page ID: {profile.connectedPage?.id || "N/A"}
+              <span className="text-[11px] font-bold text-[#3858F6] bg-white px-2.5 py-1 rounded-full border border-blue-200 shadow-3xs">
+                {clients.length} Registered Clients
+              </span>
+            </div>
+
+            {/* Selected Client Card or Search Picker */}
+            {selectedClient && !isClientPickerOpen ? (
+              <div className="p-4 bg-white rounded-xl border border-blue-200 flex items-center justify-between gap-3 shadow-3xs animate-in fade-in">
+                <div className="flex items-center gap-3 min-w-0">
+                  <ClientAvatar
+                    avatarUrl={selectedClient.avatar}
+                    fallbackUrl={selectedClient.connectedPage?.avatar}
+                    name={selectedClient.businessName || selectedClient.name}
+                    className="w-12 h-12 rounded-xl"
+                    textSize="text-sm"
+                  />
+                  <div className="min-w-0">
+                    <h4 className="font-extrabold text-sm text-slate-900 truncate">
+                      {selectedClient.businessName || selectedClient.name}
+                    </h4>
+                    <div className="text-xs text-slate-500 font-medium truncate flex items-center gap-1.5 mt-0.5">
+                      <span>Owner: {selectedClient.name}</span>
+                      {selectedClient.phone && (
+                        <>
+                          <span>•</span>
+                          <span className="text-emerald-700 font-bold">{selectedClient.phone}</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-[#3858F6] font-semibold truncate mt-0.5 flex items-center gap-1">
+                      <Globe className="w-3 h-3 text-[#3858F6]" />
+                      <span>Page: {selectedClient.connectedPage?.name || selectedClient.businessName}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <div className="text-right">
+                    <div className="text-[10px] text-slate-400 font-bold">Client Dollar Rate:</div>
+                    <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 inline-block mt-0.5">
+                      ৳{isAdsCampaign ? 155 : selectedClient.dollarRate || 150} / USD
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsClientPickerOpen(true)}
+                    className="text-xs font-bold text-[#3858F6] hover:text-[#2542D9] bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl border border-blue-200 transition-colors cursor-pointer"
+                  >
+                    Change Client
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3 animate-in fade-in">
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search client by Brand name, Owner name, Phone / WhatsApp, Page, or Email..."
+                    value={clientSearch}
+                    onChange={(e) => setClientSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#CBD5E1] rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#3858F6] shadow-3xs"
+                    autoFocus={isClientPickerOpen}
+                  />
+                  {clientSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setClientSearch("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Quick Chips of clients */}
+                {clients.length > 0 && !clientSearch && (
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                    {clients.slice(0, 6).map((c) => {
+                      const id = c._id || c.id || c.email;
+                      const isSelected = selectedClientId === id;
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedClientId(id);
+                            setIsClientPickerOpen(false);
+                          }}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer border ${
+                            isSelected
+                              ? "bg-[#3858F6] text-white border-[#3858F6] shadow-xs"
+                              : "bg-white text-slate-700 hover:bg-blue-50 hover:text-[#3858F6] border-slate-200"
+                          }`}
+                        >
+                          <span>{c.businessName || c.name}</span>
+                          <span className={`text-[10px] px-1 rounded ${isSelected ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600 font-mono"}`}>
+                            ৳{c.dollarRate || 150}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Client List Dropdown */}
+                <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 border border-slate-200 rounded-xl p-1.5 bg-white">
+                  {filteredClientsForPage.length === 0 ? (
+                    <div className="p-3 text-center text-xs text-slate-400">
+                      No client found matching "{clientSearch}".
+                    </div>
+                  ) : (
+                    filteredClientsForPage.map((c) => {
+                      const id = c._id || c.id || c.email;
+                      const isSelected = selectedClientId === id;
+                      return (
+                        <div
+                          key={id}
+                          onClick={() => {
+                            setSelectedClientId(id);
+                            setIsClientPickerOpen(false);
+                          }}
+                          className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                            isSelected
+                              ? "bg-blue-50/90 border-[#3858F6] ring-1 ring-[#3858F6]"
+                              : "bg-white hover:bg-slate-50 border-slate-100"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <ClientAvatar
+                              avatarUrl={c.avatar}
+                              fallbackUrl={c.connectedPage?.avatar}
+                              name={c.businessName || c.name}
+                              className="w-8 h-8 rounded-lg"
+                              textSize="text-[10px]"
+                            />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-extrabold text-slate-900 text-xs truncate">
+                                  {c.businessName || c.name}
+                                </span>
+                                {c.connectedPage?.name && (
+                                  <span className="text-[10px] font-bold text-[#3858F6] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
+                                    {c.connectedPage.name}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
+                                Owner: {c.name} {c.phone ? `(${c.phone})` : ""} • {c.email}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg shadow-3xs">
+                              ৳{c.dollarRate || 150}/$1
+                            </span>
+                            <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${isSelected ? "bg-[#3858F6] text-white" : "bg-slate-100 text-slate-700"}`}>
+                              {isSelected ? "Selected ✓" : "Select"}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {selectedClient && (
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setIsClientPickerOpen(false)}
+                      className="text-xs font-bold text-slate-500 hover:text-slate-800 px-2 py-1 cursor-pointer"
+                    >
+                      Close Picker (বন্ধ করুন)
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Connected Facebook Page Header Banner for Client */
+          <div className="bg-gradient-to-r from-[#EEF4FF] via-white to-[#F6F8FC] p-4 rounded-2xl border border-[#D8E4FC] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#0866FF] text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm">
+                f
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-[#172033]">
+                    Boosting For: {profile.connectedPage?.name || profile.businessName || "My Facebook Page"}
+                  </span>
+                  <span className="text-[10px] bg-[#E8F8F2] text-[#12A875] px-2 py-0.5 rounded-full font-bold">
+                    Connected
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-500">
+                  {profile.connectedPage?.category || "Shopping & Retail"} • Page ID: {profile.connectedPage?.id || "N/A"}
+                </div>
               </div>
             </div>
+            <Link
+              href="/profile"
+              className="text-xs font-bold text-[#0866FF] hover:underline self-start sm:self-auto flex items-center gap-1 bg-white px-3 py-1.5 rounded-xl border border-[#D8E4FC] shadow-2xs"
+            >
+              <span>Change Page in Profile</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </Link>
           </div>
-          <Link
-            href="/profile"
-            className="text-xs font-bold text-[#0866FF] hover:underline self-start sm:self-auto flex items-center gap-1 bg-white px-3 py-1.5 rounded-xl border border-[#D8E4FC] shadow-2xs"
-          >
-            <span>Change Page in Profile</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </Link>
-        </div>
+        )}
 
         <form onSubmit={handleSubmitOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Form Column (7 cols) */}
@@ -679,8 +962,8 @@ export default function CreateOrderPage() {
                       <div className="pt-1">
                         <FacebookPostPreview
                           postUrl={item.postUrl}
-                          pageName={profile?.connectedPage?.name || "Min Mart BD"}
-                          pageAvatar={profile?.avatar || "/images/profile-avatar.jpg"}
+                          pageName={selectedClient?.connectedPage?.name || selectedClient?.businessName || profile?.connectedPage?.name || "Min Mart BD"}
+                          pageAvatar={selectedClient?.avatar || selectedClient?.connectedPage?.avatar || profile?.avatar || "/images/profile-avatar.jpg"}
                           thumbnail="/images/winter-collection.jpg"
                           campaignName={campaignTitle || item.name}
                           objective={item.objective || primaryObjective}

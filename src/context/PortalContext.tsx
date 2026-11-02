@@ -316,8 +316,8 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
         o.paymentMethod === "Nagad"
           ? "nagad"
           : o.paymentMethod === "Bank Transfer"
-          ? "citybank"
-          : "bkash";
+            ? "citybank"
+            : "bkash";
 
       // 1. Pending Verification
       if (o.paymentStatus === "Awaiting Verification" || o.paymentStatus === "Under Review" || o.status === "Pending") {
@@ -434,8 +434,8 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
         o.paymentMethod === "Nagad"
           ? "nagad"
           : o.paymentMethod === "Bank Transfer"
-          ? "citybank"
-          : "bkash";
+            ? "citybank"
+            : "bkash";
 
       if (o.paymentStatus === "Awaiting Verification" || o.paymentStatus === "Under Review" || o.status === "Pending") {
         const id = `admin-order-review-${o.id}`;
@@ -487,8 +487,8 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
           p.method === "Nagad"
             ? "nagad"
             : p.method === "Bank Transfer"
-            ? "citybank"
-            : "bkash";
+              ? "citybank"
+              : "bkash";
 
         list.push({
           id,
@@ -548,7 +548,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
           const updated = [...prev, id];
           try {
             localStorage.setItem("scit_read_notifs_admin", JSON.stringify(updated));
-          } catch {}
+          } catch { }
           return updated;
         });
       } else {
@@ -558,7 +558,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
           try {
             const clientKey = `scit_read_notifs_client_${profile.email || "default"}`;
             localStorage.setItem(clientKey, JSON.stringify(updated));
-          } catch {}
+          } catch { }
           return updated;
         });
       }
@@ -573,14 +573,14 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
         setReadNotifIdsAdmin(allAdminIds);
         try {
           localStorage.setItem("scit_read_notifs_admin", JSON.stringify(allAdminIds));
-        } catch {}
+        } catch { }
       } else {
         const allClientIds = clientNotifications.map((n) => n.id);
         setReadNotifIdsClient(allClientIds);
         try {
           const clientKey = `scit_read_notifs_client_${profile.email || "default"}`;
           localStorage.setItem(clientKey, JSON.stringify(allClientIds));
-        } catch {}
+        } catch { }
       }
     },
     [adminNotifications, clientNotifications, profile.email]
@@ -810,14 +810,14 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
             parsed.avatar = "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=100090491619527";
             try {
               localStorage.setItem("scit_user_profile", JSON.stringify(parsed));
-            } catch {}
+            } catch { }
           }
           setProfile(parsed);
           setIsAuthenticated(true);
           hasLocal = true;
         }
       }
-    } catch {}
+    } catch { }
 
     fetch("/api/auth/me")
       .then((res) => res.json())
@@ -837,21 +837,21 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
             assignedShift: u.assignedShift || "Day Shift",
             connectedPage: userSavedPage
               ? {
-                  name: userSavedPage.name,
-                  id: userSavedPage.id || "FB-PAGE",
-                  followers: userSavedPage.followers || "10.0K followers",
-                  category: userSavedPage.category || "Shopping & Retail",
-                  verified: userSavedPage.verified !== false,
-                  avatar: userSavedPage.avatar || u.avatar || "/images/avatar.jpg",
-                }
+                name: userSavedPage.name,
+                id: userSavedPage.id || "FB-PAGE",
+                followers: userSavedPage.followers || "10.0K followers",
+                category: userSavedPage.category || "Shopping & Retail",
+                verified: userSavedPage.verified !== false,
+                avatar: userSavedPage.avatar || u.avatar || "/images/avatar.jpg",
+              }
               : {
-                  name: defaultPageName,
-                  id: u.email === "minmartbd@gmail.com" ? "110132735345674" : `FB-${Math.floor(10000000 + Math.random() * 90000000)}`,
-                  followers: u.email === "minmartbd@gmail.com" ? "12.8K followers" : "5.4K followers",
-                  category: "Shopping & Retail",
-                  verified: true,
-                  avatar: u.avatar || "/images/avatar.jpg",
-                },
+                name: defaultPageName,
+                id: u.email === "minmartbd@gmail.com" ? "110132735345674" : `FB-${Math.floor(10000000 + Math.random() * 90000000)}`,
+                followers: u.email === "minmartbd@gmail.com" ? "12.8K followers" : "5.4K followers",
+                category: "Shopping & Retail",
+                verified: true,
+                avatar: u.avatar || "/images/avatar.jpg",
+              },
             currency: u.currency || "USD",
             dollarRate: u.dollarRate || 150,
             notifications: u.notifications || {
@@ -864,13 +864,13 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
           setIsAuthenticated(true);
           try {
             localStorage.setItem("scit_user_profile", JSON.stringify(restored));
-          } catch {}
+          } catch { }
         } else {
           setIsAuthenticated(false);
           setProfile(initialProfile);
           try {
             localStorage.removeItem("scit_user_profile");
-          } catch {}
+          } catch { }
         }
       })
       .catch(() => {
@@ -878,7 +878,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
         setProfile(initialProfile);
         try {
           localStorage.removeItem("scit_user_profile");
-        } catch {}
+        } catch { }
       })
       .finally(() => {
         setIsAuthLoading(false);
@@ -960,14 +960,14 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
       const activeOrderRate = isAdsCampaign
         ? 155
         : profile.role !== "Specialist" && profile.role !== "admin" && profile.role !== "representative" && profile.dollarRate
-        ? profile.dollarRate
-        : exchangeRateBDT;
+          ? profile.dollarRate
+          : exchangeRateBDT;
       const cashoutPercent =
         savedOrder.paymentMethod === "bKash"
           ? bkashCashoutPercent
           : savedOrder.paymentMethod === "Nagad"
-          ? nagadCashoutPercent
-          : 0;
+            ? nagadCashoutPercent
+            : 0;
       const baseBDT = Math.round(savedOrder.totalBudgetUSD * activeOrderRate);
       const cashoutChargeBDT = Math.round((baseBDT * cashoutPercent) / 100);
       const bdtAmount = savedOrder.paidAmountBDT || baseBDT + cashoutChargeBDT;
@@ -1043,17 +1043,17 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
         status === "Verified"
           ? "Verified"
           : status === "Failed"
-          ? "Failed"
-          : "Awaiting Verification";
+            ? "Failed"
+            : "Awaiting Verification";
 
       setOrders((prev) =>
         prev.map((order) =>
           order.id === affectedOrderId
             ? {
-                ...order,
-                paymentStatus: orderPaymentStatus,
-                status: status === "Verified" ? "Active" : status === "Failed" ? "Rejected" : order.status,
-              }
+              ...order,
+              paymentStatus: orderPaymentStatus,
+              status: status === "Verified" ? "Active" : status === "Failed" ? "Rejected" : order.status,
+            }
             : order
         )
       );
@@ -1202,7 +1202,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
       const updated = { ...prev, ...updates };
       try {
         localStorage.setItem("scit_user_profile", JSON.stringify(updated));
-      } catch {}
+      } catch { }
       return updated;
     });
 
@@ -1231,7 +1231,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
           };
           try {
             localStorage.setItem("scit_user_profile", JSON.stringify(synced));
-          } catch {}
+          } catch { }
           return synced;
         });
       }
@@ -1405,7 +1405,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
         setProfile(updatedProfile);
         try {
           localStorage.setItem("scit_user_profile", JSON.stringify(updatedProfile));
-        } catch {}
+        } catch { }
       }
 
       return {
@@ -1416,10 +1416,10 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
           (data.user?.role === "representative"
             ? "/admin/live-chat"
             : data.user?.role === "manager"
-            ? "/manager"
-            : credentials.accountType === "specialist"
-            ? "/admin"
-            : "/"),
+              ? "/manager"
+              : credentials.accountType === "specialist"
+                ? "/admin"
+                : "/"),
       };
     } catch (err: unknown) {
       const e = err as Error;
@@ -1433,10 +1433,10 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
-    } catch {}
+    } catch { }
     try {
       localStorage.removeItem("scit_user_profile");
-    } catch {}
+    } catch { }
     setIsAuthenticated(false);
     setProfile(initialProfile);
   };

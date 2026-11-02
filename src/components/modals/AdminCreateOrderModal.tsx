@@ -25,9 +25,18 @@ import {
   Check,
   Sun,
   Moon,
+  Search,
+  Phone,
+  ChevronDown,
+  ChevronUp,
+  ArrowRight,
+  Building,
 } from "lucide-react";
 import { usePortal } from "@/context/PortalContext";
 import { ClientAccount, OrderStatus, PaymentStatus, PaymentMethod, getCurrentShift, ShiftType } from "@/types";
+
+// Consistent avatar initials and gradient helpers
+import { ClientAvatar, getAvatarGradient, getAvatarInitials } from "@/components/ui/ClientAvatar";
 
 interface AdminCreateOrderModalProps {
   isOpen: boolean;
@@ -55,6 +64,7 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
   const [isLoadingClients, setIsLoadingClients] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string>(initialClientId || "");
   const [clientSearch, setClientSearch] = useState("");
+  const [isClientPickerOpen, setIsClientPickerOpen] = useState(false);
 
   // Form fields
   const [campaignName, setCampaignName] = useState("");
@@ -178,6 +188,9 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
   useEffect(() => {
     if (initialClientId) {
       setSelectedClientId(initialClientId);
+      setIsClientPickerOpen(false);
+    } else {
+      setIsClientPickerOpen(!selectedClientId);
     }
   }, [initialClientId, isOpen]);
 
@@ -203,6 +216,7 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
         c.name?.toLowerCase().includes(q) ||
         c.businessName?.toLowerCase().includes(q) ||
         c.email?.toLowerCase().includes(q) ||
+        c.phone?.includes(q) ||
         c.connectedPage?.name?.toLowerCase().includes(q)
     );
   }, [clientsList, clientSearch]);
@@ -357,58 +371,214 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
             </div>
           )}
 
-          {/* 1. Client User Selector */}
-          <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-3">
+          {/* 1. Client User Selector (কার জন্য বুস্ট/ক্যাম্পেইন রান হবে) */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#F8FAFC] to-[#F1F5F9] border border-[#E2E8F0] space-y-3.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
-                <User className="w-3.5 h-3.5 text-[#3858F6]" />
-                Select Client User *
+              <label className="text-xs font-black text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+                <User className="w-4 h-4 text-[#3858F6]" />
+                <span>Select Target Client (কোন ক্লায়েন্টের জন্য বুস্ট রান হচ্ছে) *</span>
               </label>
-              <span className="text-[11px] text-slate-500 font-medium">
+              <span className="text-[11px] font-bold text-[#3858F6] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
                 {isLoadingClients ? "Loading clients..." : `${clientsList.length} clients registered`}
               </span>
             </div>
 
-            <div className="relative">
-              <select
-                value={selectedClientId}
-                onChange={(e) => {
-                  setSelectedClientId(e.target.value);
-                  setCustomTotalUSD(null);
-                }}
-                className="w-full px-3.5 py-2.5 bg-white border border-[#CBD5E1] rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#3858F6] cursor-pointer shadow-3xs"
-              >
-                <option value="">-- Choose Client Account --</option>
-                {filteredClients.map((c) => (
-                  <option key={c._id || c.id || c.email} value={c._id || c.id || c.email}>
-                    {c.businessName || c.name} ({c.email}) {c.connectedPage?.name ? `• ${c.connectedPage.name}` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* If Client is Selected: Show prominent Selected Client Card with Change button */}
+            {selectedClient && !isClientPickerOpen ? (
+              <div className="p-4 bg-gradient-to-r from-blue-50/90 via-indigo-50/70 to-emerald-50/60 rounded-2xl border border-blue-200 space-y-3 shadow-2xs animate-in fade-in">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-emerald-700">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>✓ Target Client Selected for Campaign</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsClientPickerOpen(true)}
+                    className="text-xs font-bold text-[#3858F6] hover:text-[#2542D9] hover:underline flex items-center gap-1 cursor-pointer bg-white px-3 py-1.5 rounded-xl border border-blue-200 shadow-3xs transition-all"
+                  >
+                    <span>Change Client (অন্য ক্লায়েন্ট সিলেক্ট করুন)</span>
+                  </button>
+                </div>
 
-            {/* Selected Client Summary Pill */}
-            {selectedClient && (
-              <div className="p-3 bg-white rounded-xl border border-blue-100 flex items-center justify-between gap-3 text-xs shadow-3xs animate-in fade-in">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-[#3858F6] text-white font-black flex items-center justify-center shrink-0 text-xs">
-                    {(selectedClient.name?.[0] || "C").toUpperCase()}
-                  </div>
-                  <div className="truncate">
-                    <div className="font-bold text-slate-900 truncate">
-                      {selectedClient.businessName || selectedClient.name}
+                <div className="flex items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-blue-100/80 shadow-3xs">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <ClientAvatar
+                      avatarUrl={selectedClient.avatar}
+                      fallbackUrl={selectedClient.connectedPage?.avatar}
+                      name={selectedClient.businessName || selectedClient.name}
+                      className="w-12 h-12 rounded-xl"
+                      textSize="text-sm"
+                    />
+                    <div className="min-w-0">
+                      <h4 className="font-black text-sm text-slate-900 truncate">
+                        {selectedClient.businessName || selectedClient.name}
+                      </h4>
+                      <div className="text-xs text-slate-500 font-medium truncate flex items-center gap-1.5 mt-0.5">
+                        <span>Owner: {selectedClient.name}</span>
+                        {selectedClient.phone && (
+                          <>
+                            <span>•</span>
+                            <span className="text-emerald-700 font-bold">{selectedClient.phone}</span>
+                          </>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-[#3858F6] font-semibold truncate mt-0.5 flex items-center gap-1">
+                        <Globe className="w-3 h-3 text-[#3858F6]" />
+                        <span>Page: {selectedClient.connectedPage?.name || selectedClient.businessName}</span>
+                      </div>
                     </div>
-                    <div className="text-[11px] text-slate-500 truncate font-mono">
-                      {selectedClient.email} • {selectedClient.phone || "No phone"}
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Client Rate</div>
+                    <div className="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 inline-block mt-0.5 shadow-3xs">
+                      ৳{isAdsCampaign ? 155 : selectedClient.dollarRate || 150} / USD
                     </div>
                   </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#10B981] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                    <CheckCircle2 className="w-3 h-3" />
-                    {selectedClient.connectedPage?.name || "Connected Page"}
-                  </span>
+              </div>
+            ) : (
+              /* Search & Select Client Picker */
+              <div className="space-y-3 animate-in fade-in">
+                {/* Search Input */}
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search client by Brand name, Owner, Phone / WhatsApp, Page, or Email..."
+                    value={clientSearch}
+                    onChange={(e) => setClientSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#CBD5E1] rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#3858F6] shadow-3xs"
+                    autoFocus={isClientPickerOpen}
+                  />
+                  {clientSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setClientSearch("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
+
+                {/* Quick Chips of registered clients */}
+                {clientsList.length > 0 && !clientSearch && (
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Quick Pick Client (দ্রুত সিলেক্ট করুন):
+                    </span>
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                      {clientsList.slice(0, 6).map((c) => {
+                        const id = c._id || c.id || c.email;
+                        const isSelected = selectedClientId === id;
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedClientId(id);
+                              setIsClientPickerOpen(false);
+                              setCustomTotalUSD(null);
+                            }}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer border ${
+                              isSelected
+                                ? "bg-[#3858F6] text-white border-[#3858F6] shadow-xs"
+                                : "bg-white text-slate-700 hover:bg-blue-50 hover:text-[#3858F6] border-slate-200"
+                            }`}
+                          >
+                            <span className="truncate max-w-[110px]">{c.businessName || c.name}</span>
+                            <span className={`text-[10px] px-1 rounded ${isSelected ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600 font-mono"}`}>
+                              ৳{c.dollarRate || 150}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Interactive Client List Box */}
+                <div className="max-h-52 overflow-y-auto space-y-1.5 pr-1 border border-slate-200/80 rounded-xl p-1.5 bg-white">
+                  {filteredClients.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-slate-400">
+                      No client found matching "{clientSearch}". Please check spelling.
+                    </div>
+                  ) : (
+                    filteredClients.map((c) => {
+                      const id = c._id || c.id || c.email;
+                      const isSelected = selectedClientId === id;
+                      return (
+                        <div
+                          key={id}
+                          onClick={() => {
+                            setSelectedClientId(id);
+                            setIsClientPickerOpen(false);
+                            setCustomTotalUSD(null);
+                          }}
+                          className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                            isSelected
+                              ? "bg-blue-50/90 border-[#3858F6] shadow-xs ring-1 ring-[#3858F6]"
+                              : "bg-white hover:bg-slate-50/80 border-slate-100 hover:border-slate-200"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <ClientAvatar
+                              avatarUrl={c.avatar}
+                              fallbackUrl={c.connectedPage?.avatar}
+                              name={c.businessName || c.name}
+                              className="w-9 h-9 rounded-lg"
+                              textSize="text-xs"
+                            />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-extrabold text-slate-900 text-xs truncate">
+                                  {c.businessName || c.name}
+                                </span>
+                                {c.connectedPage?.name && (
+                                  <span className="text-[10px] font-bold text-[#3858F6] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100 truncate max-w-[130px]">
+                                    {c.connectedPage.name}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
+                                Owner: {c.name} {c.phone ? `(${c.phone})` : ""} • {c.email}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg shadow-3xs">
+                              ৳{c.dollarRate || 150}/$1
+                            </span>
+                            <button
+                              type="button"
+                              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                isSelected
+                                  ? "bg-[#3858F6] text-white"
+                                  : "bg-slate-100 hover:bg-[#3858F6] hover:text-white text-slate-700"
+                              }`}
+                            >
+                              {isSelected ? "Selected ✓" : "Select"}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {selectedClient && (
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setIsClientPickerOpen(false)}
+                      className="text-xs font-bold text-slate-500 hover:text-slate-800 px-2 py-1 cursor-pointer"
+                    >
+                      Close Picker (বন্ধ করুন)
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -89,9 +89,15 @@ export async function POST(req: Request) {
           tags: ["meta_ads_portal", safeFolder],
         });
 
+        let secureUrl = result.secure_url;
+        // If image uploaded as .avif (common from Meta/Facebook CDN), ensure universal .png delivery URL for 100% browser compatibility
+        if (secureUrl && (result.format === "avif" || secureUrl.endsWith(".avif"))) {
+          secureUrl = secureUrl.replace(/\.avif$/, ".png");
+        }
+
         return NextResponse.json({
           success: true,
-          url: result.secure_url,
+          url: secureUrl,
           publicId: result.public_id,
           format: result.format,
           bytes: result.bytes,

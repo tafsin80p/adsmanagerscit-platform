@@ -43,73 +43,7 @@ import { usePortal } from "@/context/PortalContext";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Order, OrderStatus } from "@/types";
 import { AdminCreateOrderModal } from "@/components/modals/AdminCreateOrderModal";
-
-function getAvatarGradient(name: string): string {
-  const gradients = [
-    "from-[#3858F6] to-[#2542D9]",
-    "from-[#10B981] to-[#059669]",
-    "from-[#EC4899] to-[#BE185D]",
-    "from-[#8B5CF6] to-[#6D28D9]",
-    "from-[#F59E0B] to-[#D97706]",
-    "from-[#06B6D4] to-[#0891B2]",
-  ];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return gradients[Math.abs(hash) % gradients.length];
-}
-
-function getAvatarInitials(name: string): string {
-  if (!name) return "CL";
-  const words = name.trim().split(/\s+/);
-  if (words.length >= 2) {
-    return (words[0][0] + words[1][0]).toUpperCase();
-  }
-  return name.slice(0, 2).toUpperCase();
-}
-
-function ClientAvatar({
-  avatarUrl,
-  name,
-  className = "w-8 h-8 rounded-lg",
-  textSize = "text-xs",
-}: {
-  avatarUrl?: string;
-  name: string;
-  className?: string;
-  textSize?: string;
-}) {
-  const [hasError, setHasError] = useState(false);
-  const initials = getAvatarInitials(name);
-  const gradient = getAvatarGradient(name);
-
-  const isValidUrl = Boolean(avatarUrl && avatarUrl.trim() && !hasError);
-
-  if (isValidUrl) {
-    return (
-      <div
-        className={`relative ${className} overflow-hidden shrink-0 shadow-xs bg-slate-100 border border-slate-200/80 flex items-center justify-center`}
-      >
-        <img
-          src={avatarUrl}
-          alt={name}
-          className="w-full h-full object-cover"
-          onError={() => setHasError(true)}
-          loading="lazy"
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={`relative ${className} bg-gradient-to-tr ${gradient} flex items-center justify-center text-white font-black ${textSize} shadow-xs shrink-0 select-none`}
-    >
-      {initials}
-    </div>
-  );
-}
+import { ClientAvatar, getAvatarGradient, getAvatarInitials } from "@/components/ui/ClientAvatar";
 
 export default function AdminOrdersPage() {
   const {

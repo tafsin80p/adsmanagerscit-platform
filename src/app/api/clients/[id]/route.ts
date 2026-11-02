@@ -54,14 +54,20 @@ export async function PATCH(
     if (body.email !== undefined) updatePayload.email = body.email.trim().toLowerCase();
     if (body.phone !== undefined) updatePayload.phone = body.phone.trim();
     if (body.businessName !== undefined) updatePayload.businessName = body.businessName.trim();
-    if (body.avatar !== undefined) updatePayload.avatar = body.avatar.trim();
+    if (body.avatar !== undefined) {
+      let cleanAvatar = body.avatar.trim();
+      if (cleanAvatar.includes("res.cloudinary.com") && cleanAvatar.endsWith(".avif")) {
+        cleanAvatar = cleanAvatar.replace(/\.avif$/, ".png");
+      }
+      updatePayload.avatar = cleanAvatar;
+    }
     if (body.role !== undefined) updatePayload.role = body.role;
     if (body.assignedShift !== undefined) updatePayload.assignedShift = body.assignedShift;
     if (body.dollarRate !== undefined && !isNaN(Number(body.dollarRate))) updatePayload.dollarRate = Number(body.dollarRate);
     if (body.connectedPage !== undefined) {
       updatePayload.connectedPage = body.connectedPage;
-      if (body.avatar && updatePayload.connectedPage) {
-        updatePayload.connectedPage.avatar = body.avatar.trim();
+      if (updatePayload.avatar && updatePayload.connectedPage) {
+        updatePayload.connectedPage.avatar = updatePayload.avatar;
       }
     }
     if (body.password && typeof body.password === "string" && body.password.trim().length > 0) {

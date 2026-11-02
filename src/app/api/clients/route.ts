@@ -9,7 +9,14 @@ export async function GET(req: Request) {
     const roleParam = searchParams.get("role");
 
     const query: Record<string, any> = {};
-    if (roleParam && roleParam !== "all") {
+    if (roleParam === "client") {
+      query.$or = [
+        { role: "client" },
+        { role: { $exists: false } },
+        { role: null },
+        { role: "" },
+      ];
+    } else if (roleParam && roleParam !== "all") {
       query.role = roleParam;
     }
 
@@ -18,10 +25,27 @@ export async function GET(req: Request) {
       .sort({ createdAt: -1 })
       .lean();
 
+    // Auto-normalize Cloudinary URLs to ensure universal cross-browser image compatibility (.avif -> .png)
+    const normalizedClients = clients.map((c: any) => {
+      let avatar = c.avatar || "";
+      if (avatar.includes("res.cloudinary.com") && avatar.endsWith(".avif")) {
+        avatar = avatar.replace(/\.avif$/, ".png");
+      }
+      let pageAvatar = c.connectedPage?.avatar || "";
+      if (pageAvatar.includes("res.cloudinary.com") && pageAvatar.endsWith(".avif")) {
+        pageAvatar = pageAvatar.replace(/\.avif$/, ".png");
+      }
+      return {
+        ...c,
+        avatar,
+        connectedPage: c.connectedPage ? { ...c.connectedPage, avatar: pageAvatar } : c.connectedPage,
+      };
+    });
+
     return NextResponse.json({
       success: true,
-      count: clients.length,
-      clients,
+      count: normalizedClients.length,
+      clients: normalizedClients,
     });
   } catch (error: unknown) {
     const err = error as Error;
@@ -66,6 +90,11 @@ export async function POST(req: Request) {
       );
     }
 
+    let cleanAvatar = avatar.trim();
+    if (cleanAvatar.includes("res.cloudinary.com") && cleanAvatar.endsWith(".avif")) {
+      cleanAvatar = cleanAvatar.replace(/\.avif$/, ".png");
+    }
+
     const isStaff = role === "representative" || role === "admin" || role === "manager";
     const newClient = await UserModel.create({
       name: name.trim(),
@@ -90,7 +119,7 @@ export async function POST(req: Request) {
           ? "manager"
           : "client",
       assignedShift: body.assignedShift || "Day Shift",
-      avatar: avatar.trim() || "/images/avatar.jpg",
+      avatar: cleanAvatar || "/images/avatar.jpg",
       connectedPage: isStaff
         ? {
             name:
