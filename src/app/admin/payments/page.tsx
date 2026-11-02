@@ -93,10 +93,12 @@ export default function AdminPaymentsPage() {
   // Copy full receipt text
   const handleCopyReceiptText = () => {
     if (!selectedReceipt) return;
+    const matched = orders.find((o) => o.id === selectedReceipt.orderId);
+    const clientLabel = matched?.businessName || matched?.clientName || profile.businessName;
     const details = `
 🧾 AUDIT PAYMENT RECEIPT #${selectedReceipt.id}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Client: ${profile.name} (${profile.businessName})
+Client: ${clientLabel}
 Campaign: ${selectedReceipt.campaignName}
 Order ID: #${selectedReceipt.orderId}
 Payment Method: ${selectedReceipt.method}
@@ -687,7 +689,10 @@ SCIT Meta Ads Agency Internal Audit
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500 font-medium">Client Account:</span>
                     <span className="font-bold text-[#121826]">
-                      {profile.name} ({profile.businessName})
+                      {(() => {
+                        const matched = orders.find((o) => o.id === selectedReceipt.orderId);
+                        return matched?.businessName || matched?.clientName || profile.businessName;
+                      })()}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">

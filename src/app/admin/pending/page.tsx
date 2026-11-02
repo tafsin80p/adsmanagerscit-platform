@@ -174,16 +174,24 @@ export default function AdminPendingApprovalsPage() {
         methodFilter === "All" ? true : order.paymentMethod === methodFilter;
 
       const q = searchQuery.toLowerCase().trim();
+      const cName = (order.clientName || "").toLowerCase();
+      const bName = (order.businessName || "").toLowerCase();
+      const cEmail = (order.clientEmail || "").toLowerCase();
+      const pName = (order.facebookPageName || "").toLowerCase();
+
       const matchesSearch = !q
         ? true
         : order.id.toLowerCase().includes(q) ||
           order.campaignName.toLowerCase().includes(q) ||
           (order.transactionId && order.transactionId.toLowerCase().includes(q)) ||
-          profile.businessName.toLowerCase().includes(q);
+          cName.includes(q) ||
+          bName.includes(q) ||
+          cEmail.includes(q) ||
+          pName.includes(q);
 
       return matchesType && matchesMethod && matchesSearch;
     });
-  }, [allPendingOrders, typeFilter, methodFilter, searchQuery, profile.businessName]);
+  }, [allPendingOrders, typeFilter, methodFilter, searchQuery]);
 
   // Grouped lists
   const pendingBoostOrders = useMemo(() => {
@@ -255,7 +263,10 @@ export default function AdminPendingApprovalsPage() {
             {order.campaignName}
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            Client: <strong>{profile.businessName}</strong> ({profile.connectedPage.name})
+            Client: <strong>{order.businessName || order.clientName || order.clientEmail || profile.businessName}</strong>
+            {(order.facebookPageName || profile.connectedPage.name) && (
+              <span className="text-slate-400"> • {order.facebookPageName || profile.connectedPage.name}</span>
+            )}
           </p>
 
           {/* Admin Category Quick-Switch Bar */}
@@ -428,7 +439,7 @@ export default function AdminPendingApprovalsPage() {
                 </a>
               )}
               <a
-                href={`https://wa.me/8801712889900?text=Hi%20${profile.businessName},%20regarding%20your%20${getCategoryDisplayName(
+                href={`https://wa.me/8801712889900?text=Hi%20${encodeURIComponent(order.businessName || order.clientName || "Client")},%20regarding%20your%20${getCategoryDisplayName(
                   category
                 )}%20order%20${order.id}`}
                 target="_blank"

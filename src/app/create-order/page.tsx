@@ -343,6 +343,11 @@ export default function CreateOrderPage() {
         paidAmountBDT: finalPayableBDT,
         thumbnail: uploadedImage || "/images/winter-collection.jpg",
         items,
+        clientEmail: profile.email,
+        clientName: profile.name,
+        businessName: profile.businessName || profile.connectedPage?.name || profile.name,
+        facebookPageName: profile.connectedPage?.name || profile.businessName,
+        facebookPageId: profile.connectedPage?.id || "",
         notes: [
           `Client submitted boost order for ${items.length} item(s).`,
           `Target objective: ${primaryObjective} on ${targetPlatform}.`,

@@ -39,11 +39,40 @@ import {
   Pause,
   Play,
   RotateCcw,
+  Phone,
+  Mail,
+  Plus,
 } from "lucide-react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { usePortal } from "@/context/PortalContext";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { Order, OrderStatus, getOrderCategory } from "@/types";
+import { Order, OrderStatus, getOrderCategory, ClientAccount } from "@/types";
+import { AdminCreateOrderModal } from "@/components/modals/AdminCreateOrderModal";
+
+function getAvatarGradient(name: string): string {
+  const gradients = [
+    "from-[#3858F6] to-[#2542D9]",
+    "from-[#10B981] to-[#059669]",
+    "from-[#EC4899] to-[#BE185D]",
+    "from-[#8B5CF6] to-[#6D28D9]",
+    "from-[#F59E0B] to-[#D97706]",
+    "from-[#06B6D4] to-[#0891B2]",
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return gradients[Math.abs(hash) % gradients.length];
+}
+
+function getAvatarInitials(name: string): string {
+  if (!name) return "CL";
+  const words = name.trim().split(/\s+/);
+  if (words.length >= 2) {
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
 
 export default function AdminDashboardPage() {
   const {
@@ -71,6 +100,13 @@ export default function AdminDashboardPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Dynamic Clients state from MongoDB Atlas
+  const [clients, setClients] = useState<ClientAccount[]>([]);
+  const [isLoadingClients, setIsLoadingClients] = useState<boolean>(true);
+  const [clientTabFilter, setClientTabFilter] = useState<"client" | "all">("client");
+  const [isCreateOrderModalOpen, setIsCreateOrderModalOpen] = useState(false);
+  const [orderModalClientId, setOrderModalClientId] = useState("");
+
   const adminName =
     profile.role === "Specialist" || profile.name?.toLowerCase().includes("admin")
       ? profile.name
@@ -81,16 +117,56 @@ export default function AdminDashboardPage() {
     setTimeout(() => setNotification(null), 3000);
   };
 
+  // Fetch real clients from MongoDB Atlas
+  const fetchClients = async () => {
+    setIsLoadingClients(true);
+    try {
+      const res = await fetch("/api/clients?role=all");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.clients)) {
+          setClients(data.clients);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to fetch clients from MongoDB:", e);
+    } finally {
+      setIsLoadingClients(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchClients();
+  }, []);
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await Promise.all([refreshOrders(), refreshPayments()]);
+      await Promise.all([refreshOrders(), refreshPayments(), fetchClients()]);
       showNotification("Admin console synchronized with live database!");
     } catch {
       showNotification("Failed to refresh live data.");
     } finally {
       setTimeout(() => setIsRefreshing(false), 600);
     }
+  };
+
+  // Helper to count orders placed by a specific client
+  const getClientOrdersCount = (client: ClientAccount): number => {
+    const brandLower = (client.businessName || "").toLowerCase().trim();
+    const ownerLower = (client.name || "").toLowerCase().trim();
+    const emailLower = (client.email || "").toLowerCase().trim();
+    const pageNameLower = (client.connectedPage?.name || "").toLowerCase().trim();
+    const pageId = client.connectedPage?.id;
+
+    return orders.filter((o) => {
+      if (o.clientEmail && o.clientEmail.toLowerCase().trim() === emailLower) return true;
+      if (brandLower && o.businessName && o.businessName.toLowerCase().trim() === brandLower) return true;
+      if (ownerLower && o.clientName && o.clientName.toLowerCase().trim() === ownerLower) return true;
+      if (pageNameLower && o.facebookPageName && o.facebookPageName.toLowerCase().trim() === pageNameLower) return true;
+      if (pageId && o.facebookPageId && o.facebookPageId === pageId) return true;
+      return false;
+    }).length;
   };
 
   const handleApproveOrder = (orderId: string) => {
@@ -206,18 +282,34 @@ export default function AdminDashboardPage() {
   // Categories
   const categories = ["All Formats", "Boost Post", "Ads Campaign", "Promotion"];
 
+  // Filtered displayed clients for the Admin Dashboard overview section
+  const displayedClients = useMemo(() => {
+    if (clientTabFilter === "client") {
+      return clients.filter((c) => c.role === "client" || !c.role);
+    }
+    return clients;
+  }, [clients, clientTabFilter]);
+
   // Filtered & Sorted Orders for Admin Console Table
   const filteredOrders = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
     const filtered = activeDataset.filter((order) => {
+      const cName = (order.clientName || "").toLowerCase();
+      const bName = (order.businessName || "").toLowerCase();
+      const cEmail = (order.clientEmail || "").toLowerCase();
+      const pName = (order.facebookPageName || "").toLowerCase();
+
       const matchesSearch =
         !query ||
         order.campaignName.toLowerCase().includes(query) ||
         order.id.toLowerCase().includes(query) ||
         (order.transactionId && order.transactionId.toLowerCase().includes(query)) ||
         (order.postType && order.postType.toLowerCase().includes(query)) ||
-        profile.businessName.toLowerCase().includes(query);
+        cName.includes(query) ||
+        bName.includes(query) ||
+        cEmail.includes(query) ||
+        pName.includes(query);
 
       const matchesStatus =
         statusFilter === "All"
@@ -250,7 +342,7 @@ export default function AdminDashboardPage() {
       const dateB = new Date(b.createdAt).getTime() || 0;
       return dateB - dateA;
     });
-  }, [activeDataset, searchQuery, statusFilter, categoryFilter, sortBy, profile.businessName]);
+  }, [activeDataset, searchQuery, statusFilter, categoryFilter, sortBy]);
 
   const hasActiveFilters = searchQuery !== "" || statusFilter !== "All" || categoryFilter !== "All Formats";
 
@@ -476,8 +568,8 @@ export default function AdminDashboardPage() {
           </Link>
         </div>
 
-        {/* Quick Operations Shortcuts Navigation Banner */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Quick Operations Shortcuts Navigation Banner (4 Columns) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Link
             href="/admin/pending"
             className="p-5 rounded-[24px] bg-gradient-to-r from-[#FFFBEB] to-[#FEF3C7] border border-amber-200/80 hover:border-amber-300 shadow-xs flex items-center justify-between group transition-all"
@@ -491,7 +583,7 @@ export default function AdminDashboardPage() {
                   Pending Approvals ({pendingOrders.length})
                 </h4>
                 <p className="text-xs text-amber-800 mt-0.5">
-                  Verify bKash & Nagad TRX proofs
+                  Verify bKash & Nagad TRX
                 </p>
               </div>
             </div>
@@ -511,11 +603,31 @@ export default function AdminDashboardPage() {
                   All Client Orders ({portalOrders.length})
                 </h4>
                 <p className="text-xs text-indigo-800 mt-0.5">
-                  Master campaign table & status control
+                  Master campaign table & controls
                 </p>
               </div>
             </div>
             <ArrowRight className="w-4 h-4 text-indigo-700 group-hover:translate-x-1 transition-transform" />
+          </Link>
+
+          <Link
+            href="/admin/clients"
+            className="p-5 rounded-[24px] bg-gradient-to-r from-[#EAF8F1] to-[#D1FAE5] border border-emerald-200/80 hover:border-emerald-300 shadow-xs flex items-center justify-between group transition-all"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-[#10B981] text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-extrabold text-[#121826]">
+                  Client Profiles ({clients.filter((c) => c.role === "client" || !c.role).length})
+                </h4>
+                <p className="text-xs text-emerald-800 mt-0.5">
+                  Custom dollar rates & FB pages
+                </p>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-emerald-700 group-hover:translate-x-1 transition-transform" />
           </Link>
 
           <Link
@@ -531,12 +643,236 @@ export default function AdminDashboardPage() {
                   Exchange Rate & Fees
                 </h4>
                 <p className="text-xs text-slate-600 mt-0.5">
-                  USD rate (৳{exchangeRateBDT}) & cashout fees
+                  USD rate (৳{exchangeRateBDT}) & payment
                 </p>
               </div>
             </div>
             <ArrowRight className="w-4 h-4 text-slate-700 group-hover:translate-x-1 transition-transform" />
           </Link>
+        </div>
+
+        {/* Registered Client Profiles & Brands Directory Overview */}
+        <div className="bg-white p-6 sm:p-7 rounded-[28px] border border-[#E9EDF4] shadow-[0_4px_25px_rgba(0,0,0,0.03)] space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#3858F6] to-[#1D4ED8] text-white flex items-center justify-center shadow-md shadow-blue-500/20">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-extrabold text-[#121826] text-base sm:text-lg">
+                    Client Profiles & Registered Brands
+                  </h3>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-[#EEF2FF] text-[#3858F6] border border-blue-100">
+                    {clients.filter((c) => c.role === "client" || !c.role).length} Clients Active
+                  </span>
+                </div>
+                <p className="text-xs text-[#8A94A6] mt-0.5">
+                  Direct client accounts, custom dollar exchange rates, verified Facebook pages & boost orders.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <div className="flex items-center bg-[#F6F8FC] p-1 rounded-xl border border-slate-200/80 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setClientTabFilter("client")}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    clientTabFilter === "client"
+                      ? "bg-white text-[#3858F6] shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Clients ({clients.filter((c) => c.role === "client" || !c.role).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setClientTabFilter("all")}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    clientTabFilter === "all"
+                      ? "bg-white text-[#3858F6] shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  All Users ({clients.length})
+                </button>
+              </div>
+
+              <Link
+                href="/admin/clients"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#3858F6] hover:bg-[#2542D9] text-white rounded-xl text-xs font-bold shadow-xs transition-all hover:shadow-md hover:shadow-blue-500/20"
+              >
+                <span>Full Directory & Accounts</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Client Profiles Grid */}
+          {isLoadingClients ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4.5 pt-1">
+              {[1, 2, 3].map((n) => (
+                <div key={n} className="p-5 rounded-2xl bg-[#F8FAFC] border border-slate-200 animate-pulse space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-slate-200" />
+                    <div className="space-y-1.5 flex-1">
+                      <div className="h-4 bg-slate-200 rounded-md w-2/3" />
+                      <div className="h-3 bg-slate-200 rounded-md w-1/2" />
+                    </div>
+                  </div>
+                  <div className="h-10 bg-slate-200 rounded-xl" />
+                </div>
+              ))}
+            </div>
+          ) : displayedClients.length === 0 ? (
+            <div className="py-10 text-center rounded-2xl border border-dashed border-slate-200 bg-[#FBFBFE] space-y-2">
+              <Users className="w-8 h-8 text-slate-300 mx-auto" />
+              <h4 className="text-sm font-bold text-slate-700">No client profiles registered yet</h4>
+              <p className="text-xs text-slate-400">
+                Register clients through the User Directory to manage their custom rates and Meta campaigns.
+              </p>
+              <Link
+                href="/admin/clients"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#3858F6] hover:underline pt-1"
+              >
+                <span>Onboard New Client →</span>
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4.5 pt-1">
+              {displayedClients.slice(0, 6).map((client) => {
+                const clientOrdersCount = getClientOrdersCount(client);
+                const roleType = client.role || "client";
+
+                return (
+                  <div
+                    key={client._id || client.id || client.email}
+                    className="p-5 rounded-2xl bg-[#F8FAFC] hover:bg-white border border-slate-200/90 hover:border-[#3858F6]/40 shadow-xs hover:shadow-lg hover:shadow-blue-500/5 transition-all flex flex-col justify-between group"
+                  >
+                    <div>
+                      {/* Top Bar: Avatar, Names, Role & Dollar Rate */}
+                      <div className="flex items-start justify-between gap-2.5">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div
+                            className={`w-11 h-11 rounded-2xl bg-gradient-to-tr ${getAvatarGradient(
+                              client.businessName || client.name
+                            )} text-white font-black text-sm flex items-center justify-center shrink-0 shadow-sm`}
+                          >
+                            {getAvatarInitials(client.businessName || client.name)}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <h4
+                                className="font-extrabold text-sm text-[#121826] truncate"
+                                title={client.businessName || client.name}
+                              >
+                                {client.businessName || client.name}
+                              </h4>
+                              {client.connectedPage?.verified && (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-[#3858F6] shrink-0" />
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-500 truncate" title={client.name}>
+                              Owner: <span className="font-semibold text-slate-700">{client.name}</span>
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Dollar Rate Badge */}
+                        <div className="shrink-0">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black bg-[#EAF8F1] text-[#10B981] border border-emerald-200 shadow-2xs">
+                            ${` ৳${client.dollarRate || 150}/$1`}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Info & Badges */}
+                      <div className="mt-3.5 pt-3 border-t border-slate-200/60 space-y-2 text-xs">
+                        {/* Role & Connected Page */}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-slate-500">Account Type:</span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                              roleType === "admin"
+                                ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                : roleType === "representative"
+                                ? "bg-sky-50 text-sky-700 border border-sky-200"
+                                : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            }`}
+                          >
+                            {roleType === "admin"
+                              ? "Super Admin"
+                              : roleType === "representative"
+                              ? "Support Agent"
+                              : "Client Account"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-slate-500">Facebook Page:</span>
+                          <span
+                            className="font-bold text-[#121826] truncate max-w-[170px]"
+                            title={client.connectedPage?.name || "None"}
+                          >
+                            {client.connectedPage?.name || "Direct Account"}
+                          </span>
+                        </div>
+
+                        {client.connectedPage?.followers && (
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-slate-500">Audience:</span>
+                            <span className="font-semibold text-slate-700">
+                              {client.connectedPage.followers}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-slate-500">In-App Orders:</span>
+                          <span className="font-bold text-[#3858F6]">
+                            {clientOrdersCount} Orders Active
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick Action Buttons */}
+                    <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center gap-1.5">
+                      {client.phone && (
+                        <a
+                          href={`https://wa.me/${client.phone.replace(/[^0-9]/g, "")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold transition-colors cursor-pointer"
+                          title={`WhatsApp ${client.phone}`}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOrderModalClientId(client._id || client.id || client.email);
+                          setIsCreateOrderModalOpen(true);
+                        }}
+                        className="flex-1 py-2 px-3 bg-white hover:bg-slate-50 text-[#3858F6] border border-blue-200 hover:border-[#3858F6] rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Place Order</span>
+                      </button>
+                      <Link
+                        href={`/admin/clients?search=${encodeURIComponent(client.businessName || client.name)}`}
+                        className="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
+                      >
+                        Profile
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Priority Pending Approval Preview (If any exist) */}
@@ -611,7 +947,10 @@ export default function AdminDashboardPage() {
                       {order.campaignName}
                     </h4>
                     <p className="text-xs text-slate-500 mt-0.5 truncate">
-                      Client: <strong>{profile.businessName}</strong>
+                      Client: <strong>{order.businessName || order.clientName || order.clientEmail || profile.businessName}</strong>
+                      {(order.facebookPageName || profile.connectedPage.name) && (
+                        <span className="text-slate-400"> • {order.facebookPageName || profile.connectedPage.name}</span>
+                      )}
                     </p>
 
                     <div className="mt-3 p-3 rounded-xl bg-white border border-slate-100 text-xs space-y-1.5">
@@ -878,10 +1217,39 @@ export default function AdminDashboardPage() {
                         </div>
                       </td>
 
-                      {/* Client */}
+                      {/* Client Profile / Brand */}
                       <td className="py-4 px-4">
-                        <div className="font-bold text-[#121826]">{profile.businessName}</div>
-                        <div className="text-[11px] text-[#8A94A6]">{profile.connectedPage.name}</div>
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className={`w-8 h-8 rounded-lg bg-gradient-to-tr ${getAvatarGradient(
+                              order.businessName || order.clientName || "Client"
+                            )} text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs`}
+                          >
+                            {getAvatarInitials(order.businessName || order.clientName || "CL")}
+                          </div>
+                          <div className="min-w-0">
+                            <div
+                              className="font-bold text-[#121826] text-sm truncate max-w-[170px]"
+                              title={order.businessName || order.clientName || "Direct Client"}
+                            >
+                              {order.businessName || order.clientName || "Direct Client"}
+                            </div>
+                            <div
+                              className="text-[11px] text-[#3858F6] font-medium truncate max-w-[170px]"
+                              title={order.facebookPageName || profile.connectedPage.name}
+                            >
+                              {order.facebookPageName || profile.connectedPage.name}
+                            </div>
+                            {order.clientEmail && (
+                              <div
+                                className="text-[10px] text-slate-400 font-mono truncate max-w-[170px]"
+                                title={order.clientEmail}
+                              >
+                                {order.clientEmail}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </td>
 
                       {/* Daily Budget */}
@@ -955,6 +1323,20 @@ export default function AdminDashboardPage() {
             </table>
           </div>
         </div>
+
+        {/* Admin Create Order Modal for Client */}
+        <AdminCreateOrderModal
+          isOpen={isCreateOrderModalOpen}
+          onClose={() => setIsCreateOrderModalOpen(false)}
+          initialClientId={orderModalClientId}
+          onOrderCreated={(newOrder) => {
+            showNotification(
+              `Order #${newOrder.id} created successfully for ${
+                newOrder.clientName || newOrder.clientEmail
+              }!`
+            );
+          }}
+        />
       </div>
     </AdminLayout>
   );

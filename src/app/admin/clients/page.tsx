@@ -319,32 +319,47 @@ export default function AdminClientsPage() {
   };
 
   // Helper to get matching orders for a client
-  // Links primary Fashion Hub / Min Mart BD orders, or matches by brand name in campaignName / postUrl
+  // Matches by clientEmail, brand/businessName, clientName, connected Facebook Page, or keywords
   const getClientOrders = (client: ClientAccount): Order[] => {
-    const brandLower = (client.businessName || "").toLowerCase();
-    const ownerLower = (client.name || "").toLowerCase();
+    const brandLower = (client.businessName || "").toLowerCase().trim();
+    const ownerLower = (client.name || "").toLowerCase().trim();
+    const emailLower = (client.email || "").toLowerCase().trim();
+    const pageNameLower = (client.connectedPage?.name || "").toLowerCase().trim();
+    const pageId = client.connectedPage?.id;
 
-    // If client is primary brand (Fashion Hub, Min Mart BD or Tafsin)
-    if (
-      brandLower.includes("fashion hub") ||
-      brandLower.includes("min mart") ||
-      ownerLower.includes("tafsin") ||
-      client.email === "tafsin@fashionhubbd.com"
-    ) {
-      return orders;
-    }
+    return orders.filter((o) => {
+      // 1. Direct email match
+      if (o.clientEmail && o.clientEmail.toLowerCase().trim() === emailLower) return true;
 
-    // Otherwise match against orders whose campaignName or postUrl contains brand keywords
-    const matched = orders.filter((o) => {
-      const cLower = o.campaignName.toLowerCase();
-      const pLower = o.postUrl.toLowerCase();
-      return (
-        (brandLower && (cLower.includes(brandLower) || pLower.includes(brandLower))) ||
-        (ownerLower && cLower.includes(ownerLower))
-      );
+      // 2. Direct business / brand name match
+      if (brandLower && o.businessName && o.businessName.toLowerCase().trim() === brandLower) return true;
+
+      // 3. Direct client name match
+      if (ownerLower && o.clientName && o.clientName.toLowerCase().trim() === ownerLower) return true;
+
+      // 4. Connected Facebook page match
+      if (pageNameLower && o.facebookPageName && o.facebookPageName.toLowerCase().trim() === pageNameLower) return true;
+      if (pageId && o.facebookPageId && o.facebookPageId === pageId) return true;
+
+      // 5. If client is primary brand (Fashion Hub, Min Mart BD or Tafsin)
+      if (
+        (brandLower.includes("fashion hub") ||
+          brandLower.includes("min mart") ||
+          ownerLower.includes("tafsin") ||
+          emailLower === "tafsin@fashionhubbd.com") &&
+        (!o.clientEmail || o.clientEmail === "tafsin@fashionhubbd.com")
+      ) {
+        return true;
+      }
+
+      // 6. Otherwise match against orders whose campaignName or postUrl contains brand keywords
+      const cLower = (o.campaignName || "").toLowerCase();
+      const pLower = (o.postUrl || "").toLowerCase();
+      if (brandLower && (cLower.includes(brandLower) || pLower.includes(brandLower))) return true;
+      if (ownerLower && cLower.includes(ownerLower)) return true;
+
+      return false;
     });
-
-    return matched;
   };
 
   const getClientPortalOrders = (client: ClientAccount): Order[] => {

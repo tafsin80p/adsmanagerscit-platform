@@ -41,6 +41,31 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Order, OrderStatus } from "@/types";
 import { AdminCreateOrderModal } from "@/components/modals/AdminCreateOrderModal";
 
+function getAvatarGradient(name: string): string {
+  const gradients = [
+    "from-[#3858F6] to-[#2542D9]",
+    "from-[#10B981] to-[#059669]",
+    "from-[#EC4899] to-[#BE185D]",
+    "from-[#8B5CF6] to-[#6D28D9]",
+    "from-[#F59E0B] to-[#D97706]",
+    "from-[#06B6D4] to-[#0891B2]",
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return gradients[Math.abs(hash) % gradients.length];
+}
+
+function getAvatarInitials(name: string): string {
+  if (!name) return "CL";
+  const words = name.trim().split(/\s+/);
+  if (words.length >= 2) {
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+
 export default function AdminOrdersPage() {
   const {
     orders,
@@ -279,6 +304,11 @@ export default function AdminOrdersPage() {
     const q = searchQuery.trim().toLowerCase();
 
     const filtered = activeDataset.filter((order) => {
+      const cName = (order.clientName || "").toLowerCase();
+      const bName = (order.businessName || "").toLowerCase();
+      const cEmail = (order.clientEmail || "").toLowerCase();
+      const pName = (order.facebookPageName || "").toLowerCase();
+
       const matchesSearch =
         !q ||
         order.campaignName.toLowerCase().includes(q) ||
@@ -286,7 +316,10 @@ export default function AdminOrdersPage() {
         (order.transactionId && order.transactionId.toLowerCase().includes(q)) ||
         (order.postType && order.postType.toLowerCase().includes(q)) ||
         (order.paymentMethod && order.paymentMethod.toLowerCase().includes(q)) ||
-        profile.businessName.toLowerCase().includes(q);
+        cName.includes(q) ||
+        bName.includes(q) ||
+        cEmail.includes(q) ||
+        pName.includes(q);
 
       const matchesStatus =
         statusFilter === "All"
@@ -789,11 +822,35 @@ export default function AdminOrdersPage() {
 
                       {/* Client / Page */}
                       <td className="py-4 px-4">
-                        <div className="font-bold text-[#121826]">{order.businessName || profile.businessName}</div>
-                        <div className="text-[11px] text-slate-500 truncate max-w-[180px]">
-                          {order.facebookPageName || profile.connectedPage.name}
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className={`w-8 h-8 rounded-lg bg-gradient-to-tr ${getAvatarGradient(
+                              order.businessName || order.clientName || "Client"
+                            )} text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs`}
+                          >
+                            {getAvatarInitials(order.businessName || order.clientName || "CL")}
+                          </div>
+                          <div className="min-w-0">
+                            <div
+                              className="font-bold text-[#121826] truncate max-w-[170px]"
+                              title={order.businessName || order.clientName || "Direct Client"}
+                            >
+                              {order.businessName || order.clientName || "Direct Client"}
+                            </div>
+                            <div
+                              className="text-[11px] text-[#3858F6] font-medium truncate max-w-[170px]"
+                              title={order.facebookPageName || profile.connectedPage.name}
+                            >
+                              {order.facebookPageName || profile.connectedPage.name}
+                            </div>
+                            <div
+                              className="text-[10px] text-slate-400 font-mono truncate max-w-[170px]"
+                              title={order.clientEmail || order.createdAt}
+                            >
+                              {order.clientEmail || order.createdAt}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-[10px] text-slate-400">{order.clientEmail || order.createdAt}</div>
                       </td>
 
                       {/* Budget & Duration */}
