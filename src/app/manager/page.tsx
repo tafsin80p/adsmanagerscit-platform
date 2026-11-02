@@ -94,8 +94,18 @@ export default function ManagerDashboardPage() {
   const [isProcessingOrderId, setIsProcessingOrderId] = useState<string | null>(null);
 
   // Tabs and Search filters
-  const [activeTab, setActiveTab] = useState<"pending" | "my_shift" | "day_shift" | "night_shift" | "all">("pending");
+  const [activeTab, setActiveTab] = useState<"pending" | "my_shift" | "day_shift" | "night_shift" | "all">("my_shift");
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab");
+      if (tabParam && ["pending", "my_shift", "day_shift", "night_shift", "all"].includes(tabParam)) {
+        setActiveTab(tabParam as any);
+      }
+    }
+  }, []);
 
   const showNotification = (msg: string) => {
     setNotification(msg);

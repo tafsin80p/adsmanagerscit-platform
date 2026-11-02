@@ -79,6 +79,10 @@ export default function AdminOrdersPage() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const cId = params.get("clientId");
+      const s = params.get("search");
+      if (s) {
+        setSearchQuery(s);
+      }
       if (cId) {
         setPreselectedClientId(cId);
         setIsCreateOrderModalOpen(true);

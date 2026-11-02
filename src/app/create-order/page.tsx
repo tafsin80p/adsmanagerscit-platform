@@ -410,58 +410,115 @@ export default function CreateOrderPage() {
         ? (selectedClient.connectedPage?.id || "")
         : (profile.connectedPage?.id || "");
 
-      const created = await addOrder({
-        campaignName: campaignTitle.trim(),
-        postUrl: firstUrl,
-        postType,
-        platform: targetPlatform,
-        objective: primaryObjective,
-        budgetType: items[0]?.budgetType || "daily",
-        dailyBudgetUSD: items[0]?.dailyBudgetUSD || 5,
-        totalBudgetUSD: totalUSD,
-        durationDays: items[0]?.durationDays || 2,
-        paymentStatus: transactionId ? "Awaiting Verification" : "Unpaid",
-        paymentMethod,
-        transactionId: transactionId || undefined,
-        paidAmountBDT: finalPayableBDT,
-        thumbnail: uploadedImage || "/images/winter-collection.jpg",
-        items,
-        clientEmail: orderClientEmail,
-        clientName: orderClientName,
-        businessName: orderBusinessName,
-        facebookPageName: orderPageName,
-        facebookPageId: orderPageId,
-        notes: [
-          isStaff
-            ? `Order created by ${profile.name} (${profile.role}) in ${orderShift} for ${orderBusinessName}.`
-            : `Client submitted boost order for ${items.length} item(s).`,
-          `Target objective: ${primaryObjective} on ${targetPlatform}.`,
-          `Payment submitted via ${paymentMethod}${paymentMethod === "Bank Transfer" ? ` (${selectedBankAccount?.bankName || "Bank"})` : ""}${cashoutChargeBDT > 0 ? ` with ${cashoutPercent}% cashout charge (+৳${cashoutChargeBDT} BDT)` : ""} (${transactionId || "pending confirmation"}).`,
-          senderNumber ? `Sender Account: ${senderNumber}` : "",
-        ].filter(Boolean),
-        senderNumber: senderNumber || undefined,
-        screenshotUrl: uploadedImage || undefined,
-        isEligibleForRenew: false,
-        ...(isStaff
-          ? {
-              addedBy: {
-                name: profile.name || "Ads Specialist",
-                email: profile.email || "staff@shopnocareerit.com",
-                role: profile.role || "manager",
+      const createdOrderIds: string[] = [];
+
+      if (items.length > 1) {
+        // Multi-boost submission: create each boost post as an individual campaign order so each can be tracked & managed
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          const itemBdt = Math.round((item.totalBudgetUSD || 0) * activeOrderDollarRate);
+          const itemCreated = await addOrder({
+            campaignName: `${campaignTitle.trim()} • ${item.name || `Post #${i + 1}`}`,
+            postUrl: item.postUrl || firstUrl,
+            postType,
+            platform: item.platform || targetPlatform,
+            objective: item.objective || primaryObjective,
+            budgetType: item.budgetType || "daily",
+            dailyBudgetUSD: item.dailyBudgetUSD || 5,
+            totalBudgetUSD: item.totalBudgetUSD || 5,
+            durationDays: item.durationDays || 2,
+            paymentStatus: transactionId ? "Awaiting Verification" : "Unpaid",
+            paymentMethod,
+            transactionId: transactionId || undefined,
+            paidAmountBDT: itemBdt,
+            thumbnail: uploadedImage || "/images/winter-collection.jpg",
+            items: [item],
+            clientEmail: orderClientEmail,
+            clientName: orderClientName,
+            businessName: orderBusinessName,
+            facebookPageName: orderPageName,
+            facebookPageId: orderPageId,
+            notes: [
+              isStaff
+                ? `Order created by ${profile.name} (${profile.role}) in ${orderShift} for ${orderBusinessName}.`
+                : `Client submitted boost order (Post ${i + 1} of ${items.length}).`,
+              `Target objective: ${item.objective || primaryObjective} on ${targetPlatform}.`,
+              `Payment submitted via ${paymentMethod}${paymentMethod === "Bank Transfer" ? ` (${selectedBankAccount?.bankName || "Bank"})` : ""}${cashoutChargeBDT > 0 ? ` with ${cashoutPercent}% cashout charge` : ""} (${transactionId || "pending confirmation"}).`,
+              senderNumber ? `Sender Account: ${senderNumber}` : "",
+            ].filter(Boolean),
+            senderNumber: senderNumber || undefined,
+            screenshotUrl: uploadedImage || undefined,
+            isEligibleForRenew: false,
+            ...(isStaff
+              ? {
+                  addedBy: {
+                    name: profile.name || "Ads Specialist",
+                    email: profile.email || "staff@shopnocareerit.com",
+                    role: profile.role || "manager",
+                    shift: orderShift,
+                    at: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+                  },
+                  shift: orderShift,
+                }
+              : {}),
+          });
+          createdOrderIds.push(itemCreated.id);
+        }
+      } else {
+        const created = await addOrder({
+          campaignName: campaignTitle.trim(),
+          postUrl: firstUrl,
+          postType,
+          platform: targetPlatform,
+          objective: primaryObjective,
+          budgetType: items[0]?.budgetType || "daily",
+          dailyBudgetUSD: items[0]?.dailyBudgetUSD || 5,
+          totalBudgetUSD: totalUSD,
+          durationDays: items[0]?.durationDays || 2,
+          paymentStatus: transactionId ? "Awaiting Verification" : "Unpaid",
+          paymentMethod,
+          transactionId: transactionId || undefined,
+          paidAmountBDT: finalPayableBDT,
+          thumbnail: uploadedImage || "/images/winter-collection.jpg",
+          items,
+          clientEmail: orderClientEmail,
+          clientName: orderClientName,
+          businessName: orderBusinessName,
+          facebookPageName: orderPageName,
+          facebookPageId: orderPageId,
+          notes: [
+            isStaff
+              ? `Order created by ${profile.name} (${profile.role}) in ${orderShift} for ${orderBusinessName}.`
+              : `Client submitted boost order for ${items.length} item(s).`,
+            `Target objective: ${primaryObjective} on ${targetPlatform}.`,
+            `Payment submitted via ${paymentMethod}${paymentMethod === "Bank Transfer" ? ` (${selectedBankAccount?.bankName || "Bank"})` : ""}${cashoutChargeBDT > 0 ? ` with ${cashoutPercent}% cashout charge (+৳${cashoutChargeBDT} BDT)` : ""} (${transactionId || "pending confirmation"}).`,
+            senderNumber ? `Sender Account: ${senderNumber}` : "",
+          ].filter(Boolean),
+          senderNumber: senderNumber || undefined,
+          screenshotUrl: uploadedImage || undefined,
+          isEligibleForRenew: false,
+          ...(isStaff
+            ? {
+                addedBy: {
+                  name: profile.name || "Ads Specialist",
+                  email: profile.email || "staff@shopnocareerit.com",
+                  role: profile.role || "manager",
+                  shift: orderShift,
+                  at: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+                },
                 shift: orderShift,
-                at: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-              },
-              shift: orderShift,
-            }
-          : {}),
-      });
+              }
+            : {}),
+        });
+        createdOrderIds.push(created.id);
+      }
 
       setIsSubmitting(false);
-      setOrderCreatedSuccess(created.id);
+      setOrderCreatedSuccess(createdOrderIds.join(", "));
       setToast({
         type: "success",
         title: "🎉 Boost Order Placed Successfully!",
-        message: `Order #${created.id} (${campaignTitle.trim()}) has been submitted! Our specialist is reviewing your payment and creatives.`,
+        message: `Order(s) #${createdOrderIds.join(", #")} (${campaignTitle.trim()}) submitted successfully! Specialist is reviewing your payment and creatives.`,
         duration: 5000,
       });
 
@@ -471,7 +528,7 @@ export default function CreateOrderPage() {
           JSON.stringify({
             type: "success",
             title: "🎉 Boost Order Placed Successfully!",
-            message: `Order #${created.id} has been recorded. Review status is live in My Orders.`,
+            message: `Order #${createdOrderIds.join(", #")} has been recorded. Review status is live in My Orders.`,
             duration: 4500,
           })
         );
