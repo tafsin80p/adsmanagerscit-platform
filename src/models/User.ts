@@ -8,7 +8,8 @@ export interface IUser extends Document {
   phone: string;
   businessName: string;
   avatar: string;
-  role: "client" | "admin" | "representative";
+  role: "client" | "admin" | "representative" | "manager";
+  assignedShift?: "Day Shift" | "Night Shift" | "Rotational";
   connectedPage: {
     name: string;
     id: string;
@@ -53,7 +54,8 @@ const UserSchema = new Schema<IUser>(
     phone: { type: String, default: "" },
     businessName: { type: String, default: "" },
     avatar: { type: String, default: "/images/avatar.jpg" },
-    role: { type: String, enum: ["client", "admin", "representative"], default: "client" },
+    role: { type: String, enum: ["client", "admin", "representative", "manager"], default: "client" },
+    assignedShift: { type: String, enum: ["Day Shift", "Night Shift", "Rotational"], default: "Day Shift" },
     connectedPage: {
       name: { type: String, default: "MIN Mart BD" },
       id: { type: String, default: "110132735345674" },

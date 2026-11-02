@@ -65,34 +65,23 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, onMobile
   const reviewPaymentsCount = payments.filter((p) => p.status === "Under Review").length;
 
   const isRepresentative = (profile.role as string) === "representative";
+  const isManager = (profile.role as string) === "manager";
 
   const navSections: NavSection[] = [
-    {
-      label: isRepresentative ? "SUPPORT DESK" : "ADMIN OPERATIONS",
-      items: [
-        {
-          name: "Live Support Chat",
-          href: "/admin/live-chat",
-          icon: MessageSquare,
-          isLive: true,
-          badge: { text: "Live", color: "bg-emerald-100 text-emerald-800" },
-        },
-        {
-          name: "All Client Orders",
-          href: "/admin/orders",
-          icon: ClipboardList,
-          badge:
-            totalCount > 0
-              ? { text: String(totalCount), color: "bg-[#EEF2F6] text-slate-700" }
-              : undefined,
-        },
-        ...(!isRepresentative
-          ? [
+    ...(isManager
+      ? [
+          {
+            label: "CAMPAIGN SHIFT OPS",
+            items: [
               {
-                name: "Admin Console",
-                href: "/admin",
-                icon: LayoutDashboard,
+                name: "Shift Ads Console",
+                href: "/manager",
+                icon: Sliders,
                 isLive: true,
+                badge: {
+                  text: profile.assignedShift === "Night Shift" ? "🌙 Night" : "☀️ Day",
+                  color: "bg-indigo-100 text-indigo-700",
+                },
               },
               {
                 name: "Pending Approvals",
@@ -104,50 +93,117 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, onMobile
                     : undefined,
               },
               {
-                name: "Payment Audit",
-                href: "/admin/payments",
-                icon: Wallet,
+                name: "All Client Orders",
+                href: "/admin/orders",
+                icon: ClipboardList,
                 badge:
-                  reviewPaymentsCount > 0
-                    ? { text: String(reviewPaymentsCount), color: "bg-[#FEF3C7] text-[#D97706]" }
+                  totalCount > 0
+                    ? { text: String(totalCount), color: "bg-[#EEF2F6] text-slate-700" }
                     : undefined,
-              },
-            ]
-          : []),
-      ],
-    },
-    ...(!isRepresentative
-      ? [
-          {
-            label: "SPECIALIST TOOLS",
-            items: [
-              {
-                name: "Payment Accounts",
-                href: "/admin/rates",
-                icon: CreditCard,
               },
               {
                 name: "Users & Clients",
                 href: "/admin/clients",
                 icon: Users,
-                badge: { text: "Manage", color: "bg-[#EEF2FF] text-[#3858F6]" },
+                badge: { text: "IDs", color: "bg-[#EEF2FF] text-[#3858F6]" },
               },
               {
-                name: "Meta Ads Manager",
-                href: "/admin/meta-integration",
-                icon: Share2,
-                badge: { text: "API", color: "bg-[#0866FF]/10 text-[#0866FF]" },
-              },
-              {
-                name: "Admin Profile",
-                href: "/admin/profile",
-                icon: User,
-                badge: { text: "Security", color: "bg-[#EAF8F1] text-[#10B981]" },
+                name: "Live Support Chat",
+                href: "/admin/live-chat",
+                icon: MessageSquare,
               },
             ],
           },
         ]
-      : []),
+      : [
+          {
+            label: isRepresentative ? "SUPPORT DESK" : "ADMIN OPERATIONS",
+            items: [
+              {
+                name: "Live Support Chat",
+                href: "/admin/live-chat",
+                icon: MessageSquare,
+                isLive: true,
+                badge: { text: "Live", color: "bg-emerald-100 text-emerald-800" },
+              },
+              {
+                name: "All Client Orders",
+                href: "/admin/orders",
+                icon: ClipboardList,
+                badge:
+                  totalCount > 0
+                    ? { text: String(totalCount), color: "bg-[#EEF2F6] text-slate-700" }
+                    : undefined,
+              },
+              ...(!isRepresentative
+                ? [
+                    {
+                      name: "Admin Console",
+                      href: "/admin",
+                      icon: LayoutDashboard,
+                      isLive: true,
+                    },
+                    {
+                      name: "Shift Ads Console",
+                      href: "/manager",
+                      icon: Sliders,
+                      badge: { text: "Day/Night", color: "bg-indigo-100 text-indigo-700" },
+                    },
+                    {
+                      name: "Pending Approvals",
+                      href: "/admin/pending",
+                      icon: Clock,
+                      badge:
+                        pendingCount > 0
+                          ? { text: String(pendingCount), color: "bg-[#FEF3C7] text-[#D97706]" }
+                          : undefined,
+                    },
+                    {
+                      name: "Payment Audit",
+                      href: "/admin/payments",
+                      icon: Wallet,
+                      badge:
+                        reviewPaymentsCount > 0
+                          ? { text: String(reviewPaymentsCount), color: "bg-[#FEF3C7] text-[#D97706]" }
+                          : undefined,
+                    },
+                  ]
+                : []),
+            ],
+          },
+          ...(!isRepresentative
+            ? [
+                {
+                  label: "SPECIALIST TOOLS",
+                  items: [
+                    {
+                      name: "Payment Accounts",
+                      href: "/admin/rates",
+                      icon: CreditCard,
+                    },
+                    {
+                      name: "Users & Clients",
+                      href: "/admin/clients",
+                      icon: Users,
+                      badge: { text: "Manage", color: "bg-[#EEF2FF] text-[#3858F6]" },
+                    },
+                    {
+                      name: "Meta Ads Manager",
+                      href: "/admin/meta-integration",
+                      icon: Share2,
+                      badge: { text: "API", color: "bg-[#0866FF]/10 text-[#0866FF]" },
+                    },
+                    {
+                      name: "Admin Profile",
+                      href: "/admin/profile",
+                      icon: User,
+                      badge: { text: "Security", color: "bg-[#EAF8F1] text-[#10B981]" },
+                    },
+                  ],
+                },
+              ]
+            : []),
+        ]),
     {
       label: "PORTAL SWITCH",
       items: [
@@ -308,19 +364,29 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, onMobile
               <ShieldCheck className="w-4 h-4 text-[#60A5FA]" />
             </div>
             <span className="text-[10px] font-bold tracking-wider text-[#60A5FA] bg-[#3858F6]/20 px-2 py-0.5 rounded-full">
-              SUPER ADMIN
+              {isManager
+                ? profile.assignedShift === "Night Shift"
+                  ? "🌙 NIGHT SHIFT"
+                  : "☀️ DAY SHIFT"
+                : isRepresentative
+                ? "SUPPORT AGENT"
+                : "SUPER ADMIN"}
             </span>
           </div>
 
           <div>
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-bold text-white tracking-tight group-hover:text-[#60A5FA] transition-colors">
-                {adminName}
+              <h4 className="text-sm font-bold text-white tracking-tight group-hover:text-[#60A5FA] transition-colors truncate">
+                {profile.name || adminName}
               </h4>
               <span className="text-[10px] text-white/50 group-hover:text-white transition-colors">Edit →</span>
             </div>
             <p className="text-[11px] text-white/60 mt-0.5 leading-relaxed font-normal">
-              Meta Certified Media Buyer & Agency Strategy Lead
+              {isManager
+                ? "Campaign Operations & Shift Specialist"
+                : isRepresentative
+                ? "Customer Care & Live Support Desk"
+                : "Meta Certified Media Buyer & Agency Lead"}
             </p>
           </div>
 

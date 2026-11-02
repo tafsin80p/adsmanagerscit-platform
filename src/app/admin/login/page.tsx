@@ -70,11 +70,18 @@ export default function AdminLoginPage() {
       }
 
       const isRep = res.user?.role === "representative";
+      const isManager = res.user?.role === "manager";
       setIsLoading(false);
       setToast({
         type: "admin",
-        title: isRep ? "Support Desk Verified 🎧" : "Admin Access Granted 🛡️",
-        message: isRep
+        title: isManager
+          ? "Operations Desk Verified 🎯"
+          : isRep
+          ? "Support Desk Verified 🎧"
+          : "Admin Access Granted 🛡️",
+        message: isManager
+          ? "Authorized Campaign Manager session verified. Redirecting to Operations Desk..."
+          : isRep
           ? "Authorized Representative session verified. Redirecting to Live Chat Desk..."
           : "Authorized Specialist session verified. Redirecting to Operations Console...",
         duration: 3500,
@@ -85,8 +92,14 @@ export default function AdminLoginPage() {
           "scit_auth_toast",
           JSON.stringify({
             type: "admin",
-            title: isRep ? "🎧 Live Support Desk Ready" : "🛡️ Admin Operations Active",
-            message: isRep
+            title: isManager
+              ? "🎯 Campaign Operations Desk"
+              : isRep
+              ? "🎧 Live Support Desk Ready"
+              : "🛡️ Admin Operations Active",
+            message: isManager
+              ? "Campaign Operations desk is active. You can create client boosts and verify payments."
+              : isRep
               ? "Support desk is online. You can now chat with customers and inspect orders."
               : "Authorized Specialist console verified. Live Meta API and database connected.",
             duration: 4000,
@@ -96,7 +109,7 @@ export default function AdminLoginPage() {
 
       const dest =
         res.redirectUrl ||
-        (isRep ? "/admin/live-chat" : "/admin");
+        (isManager ? "/manager" : isRep ? "/admin/live-chat" : "/admin");
 
       setTimeout(() => {
         router.push(dest);

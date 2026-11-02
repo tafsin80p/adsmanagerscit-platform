@@ -56,6 +56,7 @@ export async function PATCH(
     if (body.businessName !== undefined) updatePayload.businessName = body.businessName.trim();
     if (body.avatar !== undefined) updatePayload.avatar = body.avatar.trim();
     if (body.role !== undefined) updatePayload.role = body.role;
+    if (body.assignedShift !== undefined) updatePayload.assignedShift = body.assignedShift;
     if (body.dollarRate !== undefined && !isNaN(Number(body.dollarRate))) updatePayload.dollarRate = Number(body.dollarRate);
     if (body.connectedPage !== undefined) {
       updatePayload.connectedPage = body.connectedPage;

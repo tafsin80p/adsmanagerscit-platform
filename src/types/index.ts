@@ -173,6 +173,30 @@ export interface Order {
   screenshotUrl?: string;
   source?: "portal_order" | "facebook_page_boost";
   isExternalBoost?: boolean;
+  addedBy?: OrderAuditUser;
+  confirmedBy?: OrderAuditUser;
+  shift?: ShiftType | string;
+}
+
+export type ShiftType = "Day Shift" | "Night Shift";
+
+export interface OrderAuditUser {
+  name: string;
+  email: string;
+  role: string;
+  shift?: ShiftType | string;
+  avatar?: string;
+  at?: string;
+  confirmedAt?: string;
+}
+
+export function getCurrentShift(date?: Date): ShiftType {
+  const d = date ?? new Date();
+  const hours = d.getHours();
+  if (hours >= 8 && hours < 20) {
+    return "Day Shift";
+  }
+  return "Night Shift";
 }
 
 export interface MetaAdAccount {
@@ -207,6 +231,7 @@ export interface ClientProfile {
   businessName: string;
   avatar: string;
   role: string;
+  assignedShift?: ShiftType | "Rotational";
   connectedPage: {
     name: string;
     id: string;
@@ -244,7 +269,8 @@ export interface ClientAccount {
   phone: string;
   businessName: string;
   avatar?: string;
-  role: "client" | "admin" | "representative";
+  role: "client" | "admin" | "representative" | "manager";
+  assignedShift?: "Day Shift" | "Night Shift" | "Rotational";
   connectedPage: {
     name: string;
     id?: string;

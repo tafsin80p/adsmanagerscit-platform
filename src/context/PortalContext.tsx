@@ -833,7 +833,8 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
             phone: u.phone || "",
             businessName: u.businessName || u.name || defaultPageName,
             avatar: u.avatar || userSavedPage?.avatar || "/images/avatar.jpg",
-            role: u.role === "admin" ? "Specialist" : u.role === "representative" ? "representative" : "Client",
+            role: u.role === "admin" ? "Specialist" : u.role === "representative" ? "representative" : u.role === "manager" ? "manager" : "Client",
+            assignedShift: u.assignedShift || "Day Shift",
             connectedPage: userSavedPage
               ? {
                   name: userSavedPage.name,
@@ -1395,7 +1396,8 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
           phone: data.user.phone || profile.phone,
           businessName: data.user.businessName || profile.businessName,
           avatar: data.user.avatar || profile.avatar,
-          role: data.user.role === "admin" ? "Specialist" : data.user.role === "representative" ? "representative" : "Client",
+          role: data.user.role === "admin" ? "Specialist" : data.user.role === "representative" ? "representative" : data.user.role === "manager" ? "manager" : "Client",
+          assignedShift: data.user.assignedShift || "Day Shift",
           connectedPage: data.user.connectedPage || profile.connectedPage,
           currency: data.user.currency || "USD",
           notifications: data.user.notifications || profile.notifications,
@@ -1413,6 +1415,8 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
           data.redirectUrl ||
           (data.user?.role === "representative"
             ? "/admin/live-chat"
+            : data.user?.role === "manager"
+            ? "/manager"
             : credentials.accountType === "specialist"
             ? "/admin"
             : "/"),

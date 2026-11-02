@@ -58,6 +58,22 @@ export interface IOrder extends Document {
   screenshotUrl?: string;
   source?: "portal_order" | "facebook_page_boost";
   isExternalBoost?: boolean;
+  addedBy?: {
+    name: string;
+    email: string;
+    role: string;
+    shift?: "Day Shift" | "Night Shift" | string;
+    avatar?: string;
+    at?: string;
+  };
+  confirmedBy?: {
+    name: string;
+    email: string;
+    role: string;
+    shift?: "Day Shift" | "Night Shift" | string;
+    confirmedAt?: string;
+  };
+  shift?: "Day Shift" | "Night Shift" | string;
 }
 
 const BoostItemSchema = new Schema<IBoostItem>(
@@ -148,6 +164,22 @@ const OrderSchema = new Schema<IOrder>(
       default: "portal_order",
     },
     isExternalBoost: { type: Boolean, default: false },
+    addedBy: {
+      name: { type: String, default: "" },
+      email: { type: String, default: "" },
+      role: { type: String, default: "" },
+      shift: { type: String, default: "" },
+      avatar: { type: String, default: "" },
+      at: { type: String, default: "" },
+    },
+    confirmedBy: {
+      name: { type: String, default: "" },
+      email: { type: String, default: "" },
+      role: { type: String, default: "" },
+      shift: { type: String, default: "" },
+      confirmedAt: { type: String, default: "" },
+    },
+    shift: { type: String, default: "" },
   },
   {
     timestamps: true,

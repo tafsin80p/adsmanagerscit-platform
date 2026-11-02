@@ -23,9 +23,11 @@ import {
   ExternalLink,
   ImageIcon,
   Check,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { usePortal } from "@/context/PortalContext";
-import { ClientAccount, OrderStatus, PaymentStatus, PaymentMethod } from "@/types";
+import { ClientAccount, OrderStatus, PaymentStatus, PaymentMethod, getCurrentShift, ShiftType } from "@/types";
 
 interface AdminCreateOrderModalProps {
   isOpen: boolean;
@@ -42,7 +44,12 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
   initialClientId,
   clients: propClients,
 }) => {
-  const { exchangeRateBDT, refreshOrders, refreshPayments } = usePortal();
+  const { profile, exchangeRateBDT, refreshOrders, refreshPayments } = usePortal();
+  const [selectedShift, setSelectedShift] = useState<ShiftType>("Day Shift");
+
+  useEffect(() => {
+    setSelectedShift(getCurrentShift());
+  }, []);
 
   const [clientsList, setClientsList] = useState<ClientAccount[]>(propClients || []);
   const [isLoadingClients, setIsLoadingClients] = useState(false);
@@ -263,6 +270,26 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
         },
         source: "portal_order",
         isExternalBoost: false,
+        addedBy: {
+          name: profile.name || (profile.role === "manager" ? "Shift Operator" : "Agency Specialist"),
+          email: profile.email || "specialist@shopnocareerit.com",
+          role: profile.role || "manager",
+          shift: selectedShift,
+          avatar: profile.avatar || "",
+          at: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+        },
+        shift: selectedShift,
+        ...(status === "Active" || paymentStatus === "Verified"
+          ? {
+              confirmedBy: {
+                name: profile.name || (profile.role === "manager" ? "Shift Operator" : "Agency Specialist"),
+                email: profile.email || "specialist@shopnocareerit.com",
+                role: profile.role || "manager",
+                shift: selectedShift,
+                confirmedAt: new Date().toISOString(),
+              },
+            }
+          : {}),
         createdAt: new Date().toISOString(),
       };
 

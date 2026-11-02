@@ -93,7 +93,7 @@ export async function POST(req: Request) {
     }
 
     // Check accountType compatibility if provided
-    if (accountType === "specialist" && user.role !== "admin" && user.role !== "representative") {
+    if (accountType === "specialist" && user.role !== "admin" && user.role !== "representative" && user.role !== "manager") {
       return NextResponse.json(
         {
           success: false,
@@ -120,6 +120,7 @@ export async function POST(req: Request) {
       name: user.name,
       email: user.email,
       role: user.role,
+      assignedShift: user.assignedShift || "Day Shift",
       businessName: user.businessName,
       phone: user.phone,
       avatar: user.avatar,
@@ -131,6 +132,8 @@ export async function POST(req: Request) {
     const redirectUrl =
       user.role === "admin"
         ? "/admin"
+        : user.role === "manager"
+        ? "/manager"
         : user.role === "representative"
         ? "/admin/live-chat"
         : "/";

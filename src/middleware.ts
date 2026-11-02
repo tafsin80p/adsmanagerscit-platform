@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 interface SessionPayload {
   id?: string;
   email?: string;
-  role?: "client" | "admin" | "representative";
+  role?: "client" | "admin" | "representative" | "manager";
   timestamp?: number;
 }
 
@@ -55,9 +55,9 @@ export function middleware(req: NextRequest) {
       );
     }
 
-    // Admin-only API endpoints: Clients must never access client management, system settings, Meta config, or admin profile
+    // Admin-only API endpoints: Clients & Managers without admin role must not access system settings or Meta credentials
     const isAdminOnlyApi =
-      pathname.startsWith("/api/clients") ||
+      (pathname.startsWith("/api/clients") && req.method !== "GET") ||
       pathname.startsWith("/api/settings") ||
       pathname.startsWith("/api/meta/") ||
       pathname.startsWith("/api/admin");
@@ -82,6 +82,8 @@ export function middleware(req: NextRequest) {
   if (isAuthPage && isAuthenticated) {
     if (userRole === "admin") {
       return NextResponse.redirect(new URL("/admin", req.url));
+    } else if (userRole === "manager") {
+      return NextResponse.redirect(new URL("/manager", req.url));
     } else if (userRole === "representative") {
       return NextResponse.redirect(new URL("/admin/live-chat", req.url));
     } else {
@@ -100,7 +102,24 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 3. ADMIN CONSOLE PAGES (/admin, /admin/...)
+  // 3. MANAGER DESK PAGES (/manager, /manager/...)
+  const isManagerPage = pathname.startsWith("/manager");
+  if (isManagerPage) {
+    if (!isAuthenticated) {
+      const loginUrl = new URL("/admin/login", req.url);
+      loginUrl.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+    // Only managers and admins can access manager desk
+    if (userRole !== "manager" && userRole !== "admin") {
+      const clientHomeUrl = new URL("/", req.url);
+      clientHomeUrl.searchParams.set("unauthorized", "manager_restricted");
+      return NextResponse.redirect(clientHomeUrl);
+    }
+    return NextResponse.next();
+  }
+
+  // 3.5 ADMIN CONSOLE PAGES (/admin, /admin/...)
   const isAdminPage = pathname.startsWith("/admin");
   if (isAdminPage) {
     // A: Without login -> Redirect to /admin/login
@@ -110,6 +129,11 @@ export function middleware(req: NextRequest) {
         loginUrl.searchParams.set("callbackUrl", pathname);
       }
       return NextResponse.redirect(loginUrl);
+    }
+
+    // Managers visiting /admin console -> Redirect to their dedicated /manager desk
+    if (userRole === "manager") {
+      return NextResponse.redirect(new URL("/manager", req.url));
     }
 
     // B: Logged-in client trying to access Admin pages -> BLOCKED & REDIRECTED TO CLIENT HOME
@@ -147,7 +171,10 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(clientLoginUrl);
   }
 
-  // Support representative should NOT be in client dashboard - redirect directly to Live Support Chat desk!
+  // Support representative and manager should NOT be in client dashboard
+  if (userRole === "manager") {
+    return NextResponse.redirect(new URL("/manager", req.url));
+  }
   if (userRole === "representative") {
     return NextResponse.redirect(new URL("/admin/live-chat", req.url));
   }

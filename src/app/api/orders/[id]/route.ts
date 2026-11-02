@@ -51,6 +51,14 @@ export async function PATCH(
       );
     }
 
+    if (body.paymentStatus === "Verified") {
+      try {
+        await PaymentModel.updateMany({ orderId: id }, { $set: { status: "Verified" } });
+      } catch (paySyncErr) {
+        console.warn("Could not sync payment status:", paySyncErr);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: "Order updated successfully",

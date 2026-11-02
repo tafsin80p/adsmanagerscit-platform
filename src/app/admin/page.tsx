@@ -42,6 +42,8 @@ import {
   Phone,
   Mail,
   Plus,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { usePortal } from "@/context/PortalContext";
@@ -273,6 +275,16 @@ export default function AdminDashboardPage() {
   const pageBoostsSpendUSD = useMemo(
     () => pageBoosts.reduce((sum, o) => sum + (o.totalBudgetUSD || 0), 0),
     [pageBoosts]
+  );
+
+  // Shift Operations counts for Day & Night audits
+  const dayShiftOrdersCount = useMemo(
+    () => portalOrders.filter((o) => o.shift === "Day Shift" || (o.addedBy && o.addedBy.shift === "Day Shift")).length,
+    [portalOrders]
+  );
+  const nightShiftOrdersCount = useMemo(
+    () => portalOrders.filter((o) => o.shift === "Night Shift" || (o.addedBy && o.addedBy.shift === "Night Shift")).length,
+    [portalOrders]
   );
 
   // Dynamic Total Verified Reach, Impressions & Inquiries (Prevents double counting)
@@ -691,6 +703,48 @@ export default function AdminDashboardPage() {
             </div>
             <ArrowRight className="w-4 h-4 text-slate-700 group-hover:translate-x-1 transition-transform" />
           </Link>
+        </div>
+
+        {/* Shift Campaign Operations & Shift Audit Banner */}
+        <div className="p-5 sm:p-6 rounded-[28px] bg-gradient-to-r from-slate-900 via-[#182035] to-[#1E1B4B] text-white border border-white/10 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[#3858F6]/20 border border-[#3858F6]/40 flex items-center justify-center text-[#60A5FA] shrink-0">
+              <Sliders className="w-6 h-6 text-[#60A5FA]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="text-sm sm:text-base font-black text-white">
+                  Day & Night Shift Campaign Operations
+                </h4>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  Live Audit Active
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5">
+                ক্যাম্পেইন ম্যানেজারদের শিফট ভিত্তিক বুস্ট, অর্ডার সাবমিশন এবং পেমেন্ট কনফার্মেশন মনিটরিং।
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="flex items-center gap-2 bg-white/10 px-3.5 py-2 rounded-2xl border border-white/10 text-xs">
+              <Sun className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-amber-400 font-bold">Day Shift:</span>
+              <span className="font-black text-white">{dayShiftOrdersCount} Boosts</span>
+            </div>
+            <div className="flex items-center gap-2 bg-white/10 px-3.5 py-2 rounded-2xl border border-white/10 text-xs">
+              <Moon className="w-3.5 h-3.5 text-purple-300" />
+              <span className="text-purple-300 font-bold">Night Shift:</span>
+              <span className="font-black text-white">{nightShiftOrdersCount} Boosts</span>
+            </div>
+            <Link
+              href="/manager"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#3858F6] to-[#2542D9] hover:from-[#2F4EE8] hover:to-[#1E37B5] text-white text-xs font-bold rounded-2xl shadow-md transition-all cursor-pointer"
+            >
+              <span>Shift Console</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
 
         {/* Registered Client Profiles & Brands Directory Overview */}

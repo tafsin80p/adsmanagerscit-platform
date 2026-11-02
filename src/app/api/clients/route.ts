@@ -66,21 +66,47 @@ export async function POST(req: Request) {
       );
     }
 
-    const isStaff = role === "representative" || role === "admin";
+    const isStaff = role === "representative" || role === "admin" || role === "manager";
     const newClient = await UserModel.create({
       name: name.trim(),
       email: cleanEmail,
       password: hashPassword(password),
       phone: phone.trim() || (isStaff ? "" : "+880 1700-000000"),
-      businessName: businessName.trim() || (isStaff ? (role === "representative" ? "Support Representative" : "Admin Staff") : `${name}'s Brand`),
-      role: role === "admin" ? "admin" : role === "representative" ? "representative" : "client",
+      businessName:
+        businessName.trim() ||
+        (isStaff
+          ? role === "representative"
+            ? "Support Representative"
+            : role === "manager"
+            ? "Ads Operations Specialist"
+            : "Admin Staff"
+          : `${name}'s Brand`),
+      role:
+        role === "admin"
+          ? "admin"
+          : role === "representative"
+          ? "representative"
+          : role === "manager"
+          ? "manager"
+          : "client",
+      assignedShift: body.assignedShift || "Day Shift",
       avatar: avatar.trim() || "/images/avatar.jpg",
       connectedPage: isStaff
         ? {
-            name: role === "representative" ? "Live Chat Desk" : "Admin Console",
+            name:
+              role === "representative"
+                ? "Live Chat Desk"
+                : role === "manager"
+                ? "Campaign Operations Desk"
+                : "Admin Console",
             id: `STAFF-${Math.floor(1000000 + Math.random() * 9000000)}`,
-            followers: "Staff Member",
-            category: role === "representative" ? "Customer Support" : "Administration",
+            followers: role === "manager" ? (body.assignedShift || "Day Shift") : "Staff Member",
+            category:
+              role === "representative"
+                ? "Customer Support"
+                : role === "manager"
+                ? "Ads Operations"
+                : "Administration",
             verified: true,
           }
         : {

@@ -34,6 +34,9 @@ import {
   Share2,
   Plus,
   Trash2,
+  Sun,
+  Moon,
+  Sliders,
 } from "lucide-react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { usePortal } from "@/context/PortalContext";
@@ -126,6 +129,7 @@ export default function AdminOrdersPage() {
   const [sourceTab, setSourceTab] = useState<"portal" | "facebook_page">("portal");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
+  const [shiftFilter, setShiftFilter] = useState<string>("All");
   const [objectiveFilter, setObjectiveFilter] = useState<string>("All");
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "budget-high" | "budget-low">("newest");
@@ -358,6 +362,9 @@ export default function AdminOrdersPage() {
         (order.transactionId && order.transactionId.toLowerCase().includes(q)) ||
         (order.postType && order.postType.toLowerCase().includes(q)) ||
         (order.paymentMethod && order.paymentMethod.toLowerCase().includes(q)) ||
+        (order.addedBy?.name && order.addedBy.name.toLowerCase().includes(q)) ||
+        (order.confirmedBy?.name && order.confirmedBy.name.toLowerCase().includes(q)) ||
+        (order.shift && order.shift.toLowerCase().includes(q)) ||
         cName.includes(q) ||
         bName.includes(q) ||
         cEmail.includes(q) ||
@@ -370,6 +377,17 @@ export default function AdminOrdersPage() {
           ? order.status === "Pending" || order.paymentStatus === "Awaiting Verification"
           : order.status === statusFilter;
 
+      const matchesShift =
+        shiftFilter === "All"
+          ? true
+          : shiftFilter === "Day Shift"
+          ? order.shift === "Day Shift" || (order.addedBy && order.addedBy.shift === "Day Shift")
+          : shiftFilter === "Night Shift"
+          ? order.shift === "Night Shift" || (order.addedBy && order.addedBy.shift === "Night Shift")
+          : shiftFilter === "Client Direct"
+          ? !order.addedBy || order.addedBy.role === "client"
+          : true;
+
       const matchesObjective =
         objectiveFilter === "All" ? true : order.objective === objectiveFilter;
 
@@ -378,7 +396,7 @@ export default function AdminOrdersPage() {
           ? true
           : order.postType?.toLowerCase().includes(categoryFilter.toLowerCase());
 
-      return matchesSearch && matchesStatus && matchesObjective && matchesCategory;
+      return matchesSearch && matchesStatus && matchesShift && matchesObjective && matchesCategory;
     });
 
     return filtered.sort((a, b) => {
@@ -398,17 +416,19 @@ export default function AdminOrdersPage() {
       const dateB = new Date(b.createdAt).getTime() || 0;
       return dateB - dateA;
     });
-  }, [activeDataset, searchQuery, statusFilter, objectiveFilter, categoryFilter, sortBy, profile.businessName]);
+  }, [activeDataset, searchQuery, statusFilter, shiftFilter, objectiveFilter, categoryFilter, sortBy, profile.businessName]);
 
   const hasActiveFilters =
     searchQuery !== "" ||
     statusFilter !== "All" ||
+    shiftFilter !== "All" ||
     objectiveFilter !== "All" ||
     categoryFilter !== "All Formats";
 
   const resetFilters = () => {
     setSearchQuery("");
     setStatusFilter("All");
+    setShiftFilter("All");
     setObjectiveFilter("All");
     setCategoryFilter("All Formats");
     setSortBy("newest");
@@ -672,6 +692,21 @@ export default function AdminOrdersPage() {
                   </select>
                 </div>
 
+                {/* Shift & Source Selector */}
+                <div className="flex items-center gap-1.5 bg-[#F5F7FB] px-3 py-1.5 rounded-xl border border-slate-200 text-xs">
+                  <span className="text-slate-400 font-medium">Shift / Source:</span>
+                  <select
+                    value={shiftFilter}
+                    onChange={(e) => setShiftFilter(e.target.value)}
+                    className="bg-transparent font-bold text-slate-700 focus:outline-none cursor-pointer pr-1"
+                  >
+                    <option value="All">All Shifts & Sources</option>
+                    <option value="Day Shift">☀️ Day Shift (08 AM - 08 PM)</option>
+                    <option value="Night Shift">🌙 Night Shift (08 PM - 08 AM)</option>
+                    <option value="Client Direct">👤 Direct Client Self-Orders</option>
+                  </select>
+                </div>
+
                 {/* Objective Selector */}
                 <div className="flex items-center gap-1.5 bg-[#F5F7FB] px-3 py-1.5 rounded-xl border border-slate-200 text-xs">
                   <span className="text-slate-400 font-medium">Goal:</span>
@@ -752,6 +787,7 @@ export default function AdminOrdersPage() {
                 <tr>
                   <th className="py-4 px-6">Order ID & Campaign</th>
                   <th className="py-4 px-4">Client / Page</th>
+                  <th className="py-4 px-4">Shift & Operator</th>
                   <th className="py-4 px-4">Budget & Duration</th>
                   <th className="py-4 px-4">Payment Info</th>
                   <th className="py-4 px-4">Live Status Control</th>
@@ -761,7 +797,7 @@ export default function AdminOrdersPage() {
               <tbody className="divide-y divide-slate-100 font-medium">
                 {isLoadingOrders && orders.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-12 text-slate-400 text-xs">
+                    <td colSpan={7} className="text-center py-12 text-slate-400 text-xs">
                       <div className="flex items-center justify-center gap-2">
                         <RefreshCw className="w-4 h-4 animate-spin text-[#3858F6]" />
                         <span>Loading live client orders...</span>
@@ -770,7 +806,7 @@ export default function AdminOrdersPage() {
                   </tr>
                 ) : filteredOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-16 px-4">
+                    <td colSpan={7} className="text-center py-16 px-4">
                       <div className="max-w-md mx-auto space-y-3">
                         <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
                           {sourceTab === "portal" ? (
@@ -892,6 +928,64 @@ export default function AdminOrdersPage() {
                             </div>
                           </div>
                         </div>
+                      </td>
+
+                      {/* Shift & Operator Audit */}
+                      <td className="py-4 px-4">
+                        {order.addedBy ? (
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1.5">
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black border ${
+                                  order.shift === "Night Shift" || order.addedBy.shift === "Night Shift"
+                                    ? "bg-purple-50 text-purple-700 border-purple-200"
+                                    : "bg-amber-50 text-amber-800 border-amber-200"
+                                }`}
+                              >
+                                {order.shift === "Night Shift" || order.addedBy.shift === "Night Shift" ? (
+                                  <>
+                                    <Moon className="w-2.5 h-2.5 text-purple-600" />
+                                    <span>Night Shift</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sun className="w-2.5 h-2.5 text-amber-600" />
+                                    <span>Day Shift</span>
+                                  </>
+                                )}
+                              </span>
+                            </div>
+                            <div className="font-bold text-[#121826] text-xs flex items-center gap-1">
+                              <span>{order.addedBy.name}</span>
+                            </div>
+                            <div className="text-[10px] text-slate-400 capitalize">
+                              {order.addedBy.role === "manager" ? "Ads Campaign Manager" : order.addedBy.role || "Specialist"}
+                            </div>
+                            {order.confirmedBy && (
+                              <div className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 pt-0.5">
+                                <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
+                                <span className="truncate" title={`Approved by ${order.confirmedBy.name}`}>
+                                  ✓ Approved: {order.confirmedBy.name}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-1">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                              👤 Client Direct
+                            </span>
+                            <div className="text-[10px] text-slate-400">Self-Placed Order</div>
+                            {order.confirmedBy && (
+                              <div className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 pt-0.5">
+                                <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
+                                <span className="truncate" title={`Approved by ${order.confirmedBy.name}`}>
+                                  ✓ Approved: {order.confirmedBy.name}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </td>
 
                       {/* Budget & Duration */}

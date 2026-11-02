@@ -35,6 +35,9 @@ import {
   Headphones,
   Camera,
   UploadCloud,
+  Sliders,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { usePortal } from "@/context/PortalContext";
@@ -122,7 +125,7 @@ export default function AdminClientsPage() {
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState<"All" | "Clients" | "Support Agents" | "Admins" | "Active" | "Pending">("All");
+  const [filterType, setFilterType] = useState<"All" | "Clients" | "Managers" | "Support Agents" | "Admins" | "Active" | "Pending">("All");
   const [sortBy, setSortBy] = useState<"newest" | "name" | "orders">("newest");
   const [expandedClientId, setExpandedClientId] = useState<string | null>(null);
 
@@ -149,7 +152,8 @@ export default function AdminClientsPage() {
     email: "",
     phone: "",
     dollarRate: 150,
-    role: "client" as "client" | "admin" | "representative",
+    role: "client" as "client" | "admin" | "representative" | "manager",
+    assignedShift: "Day Shift" as "Day Shift" | "Night Shift" | "Rotational",
     pageName: "",
     pageCategory: "Apparel & Clothing Store",
     pageFollowers: "25.0K followers",
@@ -285,7 +289,7 @@ export default function AdminClientsPage() {
       return;
     }
 
-    const isStaff = formData.role === "representative" || formData.role === "admin";
+    const isStaff = formData.role === "representative" || formData.role === "admin" || formData.role === "manager";
     if (!isStaff && !formData.businessName.trim()) {
       showNotification("Please provide Brand / Business Name for the client.");
       return;
@@ -297,15 +301,16 @@ export default function AdminClientsPage() {
         name: formData.name.trim(),
         email: formData.email.trim(),
         role: formData.role,
+        assignedShift: formData.role === "manager" ? (formData.assignedShift || "Day Shift") : undefined,
         password: formData.password.trim() || "staff123",
         businessName: isStaff
-          ? (formData.businessName.trim() || (formData.role === "representative" ? "Support Representative" : "Platform Admin"))
+          ? (formData.businessName.trim() || (formData.role === "representative" ? "Support Representative" : formData.role === "manager" ? "Ads Campaign Manager" : "Platform Admin"))
           : formData.businessName.trim(),
         phone: isStaff ? "" : formData.phone.trim(),
         dollarRate: isStaff ? 150 : (Number(formData.dollarRate) || 150),
         pageName: isStaff ? "" : formData.pageName.trim(),
-        pageCategory: isStaff ? "Customer Support" : formData.pageCategory.trim(),
-        pageFollowers: isStaff ? "Staff Member" : formData.pageFollowers.trim(),
+        pageCategory: formData.role === "manager" ? "Campaigns & Shifts" : isStaff ? "Customer Support" : formData.pageCategory.trim(),
+        pageFollowers: formData.role === "manager" ? (formData.assignedShift || "Day Shift") : isStaff ? "Staff Member" : formData.pageFollowers.trim(),
         avatar: formData.avatar ? formData.avatar.trim() : undefined,
       };
 
@@ -323,6 +328,8 @@ export default function AdminClientsPage() {
       showNotification(
         formData.role === "representative"
           ? `Support representative '${formData.name}' created successfully!`
+          : formData.role === "manager"
+          ? `Ads Campaign Manager '${formData.name}' (${formData.assignedShift}) onboarded successfully!`
           : formData.role === "admin"
           ? `Admin '${formData.name}' created successfully!`
           : `Client account '${formData.name}' onboarded successfully!`
@@ -335,6 +342,7 @@ export default function AdminClientsPage() {
         phone: "",
         dollarRate: 150,
         role: "client",
+        assignedShift: "Day Shift",
         pageName: "",
         pageCategory: "Apparel & Clothing Store",
         pageFollowers: "25.0K followers",
@@ -355,7 +363,7 @@ export default function AdminClientsPage() {
     e.preventDefault();
     if (!editingClient) return;
 
-    const isStaff = editingClient.role === "representative" || editingClient.role === "admin";
+    const isStaff = editingClient.role === "representative" || editingClient.role === "admin" || editingClient.role === "manager";
     if (!editingClient.name?.trim() || !editingClient.email?.trim()) {
       showNotification("Please provide user name and email.");
       return;
@@ -372,8 +380,9 @@ export default function AdminClientsPage() {
         name: editingClient.name.trim(),
         email: editingClient.email.trim(),
         role: editingClient.role || "client",
+        assignedShift: editingClient.role === "manager" ? (editingClient.assignedShift || "Day Shift") : undefined,
         businessName: isStaff
-          ? (editingClient.businessName?.trim() || (editingClient.role === "representative" ? "Support Representative" : "Platform Admin"))
+          ? (editingClient.businessName?.trim() || (editingClient.role === "representative" ? "Support Representative" : editingClient.role === "manager" ? "Ads Campaign Manager" : "Platform Admin"))
           : editingClient.businessName.trim(),
         phone: isStaff ? "" : (editingClient.phone?.trim() || ""),
         dollarRate: isStaff ? 150 : (Number(editingClient.dollarRate) || 150),
@@ -521,6 +530,8 @@ export default function AdminClientsPage() {
             ? true
             : filterType === "Clients"
             ? client.role === "client" || !client.role
+            : filterType === "Managers"
+            ? client.role === "manager"
             : filterType === "Support Agents"
             ? client.role === "representative"
             : filterType === "Admins"
@@ -744,7 +755,7 @@ export default function AdminClientsPage() {
           <div className="flex items-center gap-2.5 flex-wrap">
             {/* Filter Tabs */}
             <div className="flex items-center gap-1.5 bg-[#F5F7FB] p-1 rounded-xl border border-slate-200">
-              {(["All", "Clients", "Support Agents", "Admins", "Active", "Pending"] as const).map((ft) => (
+              {(["All", "Clients", "Managers", "Support Agents", "Admins", "Active", "Pending"] as const).map((ft) => (
                 <button
                   key={ft}
                   onClick={() => setFilterType(ft)}
@@ -758,6 +769,8 @@ export default function AdminClientsPage() {
                     ? "All Users"
                     : ft === "Clients"
                     ? "Clients Only"
+                    : ft === "Managers"
+                    ? "🎯 Ads Managers"
                     : ft === "Support Agents"
                     ? "🎧 Support Agents"
                     : ft === "Admins"
@@ -851,6 +864,22 @@ export default function AdminClientsPage() {
                                 <ShieldCheck className="w-3 h-3 text-purple-600" />
                                 <span>Super Admin</span>
                               </span>
+                            ) : client.role === "manager" ? (
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0">
+                                  <Sliders className="w-3 h-3 text-indigo-600" />
+                                  <span>Ads Manager</span>
+                                </span>
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${
+                                  client.assignedShift === "Night Shift"
+                                    ? "bg-purple-50 text-purple-700 border-purple-200"
+                                    : client.assignedShift === "Rotational"
+                                    ? "bg-blue-50 text-blue-700 border-blue-200"
+                                    : "bg-amber-50 text-amber-800 border-amber-200"
+                                }`}>
+                                  {client.assignedShift === "Night Shift" ? "🌙 Night Shift" : client.assignedShift === "Rotational" ? "🔄 Rotational" : "☀️ Day Shift"}
+                                </span>
+                              </div>
                             ) : client.role === "representative" ? (
                               <span className="text-[10px] font-black bg-blue-50 text-[#3858F6] border border-blue-200 px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0">
                                 <Headphones className="w-3 h-3 text-[#3858F6]" />
@@ -923,6 +952,11 @@ export default function AdminClientsPage() {
                             </span>
                           </div>
                         </>
+                      ) : client.role === "manager" ? (
+                        <div className="text-[11px] font-bold text-indigo-700 pt-0.5 flex items-center gap-1.5">
+                          <Sliders className="w-3 h-3 text-indigo-600" />
+                          <span>Campaign Specialist • {client.assignedShift || "Day Shift"}</span>
+                        </div>
                       ) : client.role === "representative" ? (
                         <div className="text-[11px] font-bold text-[#3858F6] pt-0.5 flex items-center gap-1">
                           <Headphones className="w-3 h-3" />
@@ -937,7 +971,26 @@ export default function AdminClientsPage() {
                     </div>
 
                     {/* Quick 2x2 Metrics Box */}
-                    {client.role === "representative" ? (
+                    {client.role === "manager" ? (
+                      <div className="grid grid-cols-2 gap-2 text-xs bg-indigo-50/50 p-3 rounded-2xl border border-indigo-100">
+                        <div>
+                          <span className="text-slate-400 text-[10px] block">Role:</span>
+                          <span className="font-extrabold text-indigo-700 text-xs">Campaign Manager</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[10px] block">Work Shift:</span>
+                          <span className="font-extrabold text-slate-800 text-xs">{client.assignedShift || "Day Shift"}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[10px] block">Assigned Desk:</span>
+                          <span className="font-extrabold text-[#3858F6] text-xs">Client Boost Desk</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[10px] block">Payments:</span>
+                          <span className="font-extrabold text-emerald-600 text-xs">Confirm & Launch</span>
+                        </div>
+                      </div>
+                    ) : client.role === "representative" ? (
                       <div className="grid grid-cols-2 gap-2 text-xs bg-blue-50/50 p-3 rounded-2xl border border-blue-100">
                         <div>
                           <span className="text-slate-400 text-[10px] block">Assigned Desk:</span>
@@ -1205,14 +1258,18 @@ export default function AdminClientsPage() {
               <div className="flex items-center gap-2.5">
                 <div
                   className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                    formData.role === "representative"
+                    formData.role === "manager"
+                      ? "bg-indigo-50 text-indigo-600"
+                      : formData.role === "representative"
                       ? "bg-blue-50 text-[#3858F6]"
                       : formData.role === "admin"
                       ? "bg-purple-50 text-purple-600"
                       : "bg-[#EEF2FF] text-[#3858F6]"
                   }`}
                 >
-                  {formData.role === "representative" ? (
+                  {formData.role === "manager" ? (
+                    <Sliders className="w-4 h-4" />
+                  ) : formData.role === "representative" ? (
                     <Headphones className="w-4 h-4" />
                   ) : formData.role === "admin" ? (
                     <ShieldCheck className="w-4 h-4" />
@@ -1222,14 +1279,18 @@ export default function AdminClientsPage() {
                 </div>
                 <div>
                   <h3 className="font-extrabold text-base text-[#121826]">
-                    {formData.role === "representative"
+                    {formData.role === "manager"
+                      ? "Create Ads Campaign Manager"
+                      : formData.role === "representative"
                       ? "Create Support Representative"
                       : formData.role === "admin"
                       ? "Create Administrator Account"
                       : "Onboard New Client Brand"}
                   </h3>
                   <p className="text-xs text-slate-400">
-                    {formData.role === "representative"
+                    {formData.role === "manager"
+                      ? "Register shift specialist to manage boosts and verify payments"
+                      : formData.role === "representative"
                       ? "Register customer support agent for Live Chat"
                       : formData.role === "admin"
                       ? "Register administrator with full platform control"
@@ -1257,10 +1318,40 @@ export default function AdminClientsPage() {
                   className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826] focus:outline-none focus:bg-white focus:border-[#3858F6]"
                 >
                   <option value="client">Client (E-Commerce Brand Portal)</option>
+                  <option value="manager">🎯 Ads Campaign Manager (Day/Night Shift Operator)</option>
                   <option value="representative">🎧 Support Representative (Customer Care Agent)</option>
                   <option value="admin">🛡️ Super Admin (Full Platform Access)</option>
                 </select>
               </div>
+
+              {/* Informational banner when manager is selected */}
+              {formData.role === "manager" && (
+                <div className="p-3.5 bg-indigo-50/90 border border-indigo-200 rounded-2xl space-y-2.5 text-xs text-indigo-950">
+                  <div className="flex items-start gap-2">
+                    <Sliders className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold text-indigo-900">Ads Campaign Manager Shift Mode</span>
+                      <p className="text-[11px] text-indigo-800/90 mt-0.5 leading-relaxed">
+                        ক্যাম্পেইন ম্যানেজার ডে এবং নাইট শিফটে ক্লায়েন্টদের আইডিতে সরাসরি বুস্ট ও অ্যাড তৈরি করতে পারবে এবং পেমেন্ট কনফার্ম করতে পারবে।
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-indigo-900 mb-1">
+                      Assigned Working Shift (দায়িত্বপ্রাপ্ত শিফট) *
+                    </label>
+                    <select
+                      value={formData.assignedShift}
+                      onChange={(e) => setFormData({ ...formData, assignedShift: e.target.value as any })}
+                      className="w-full px-3 py-2 bg-white border border-indigo-300 rounded-xl text-xs font-bold text-indigo-950 focus:outline-none focus:ring-1 focus:ring-indigo-500 shadow-2xs"
+                    >
+                      <option value="Day Shift">☀️ Day Shift (08:00 AM - 08:00 PM BST)</option>
+                      <option value="Night Shift">🌙 Night Shift (08:00 PM - 08:00 AM BST)</option>
+                      <option value="Rotational">🔄 Rotational Shift (উভয় শিফটে শিফটিং)</option>
+                    </select>
+                  </div>
+                </div>
+              )}
 
               {/* Informational banner when representative is selected */}
               {formData.role === "representative" && (
@@ -1623,10 +1714,40 @@ export default function AdminClientsPage() {
                   className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#121826]"
                 >
                   <option value="client">Client (E-Commerce Brand)</option>
+                  <option value="manager">🎯 Ads Campaign Manager (Day/Night Shift Operator)</option>
                   <option value="representative">🎧 Support Representative (Customer Care Agent)</option>
                   <option value="admin">🛡️ Super Admin / Platform Specialist</option>
                 </select>
               </div>
+
+              {/* Informational banner & Shift Selector when manager is selected */}
+              {editingClient.role === "manager" && (
+                <div className="p-3.5 bg-indigo-50/90 border border-indigo-200 rounded-2xl space-y-2.5 text-xs text-indigo-950">
+                  <div className="flex items-start gap-2">
+                    <Sliders className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold text-indigo-900">Ads Campaign Manager Desk Mode</span>
+                      <p className="text-[11px] text-indigo-800/90 mt-0.5">
+                        এই ইউজার ক্লায়েন্টদের জন্য সরাসরি বুস্ট/অর্ডার সাবমিট ও পেমেন্ট কনফার্ম করতে পারবে।
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-indigo-900 mb-1">
+                      Assigned Working Shift (দায়িত্বপ্রাপ্ত শিফট) *
+                    </label>
+                    <select
+                      value={editingClient.assignedShift || "Day Shift"}
+                      onChange={(e) => setEditingClient({ ...editingClient, assignedShift: e.target.value as any })}
+                      className="w-full px-3 py-2 bg-white border border-indigo-300 rounded-xl text-xs font-bold text-indigo-950 focus:outline-none focus:ring-1 focus:ring-indigo-500 shadow-2xs"
+                    >
+                      <option value="Day Shift">☀️ Day Shift (08:00 AM - 08:00 PM BST)</option>
+                      <option value="Night Shift">🌙 Night Shift (08:00 PM - 08:00 AM BST)</option>
+                      <option value="Rotational">🔄 Rotational Shift (উভয় শিফটে শিফটিং)</option>
+                    </select>
+                  </div>
+                </div>
+              )}
 
               {/* Informational banner when representative is selected */}
               {editingClient.role === "representative" && (

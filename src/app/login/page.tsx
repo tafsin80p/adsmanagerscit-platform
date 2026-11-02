@@ -121,11 +121,18 @@ function ClientLoginContent() {
 
       const isRep = res.user?.role === "representative";
       const isAdmin = res.user?.role === "admin";
+      const isManager = res.user?.role === "manager";
       setIsLoading(false);
       setToast({
         type: isRep ? "info" : "success",
-        title: isRep ? "Support Desk Session 🎧" : "Signed In Successfully! 🎉",
-        message: isRep
+        title: isManager
+          ? "Ads Operations Desk 🎯"
+          : isRep
+          ? "Support Desk Session 🎧"
+          : "Signed In Successfully! 🎉",
+        message: isManager
+          ? `Welcome ${res.user.name}! Redirecting to Ads Operations Desk...`
+          : isRep
           ? "Welcome! Redirecting you to Support Live Chat desk..."
           : isAdmin
           ? "Welcome Admin! Redirecting to Operations Console..."
@@ -149,7 +156,7 @@ function ClientLoginContent() {
 
       const dest =
         res.redirectUrl ||
-        (isRep ? "/admin/live-chat" : isAdmin ? "/admin" : "/");
+        (isManager ? "/manager" : isRep ? "/admin/live-chat" : isAdmin ? "/admin" : "/");
 
       setTimeout(() => {
         router.push(dest);
