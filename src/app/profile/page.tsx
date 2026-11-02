@@ -27,6 +27,7 @@ import {
   KeyRound,
   Eye,
   EyeOff,
+  DollarSign,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { usePortal } from "@/context/PortalContext";
@@ -393,6 +394,10 @@ export default function ProfilePage() {
               <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#12A875] bg-[#E8F8F2] px-2.5 py-0.5 rounded-full self-center sm:self-auto">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 Verified Business Client
+              </span>
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0866FF] bg-[#EEF4FF] border border-[#D0E2FF] px-2.5 py-0.5 rounded-full self-center sm:self-auto" title="Your assigned Dollar Rate for ads & boosts">
+                <DollarSign className="w-3 h-3" />
+                1 USD = ৳{profile.dollarRate || 150} BDT
               </span>
             </div>
             <p className="text-xs text-slate-500 font-medium">

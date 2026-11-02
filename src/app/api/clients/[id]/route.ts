@@ -55,6 +55,7 @@ export async function PATCH(
     if (body.phone !== undefined) updatePayload.phone = body.phone.trim();
     if (body.businessName !== undefined) updatePayload.businessName = body.businessName.trim();
     if (body.role !== undefined) updatePayload.role = body.role;
+    if (body.dollarRate !== undefined && !isNaN(Number(body.dollarRate))) updatePayload.dollarRate = Number(body.dollarRate);
     if (body.connectedPage !== undefined) updatePayload.connectedPage = body.connectedPage;
     if (body.password && typeof body.password === "string" && body.password.trim().length > 0) {
       updatePayload.password = hashPassword(body.password.trim());

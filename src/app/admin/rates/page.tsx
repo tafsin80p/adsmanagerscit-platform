@@ -1392,6 +1392,17 @@ export default function AdminExchangeRatesPage() {
                     </div>
                   </div>
 
+                  {/* Informational banner about client-specific dollar rates */}
+                  <div className="p-3 bg-blue-50/80 border border-blue-200/80 rounded-xl flex items-start gap-2.5 text-xs text-blue-900">
+                    <span className="text-base leading-none">💡</span>
+                    <div>
+                      <span className="font-bold text-[#3858F6]">Individual Client-Specific Dollar Rates:</span>
+                      <p className="text-[11px] text-blue-800/80 mt-0.5">
+                        ক্লায়েন্টরা রেজিস্ট্রেশনের সময় সরাসরি তাদের রেট (যেমন ৳১৪৮ বা ৳১৫০ বা ম্যানুয়ালি) সিলেক্ট করতে পারে, অথবা আপনি &quot;Client Management&quot; থেকে যেকোনো ক্লায়েন্টের রেট নির্ধারণ করতে পারবেন। এখানে সেট করা রেটটি গ্লোবাল সিস্টেম ডিফল্ট হিসেবে সংরক্ষিত থাকে।
+                      </p>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-2">
                       Active Conversion Rate (BDT per 1 USD)

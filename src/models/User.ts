@@ -18,6 +18,7 @@ export interface IUser extends Document {
     avatar?: string;
   };
   currency: "USD" | "BDT";
+  dollarRate?: number;
   notifications: {
     email: boolean;
     sms: boolean;
@@ -62,6 +63,7 @@ const UserSchema = new Schema<IUser>(
       avatar: { type: String, default: "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=100090491619527" },
     },
     currency: { type: String, enum: ["USD", "BDT"], default: "USD" },
+    dollarRate: { type: Number, default: 150 },
     notifications: {
       email: { type: Boolean, default: true },
       sms: { type: Boolean, default: true },

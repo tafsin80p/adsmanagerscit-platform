@@ -43,6 +43,7 @@ export async function POST(req: Request) {
       role = "client",
       phone = "",
       businessName = "",
+      dollarRate = 150,
       pageName = "",
       pageCategory = "E-Commerce",
       pageFollowers = "10K followers",
@@ -89,6 +90,7 @@ export async function POST(req: Request) {
             verified: true,
           },
       currency: "USD",
+      dollarRate: !isNaN(Number(dollarRate)) && Number(dollarRate) > 0 ? Number(dollarRate) : 150,
       notifications: {
         email: true,
         sms: !isStaff,

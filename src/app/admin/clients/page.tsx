@@ -99,6 +99,7 @@ export default function AdminClientsPage() {
     businessName: "",
     email: "",
     phone: "",
+    dollarRate: 150,
     role: "client" as "client" | "admin" | "representative",
     pageName: "",
     pageCategory: "Apparel & Clothing Store",
@@ -182,6 +183,7 @@ export default function AdminClientsPage() {
           ? (formData.businessName.trim() || (formData.role === "representative" ? "Support Representative" : "Platform Admin"))
           : formData.businessName.trim(),
         phone: isStaff ? "" : formData.phone.trim(),
+        dollarRate: isStaff ? 150 : (Number(formData.dollarRate) || 150),
         pageName: isStaff ? "" : formData.pageName.trim(),
         pageCategory: isStaff ? "Customer Support" : formData.pageCategory.trim(),
         pageFollowers: isStaff ? "Staff Member" : formData.pageFollowers.trim(),
@@ -211,6 +213,7 @@ export default function AdminClientsPage() {
         businessName: "",
         email: "",
         phone: "",
+        dollarRate: 150,
         role: "client",
         pageName: "",
         pageCategory: "Apparel & Clothing Store",
@@ -252,6 +255,7 @@ export default function AdminClientsPage() {
           ? (editingClient.businessName?.trim() || (editingClient.role === "representative" ? "Support Representative" : "Platform Admin"))
           : editingClient.businessName.trim(),
         phone: isStaff ? "" : (editingClient.phone?.trim() || ""),
+        dollarRate: isStaff ? 150 : (Number(editingClient.dollarRate) || 150),
         connectedPage: isStaff ? undefined : editingClient.connectedPage,
       };
       if (editPassword.trim()) {
@@ -787,6 +791,15 @@ export default function AdminClientsPage() {
                                 <span>{clientPageBoosts.length} FB Page Boosts Connected</span>
                               </div>
                             )}
+
+                            {/* Client Assigned Dollar Rate Badge */}
+                            <div
+                              className="px-2.5 py-1.5 rounded-xl text-xs font-extrabold bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center gap-1 shadow-3xs"
+                              title="Assigned Client Dollar Conversion Rate"
+                            >
+                              <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>৳{client.dollarRate || 150}/$1</span>
+                            </div>
                           </div>
 
                           {/* Pending Pill if any */}
@@ -1328,9 +1341,63 @@ export default function AdminClientsPage() {
                 </div>
               )}
 
-              {/* Facebook Page fields (Client only) */}
+              {/* Facebook Page & Dollar Rate fields (Client only) */}
               {formData.role === "client" && (
                 <>
+                  {/* Assigned Dollar Rate Field */}
+                  <div className="p-3.5 bg-gradient-to-br from-[#F5F9FF] to-[#EEF4FF] border border-[#D0E2FF] rounded-2xl space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <DollarSign className="w-3.5 h-3.5 text-[#3858F6]" />
+                        <span>Client Dollar Rate (ডলার রেট) *</span>
+                      </label>
+                      <span className="text-xs font-extrabold text-[#3858F6] bg-blue-100/80 px-2 py-0.5 rounded-md">
+                        ৳{formData.dollarRate || 150} / USD
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, dollarRate: 148 })}
+                        className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all border cursor-pointer text-center ${
+                          formData.dollarRate === 148
+                            ? "bg-[#3858F6] text-white border-[#3858F6] shadow-xs"
+                            : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                        }`}
+                      >
+                        ৳148 / USD
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, dollarRate: 150 })}
+                        className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all border cursor-pointer text-center ${
+                          formData.dollarRate === 150
+                            ? "bg-[#3858F6] text-white border-[#3858F6] shadow-xs"
+                            : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                        }`}
+                      >
+                        ৳150 / USD
+                      </button>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min={1}
+                          step="any"
+                          value={formData.dollarRate || 150}
+                          onChange={(e) =>
+                            setFormData({ ...formData, dollarRate: Number(e.target.value) || 150 })
+                          }
+                          placeholder="Custom Rate"
+                          className="w-full py-1.5 px-2 bg-white text-xs font-bold text-slate-900 rounded-xl border border-slate-300 focus:border-[#3858F6] focus:outline-none text-center"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      এই ক্লায়েন্টের জন্য ডলার রেট নির্ধারণ করুন (148 বা 150 সিলেক্ট করুন অথবা কাস্টম রেট লিখুন)।
+                    </p>
+                  </div>
+
                   <div className="pt-2 border-t border-[#F0F3F7]">
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       Connected Facebook Page Name
@@ -1564,6 +1631,65 @@ export default function AdminClientsPage() {
                 />
                 <p className="text-[11px] text-slate-400 mt-1">Leave empty to keep existing password.</p>
               </div>
+
+              {/* Dollar Rate Setting (Client only) */}
+              {editingClient.role === "client" && (
+                <div className="p-3.5 bg-gradient-to-br from-[#F5F9FF] to-[#EEF4FF] border border-[#D0E2FF] rounded-2xl space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <DollarSign className="w-3.5 h-3.5 text-[#3858F6]" />
+                      <span>Assigned Dollar Rate (ডলার রেট) *</span>
+                    </label>
+                    <span className="text-xs font-extrabold text-[#3858F6] bg-blue-100/80 px-2 py-0.5 rounded-md">
+                      ৳{editingClient.dollarRate || 150} / USD
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingClient({ ...editingClient, dollarRate: 148 })}
+                      className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all border cursor-pointer text-center ${
+                        editingClient.dollarRate === 148
+                          ? "bg-[#3858F6] text-white border-[#3858F6] shadow-xs"
+                          : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                      }`}
+                    >
+                      ৳148 / USD
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingClient({ ...editingClient, dollarRate: 150 })}
+                      className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all border cursor-pointer text-center ${
+                        editingClient.dollarRate === 150
+                          ? "bg-[#3858F6] text-white border-[#3858F6] shadow-xs"
+                          : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                      }`}
+                    >
+                      ৳150 / USD
+                    </button>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min={1}
+                        step="any"
+                        value={editingClient.dollarRate || 150}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            dollarRate: Number(e.target.value) || 150,
+                          })
+                        }
+                        placeholder="Custom Rate"
+                        className="w-full py-1.5 px-2 bg-white text-xs font-bold text-slate-900 rounded-xl border border-slate-300 focus:border-[#3858F6] focus:outline-none text-center"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    রেট পরিবর্তন করলে এই ক্লায়েন্টের পরবর্তী সকল অর্ডার ও কনভার্সন এই রেট অনুযায়ী হিসাব হবে।
+                  </p>
+                </div>
+              )}
 
               {/* Connected Facebook Page (Client only) */}
               {editingClient.role === "client" && (

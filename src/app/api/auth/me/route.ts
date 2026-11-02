@@ -129,6 +129,7 @@ export async function PATCH(req: Request) {
     if (body.phone !== undefined && typeof body.phone === "string") user.phone = body.phone.trim();
     if (body.businessName !== undefined && typeof body.businessName === "string") user.businessName = body.businessName.trim();
     if (body.avatar !== undefined && typeof body.avatar === "string") user.avatar = body.avatar.trim();
+    if (body.dollarRate !== undefined && !isNaN(Number(body.dollarRate))) user.dollarRate = Number(body.dollarRate);
     if (body.currency && (body.currency === "USD" || body.currency === "BDT")) user.currency = body.currency;
     if (body.connectedPage && typeof body.connectedPage === "object") {
       user.connectedPage = {

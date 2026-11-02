@@ -201,6 +201,7 @@ const initialProfile: ClientProfile = {
     avatar: "/images/avatar.jpg",
   },
   currency: "USD",
+  dollarRate: 150,
   notifications: {
     email: true,
     sms: true,
@@ -851,6 +852,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
                   avatar: u.avatar || "/images/avatar.jpg",
                 },
             currency: u.currency || "USD",
+            dollarRate: u.dollarRate || 150,
             notifications: u.notifications || {
               email: true,
               sms: true,
@@ -949,13 +951,17 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
 
     // Also create and persist corresponding payment transaction record
     if (savedOrder.totalBudgetUSD) {
+      const activeOrderRate =
+        profile.role !== "Specialist" && profile.role !== "admin" && profile.role !== "representative" && profile.dollarRate
+          ? profile.dollarRate
+          : exchangeRateBDT;
       const cashoutPercent =
         savedOrder.paymentMethod === "bKash"
           ? bkashCashoutPercent
           : savedOrder.paymentMethod === "Nagad"
           ? nagadCashoutPercent
           : 0;
-      const baseBDT = Math.round(savedOrder.totalBudgetUSD * exchangeRateBDT);
+      const baseBDT = Math.round(savedOrder.totalBudgetUSD * activeOrderRate);
       const cashoutChargeBDT = Math.round((baseBDT * cashoutPercent) / 100);
       const bdtAmount = savedOrder.paidAmountBDT || baseBDT + cashoutChargeBDT;
 
@@ -968,7 +974,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
           savedOrder.transactionId || "Pending Verification",
         amountUSD: savedOrder.totalBudgetUSD,
         amountBDT: bdtAmount,
-        exchangeRate: exchangeRateBDT,
+        exchangeRate: activeOrderRate,
         serviceChargeBDT: cashoutChargeBDT,
         status: "Under Review",
         date: `${dateStr} Just now`,
@@ -1212,6 +1218,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
             businessName: u.businessName || prev.businessName,
             phone: u.phone || prev.phone,
             avatar: u.avatar || prev.avatar,
+            dollarRate: u.dollarRate !== undefined ? u.dollarRate : prev.dollarRate,
             connectedPage: u.connectedPage || prev.connectedPage,
             notifications: u.notifications || prev.notifications,
           };
@@ -1439,6 +1446,13 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // If client is logged in and has their own customized dollarRate (e.g. 148 or 150),
+  // client's effective dollar rate takes priority for their orders and dashboard conversions
+  const effectiveExchangeRateBDT =
+    profile.role !== "Specialist" && profile.role !== "admin" && profile.role !== "representative" && profile.dollarRate
+      ? profile.dollarRate
+      : exchangeRateBDT;
+
   return (
     <PortalContext.Provider
       value={{
@@ -1446,7 +1460,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
         payments,
         profile,
         liveMetrics,
-        exchangeRateBDT,
+        exchangeRateBDT: effectiveExchangeRateBDT,
         serviceChargePercent,
         bkashCashoutPercent,
         nagadCashoutPercent,

@@ -216,6 +216,7 @@ export interface ClientProfile {
     avatar?: string;
   };
   currency: "USD" | "BDT";
+  dollarRate?: number;
   notifications: {
     email: boolean;
     sms: boolean;
@@ -253,6 +254,7 @@ export interface ClientAccount {
     avatar?: string;
   };
   currency?: "USD" | "BDT";
+  dollarRate?: number;
   createdAt?: string;
 }
 

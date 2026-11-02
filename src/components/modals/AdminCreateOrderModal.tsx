@@ -201,8 +201,9 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
   }, [clientsList, clientSearch]);
 
   // Calculated totals
+  const clientDollarRate = selectedClient?.dollarRate || exchangeRateBDT || 150;
   const totalBudgetUSD = customTotalUSD !== null ? customTotalUSD : dailyBudgetUSD * durationDays;
-  const totalBudgetBDT = Math.round(totalBudgetUSD * exchangeRateBDT);
+  const totalBudgetBDT = Math.round(totalBudgetUSD * clientDollarRate);
 
   if (!isOpen) return null;
 
@@ -592,7 +593,7 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
             </div>
 
             <div className="pt-1 flex items-center justify-between text-xs border-t border-blue-200/60 font-semibold text-slate-700">
-              <span>BDT Total (Rate: ৳{exchangeRateBDT}/USD):</span>
+              <span>BDT Total (Client Rate: ৳{clientDollarRate}/USD):</span>
               <span className="font-black text-[#10B981] text-sm">৳{totalBudgetBDT.toLocaleString()} BDT</span>
             </div>
           </div>

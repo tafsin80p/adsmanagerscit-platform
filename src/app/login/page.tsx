@@ -17,6 +17,7 @@ import {
   Phone,
   Globe,
   Layers,
+  DollarSign,
 } from "lucide-react";
 import { usePortal } from "@/context/PortalContext";
 import { AnimatedToast, ToastData } from "@/components/ui/AnimatedToast";
@@ -45,6 +46,15 @@ function ClientLoginContent() {
   const [regEmail, setRegEmail] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [showRegPassword, setShowRegPassword] = useState(false);
+  const [regDollarRateMode, setRegDollarRateMode] = useState<"148" | "150" | "custom">("148");
+  const [regCustomRate, setRegCustomRate] = useState<string>("148");
+
+  const selectedDollarRate =
+    regDollarRateMode === "custom"
+      ? Number(regCustomRate) > 0
+        ? Number(regCustomRate)
+        : 148
+      : Number(regDollarRateMode);
 
   // Status & Feedback
   const [isLoading, setIsLoading] = useState(false);
@@ -213,6 +223,7 @@ function ClientLoginContent() {
           phone: regPhone.trim(),
           email: regEmail.trim(),
           password: regPassword,
+          dollarRate: selectedDollarRate,
           role: "client",
         }),
       });
@@ -600,6 +611,100 @@ function ClientLoginContent() {
                   required
                   className="w-full bg-[#F8FAFC] focus:bg-white text-xs font-medium text-slate-900 pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-[#0866FF] focus:outline-none transition-all placeholder:text-slate-400"
                 />
+              </div>
+            </div>
+
+            {/* Dollar Rate Selection */}
+            <div className="p-3.5 bg-gradient-to-br from-[#F5F9FF] to-[#EEF4FF] rounded-2xl border border-[#D0E2FF] space-y-2.5 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <DollarSign className="w-3.5 h-3.5 text-[#0866FF]" />
+                  <span>Dollar Conversion Rate (ডলার রেট) *</span>
+                </label>
+                <span className="text-xs font-extrabold text-[#0866FF] bg-blue-100/80 px-2 py-0.5 rounded-md">
+                  ৳{selectedDollarRate} / $1 USD
+                </span>
+              </div>
+
+              {/* Quick Select Buttons */}
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRegDollarRateMode("148");
+                    setRegCustomRate("148");
+                  }}
+                  className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all border cursor-pointer text-center ${
+                    regDollarRateMode === "148"
+                      ? "bg-[#0866FF] text-white border-[#0866FF] shadow-xs"
+                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  ৳148 / USD
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRegDollarRateMode("150");
+                    setRegCustomRate("150");
+                  }}
+                  className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all border cursor-pointer text-center ${
+                    regDollarRateMode === "150"
+                      ? "bg-[#0866FF] text-white border-[#0866FF] shadow-xs"
+                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  ৳150 / USD
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRegDollarRateMode("custom")}
+                  className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all border cursor-pointer text-center ${
+                    regDollarRateMode === "custom"
+                      ? "bg-[#0866FF] text-white border-[#0866FF] shadow-xs"
+                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  অন্য রেট লিখুন
+                </button>
+              </div>
+
+              {/* Dropdown & Manual Input */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
+                <div>
+                  <select
+                    value={regDollarRateMode}
+                    onChange={(e) => {
+                      const val = e.target.value as "148" | "150" | "custom";
+                      setRegDollarRateMode(val);
+                      if (val !== "custom") setRegCustomRate(val);
+                    }}
+                    className="w-full bg-white text-xs font-semibold text-slate-800 px-3 py-2 rounded-xl border border-slate-200 focus:border-[#0866FF] focus:outline-none cursor-pointer"
+                  >
+                    <option value="148">৳148 TK (স্ট্যান্ডার্ড রেট)</option>
+                    <option value="150">৳150 TK (ডিফল্ট রেট)</option>
+                    <option value="custom">✏️ ম্যানুয়ালি রেট লিখুন (Custom)</option>
+                  </select>
+                </div>
+
+                {regDollarRateMode === "custom" ? (
+                  <div>
+                    <input
+                      type="number"
+                      min={1}
+                      step="any"
+                      value={regCustomRate}
+                      onChange={(e) => setRegCustomRate(e.target.value)}
+                      placeholder="e.g. 149"
+                      required
+                      className="w-full bg-white text-xs font-bold text-slate-900 px-3 py-2 rounded-xl border-2 border-[#0866FF] focus:outline-none"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center text-[11px] text-slate-500 px-1">
+                    <span>১ ডলার = ৳{selectedDollarRate} হিসেবে বুস্টিং হিসাব হবে।</span>
+                  </div>
+                )}
               </div>
             </div>
 

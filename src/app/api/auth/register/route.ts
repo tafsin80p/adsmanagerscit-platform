@@ -18,6 +18,7 @@ export async function POST(req: Request) {
       facebookPageUrl,
       pageCategory,
       followers,
+      dollarRate,
     } = body;
 
     if (!name || !email || !password) {
@@ -90,6 +91,7 @@ export async function POST(req: Request) {
         avatar: resolvedAvatar,
       },
       currency: "USD",
+      dollarRate: !isNaN(Number(dollarRate)) && Number(dollarRate) > 0 ? Number(dollarRate) : 148,
       notifications: {
         email: true,
         sms: true,
@@ -107,6 +109,7 @@ export async function POST(req: Request) {
       avatar: newUser.avatar,
       connectedPage: newUser.connectedPage,
       currency: newUser.currency,
+      dollarRate: newUser.dollarRate || 148,
       notifications: newUser.notifications,
     };
 
