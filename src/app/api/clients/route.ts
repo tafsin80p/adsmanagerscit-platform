@@ -47,6 +47,7 @@ export async function POST(req: Request) {
       pageName = "",
       pageCategory = "E-Commerce",
       pageFollowers = "10K followers",
+      avatar = "",
     } = body;
 
     if (!name || !email) {
@@ -73,7 +74,7 @@ export async function POST(req: Request) {
       phone: phone.trim() || (isStaff ? "" : "+880 1700-000000"),
       businessName: businessName.trim() || (isStaff ? (role === "representative" ? "Support Representative" : "Admin Staff") : `${name}'s Brand`),
       role: role === "admin" ? "admin" : role === "representative" ? "representative" : "client",
-      avatar: "/images/avatar.jpg",
+      avatar: avatar.trim() || "/images/avatar.jpg",
       connectedPage: isStaff
         ? {
             name: role === "representative" ? "Live Chat Desk" : "Admin Console",

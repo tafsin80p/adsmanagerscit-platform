@@ -74,6 +74,48 @@ function getAvatarInitials(name: string): string {
   return name.slice(0, 2).toUpperCase();
 }
 
+function ClientAvatar({
+  avatarUrl,
+  name,
+  className = "w-11 h-11 rounded-2xl",
+  textSize = "text-sm",
+}: {
+  avatarUrl?: string;
+  name: string;
+  className?: string;
+  textSize?: string;
+}) {
+  const [hasError, setHasError] = useState(false);
+  const initials = getAvatarInitials(name);
+  const gradient = getAvatarGradient(name);
+
+  const isValidUrl = Boolean(avatarUrl && avatarUrl.trim() && !hasError);
+
+  if (isValidUrl) {
+    return (
+      <div
+        className={`relative ${className} overflow-hidden shrink-0 shadow-xs bg-slate-100 border border-slate-200/80 flex items-center justify-center`}
+      >
+        <img
+          src={avatarUrl}
+          alt={name}
+          className="w-full h-full object-cover"
+          onError={() => setHasError(true)}
+          loading="lazy"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`relative ${className} bg-gradient-to-tr ${gradient} flex items-center justify-center text-white font-black ${textSize} shadow-xs shrink-0 select-none`}
+    >
+      {initials}
+    </div>
+  );
+}
+
 export default function AdminDashboardPage() {
   const {
     orders,
@@ -754,13 +796,12 @@ export default function AdminDashboardPage() {
                       {/* Top Bar: Avatar, Names, Role & Dollar Rate */}
                       <div className="flex items-start justify-between gap-2.5">
                         <div className="flex items-center gap-3 min-w-0">
-                          <div
-                            className={`w-11 h-11 rounded-2xl bg-gradient-to-tr ${getAvatarGradient(
-                              client.businessName || client.name
-                            )} text-white font-black text-sm flex items-center justify-center shrink-0 shadow-sm`}
-                          >
-                            {getAvatarInitials(client.businessName || client.name)}
-                          </div>
+                          <ClientAvatar
+                            avatarUrl={client.avatar || client.connectedPage?.avatar}
+                            name={client.businessName || client.name}
+                            className="w-11 h-11 rounded-2xl"
+                            textSize="text-sm"
+                          />
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
                               <h4
@@ -1219,37 +1260,48 @@ export default function AdminDashboardPage() {
 
                       {/* Client Profile / Brand */}
                       <td className="py-4 px-4">
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className={`w-8 h-8 rounded-lg bg-gradient-to-tr ${getAvatarGradient(
-                              order.businessName || order.clientName || "Client"
-                            )} text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs`}
-                          >
-                            {getAvatarInitials(order.businessName || order.clientName || "CL")}
-                          </div>
-                          <div className="min-w-0">
-                            <div
-                              className="font-bold text-[#121826] text-sm truncate max-w-[170px]"
-                              title={order.businessName || order.clientName || "Direct Client"}
-                            >
-                              {order.businessName || order.clientName || "Direct Client"}
-                            </div>
-                            <div
-                              className="text-[11px] text-[#3858F6] font-medium truncate max-w-[170px]"
-                              title={order.facebookPageName || profile.connectedPage.name}
-                            >
-                              {order.facebookPageName || profile.connectedPage.name}
-                            </div>
-                            {order.clientEmail && (
-                              <div
-                                className="text-[10px] text-slate-400 font-mono truncate max-w-[170px]"
-                                title={order.clientEmail}
-                              >
-                                {order.clientEmail}
+                        {(() => {
+                          const matchedClient = clients.find(
+                            (c) =>
+                              (c.email && order.clientEmail && c.email.toLowerCase() === order.clientEmail.toLowerCase()) ||
+                              (c.businessName && order.businessName && c.businessName.toLowerCase() === order.businessName.toLowerCase()) ||
+                              (c.name && order.clientName && c.name.toLowerCase() === order.clientName.toLowerCase())
+                          );
+                          const clientAvatarUrl = matchedClient?.avatar || matchedClient?.connectedPage?.avatar;
+
+                          return (
+                            <div className="flex items-center gap-2.5">
+                              <ClientAvatar
+                                avatarUrl={clientAvatarUrl}
+                                name={order.businessName || order.clientName || "Client"}
+                                className="w-8 h-8 rounded-lg"
+                                textSize="text-xs"
+                              />
+                              <div className="min-w-0">
+                                <div
+                                  className="font-bold text-[#121826] text-sm truncate max-w-[170px]"
+                                  title={order.businessName || order.clientName || "Direct Client"}
+                                >
+                                  {order.businessName || order.clientName || "Direct Client"}
+                                </div>
+                                <div
+                                  className="text-[11px] text-[#3858F6] font-medium truncate max-w-[170px]"
+                                  title={order.facebookPageName || profile.connectedPage.name}
+                                >
+                                  {order.facebookPageName || profile.connectedPage.name}
+                                </div>
+                                {order.clientEmail && (
+                                  <div
+                                    className="text-[10px] text-slate-400 font-mono truncate max-w-[170px]"
+                                    title={order.clientEmail}
+                                  >
+                                    {order.clientEmail}
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
-                        </div>
+                            </div>
+                          );
+                        })()}
                       </td>
 
                       {/* Daily Budget */}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import {
   Users,
@@ -33,6 +33,8 @@ import {
   FileText,
   ShoppingBag,
   Headphones,
+  Camera,
+  UploadCloud,
 } from "lucide-react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { usePortal } from "@/context/PortalContext";
@@ -65,6 +67,50 @@ function getAvatarInitials(name: string): string {
   return name.slice(0, 2).toUpperCase();
 }
 
+// Client Avatar with real image support and initials fallback
+function ClientAvatar({
+  avatarUrl,
+  name,
+  className = "w-12 h-12 rounded-2xl",
+  textSize = "text-base",
+}: {
+  avatarUrl?: string;
+  name: string;
+  className?: string;
+  textSize?: string;
+}) {
+  const [hasError, setHasError] = useState(false);
+  const initials = getAvatarInitials(name);
+  const gradient = getAvatarGradient(name);
+
+  // Consider an avatar valid if it exists, is not empty, and not an error
+  const isValidUrl = Boolean(avatarUrl && avatarUrl.trim() && !hasError);
+
+  if (isValidUrl) {
+    return (
+      <div
+        className={`relative ${className} overflow-hidden shrink-0 shadow-sm bg-slate-100 border border-slate-200/80 flex items-center justify-center`}
+      >
+        <img
+          src={avatarUrl}
+          alt={name}
+          className="w-full h-full object-cover"
+          onError={() => setHasError(true)}
+          loading="lazy"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`relative ${className} bg-gradient-to-tr ${gradient} flex items-center justify-center text-white font-black ${textSize} shadow-sm shrink-0 select-none`}
+    >
+      {initials}
+    </div>
+  );
+}
+
 export default function AdminClientsPage() {
   const { profile, orders, exchangeRateBDT, setSelectedOrderForModal } = usePortal();
 
@@ -88,6 +134,9 @@ export default function AdminClientsPage() {
   const [editPassword, setEditPassword] = useState("");
   const [deletingClient, setDeletingClient] = useState<ClientAccount | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
+  const addFileInputRef = useRef<HTMLInputElement>(null);
 
   // Copy feedback state
   const [copiedText, setCopiedText] = useState<string | null>(null);
@@ -104,12 +153,82 @@ export default function AdminClientsPage() {
     pageName: "",
     pageCategory: "Apparel & Clothing Store",
     pageFollowers: "25.0K followers",
+    avatar: "",
     password: "client123",
   });
 
   const showNotification = (msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 3500);
+  };
+
+  const handleUploadFileForEdit = async (file: File) => {
+    setIsUploadingAvatar(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "avatars");
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: fd,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success && data.url) {
+        setEditingClient((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            avatar: data.url,
+            connectedPage: prev.connectedPage
+              ? { ...prev.connectedPage, avatar: data.url }
+              : {
+                  name: prev.businessName || prev.name,
+                  followers: "10K followers",
+                  category: "Shopping & Retail",
+                  verified: true,
+                  avatar: data.url,
+                },
+          };
+        });
+        showNotification("Profile logo uploaded! Click 'Save Changes' to update.");
+      } else {
+        throw new Error(data.error || "Upload failed");
+      }
+    } catch (err: unknown) {
+      const e = err as Error;
+      showNotification(e.message || "Failed to upload image.");
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleUploadFileForAdd = async (file: File) => {
+    setIsUploadingAvatar(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "avatars");
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: fd,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success && data.url) {
+        setFormData((prev) => ({ ...prev, avatar: data.url }));
+        showNotification("Profile logo uploaded successfully!");
+      } else {
+        throw new Error(data.error || "Upload failed");
+      }
+    } catch (err: unknown) {
+      const e = err as Error;
+      showNotification(e.message || "Failed to upload image.");
+    } finally {
+      setIsUploadingAvatar(false);
+    }
   };
 
   const handleCopy = (text: string, label: string, e: React.MouseEvent) => {
@@ -187,6 +306,7 @@ export default function AdminClientsPage() {
         pageName: isStaff ? "" : formData.pageName.trim(),
         pageCategory: isStaff ? "Customer Support" : formData.pageCategory.trim(),
         pageFollowers: isStaff ? "Staff Member" : formData.pageFollowers.trim(),
+        avatar: formData.avatar ? formData.avatar.trim() : undefined,
       };
 
       const res = await fetch("/api/clients", {
@@ -218,6 +338,7 @@ export default function AdminClientsPage() {
         pageName: "",
         pageCategory: "Apparel & Clothing Store",
         pageFollowers: "25.0K followers",
+        avatar: "",
         password: "client123",
       });
       await fetchClients();
@@ -256,7 +377,13 @@ export default function AdminClientsPage() {
           : editingClient.businessName.trim(),
         phone: isStaff ? "" : (editingClient.phone?.trim() || ""),
         dollarRate: isStaff ? 150 : (Number(editingClient.dollarRate) || 150),
-        connectedPage: isStaff ? undefined : editingClient.connectedPage,
+        avatar: editingClient.avatar || editingClient.connectedPage?.avatar || "",
+        connectedPage: isStaff
+          ? undefined
+          : {
+              ...editingClient.connectedPage,
+              avatar: editingClient.avatar || editingClient.connectedPage?.avatar || "",
+            },
       };
       if (editPassword.trim()) {
         payload.password = editPassword.trim();
@@ -703,11 +830,12 @@ export default function AdminClientsPage() {
                     {/* Header: Avatar, Name, Badges, Dollar Rate */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div
-                          className={`w-12 h-12 rounded-2xl bg-gradient-to-tr ${avatarGradient} flex items-center justify-center text-white font-black text-base shadow-sm shrink-0`}
-                        >
-                          {avatarInitials}
-                        </div>
+                        <ClientAvatar
+                          avatarUrl={client.avatar || client.connectedPage?.avatar}
+                          name={client.role === "representative" ? client.name : (client.businessName || client.name)}
+                          className="w-12 h-12 rounded-2xl"
+                          textSize="text-base"
+                        />
 
                         <div className="min-w-0 flex-1">
                           <h3
@@ -1164,6 +1292,64 @@ export default function AdminClientsPage() {
                 </div>
               )}
 
+              {/* Profile Logo Upload */}
+              <div className="p-3.5 bg-[#F8FAFC] rounded-2xl border border-slate-200/90 space-y-2.5">
+                <label className="block text-xs font-bold text-slate-700">
+                  Profile Picture / Brand Logo (ঐচ্ছিক লোগো বা ছবি)
+                </label>
+                <div className="flex items-center gap-3">
+                  <ClientAvatar
+                    avatarUrl={formData.avatar}
+                    name={formData.businessName || formData.name || "Brand"}
+                    className="w-12 h-12 rounded-xl"
+                    textSize="text-sm"
+                  />
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => addFileInputRef.current?.click()}
+                        disabled={isUploadingAvatar}
+                        className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs disabled:opacity-50"
+                      >
+                        {isUploadingAvatar ? (
+                          <RefreshCw className="w-3 h-3 animate-spin text-[#3858F6]" />
+                        ) : (
+                          <Camera className="w-3 h-3 text-[#3858F6]" />
+                        )}
+                        <span>{isUploadingAvatar ? "Uploading..." : "Upload Logo"}</span>
+                      </button>
+                      {formData.avatar && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData((p) => ({ ...p, avatar: "" }))}
+                          className="px-2 py-1 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      ref={addFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadFileForAdd(file);
+                      }}
+                    />
+                    <input
+                      type="url"
+                      placeholder="Or paste image URL (https://...)"
+                      value={formData.avatar}
+                      onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Full Name & Email */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -1454,6 +1640,99 @@ export default function AdminClientsPage() {
                   </div>
                 </div>
               )}
+
+              {/* Profile Avatar & Logo Uploader */}
+              <div className="p-3.5 bg-[#F8FAFC] rounded-2xl border border-slate-200/90 space-y-2.5">
+                <label className="block text-xs font-bold text-slate-700">
+                  Profile Picture / Brand Logo (প্রোফাইল ছবি / লোগো)
+                </label>
+                <div className="flex items-center gap-3">
+                  <ClientAvatar
+                    avatarUrl={editingClient.avatar || editingClient.connectedPage?.avatar}
+                    name={editingClient.businessName || editingClient.name}
+                    className="w-14 h-14 rounded-2xl"
+                    textSize="text-lg"
+                  />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => editFileInputRef.current?.click()}
+                        disabled={isUploadingAvatar}
+                        className="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs disabled:opacity-50"
+                      >
+                        {isUploadingAvatar ? (
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#3858F6]" />
+                        ) : (
+                          <Camera className="w-3.5 h-3.5 text-[#3858F6]" />
+                        )}
+                        <span>{isUploadingAvatar ? "Uploading..." : "Upload Logo / Photo"}</span>
+                      </button>
+                      {(editingClient.avatar || editingClient.connectedPage?.avatar) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingClient((prev) => {
+                              if (!prev) return null;
+                              return {
+                                ...prev,
+                                avatar: "",
+                                connectedPage: prev.connectedPage
+                                  ? { ...prev.connectedPage, avatar: "" }
+                                  : {
+                                      name: prev.businessName || prev.name,
+                                      followers: "10K followers",
+                                      category: "Shopping & Retail",
+                                      verified: true,
+                                      avatar: "",
+                                    },
+                              };
+                            });
+                          }}
+                          className="px-2.5 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      ref={editFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadFileForEdit(file);
+                      }}
+                    />
+                    <input
+                      type="url"
+                      placeholder="Or paste image URL (https://...)"
+                      value={editingClient.avatar || ""}
+                      onChange={(e) => {
+                        const newUrl = e.target.value;
+                        setEditingClient((prev) => {
+                          if (!prev) return null;
+                          return {
+                            ...prev,
+                            avatar: newUrl,
+                            connectedPage: prev.connectedPage
+                              ? { ...prev.connectedPage, avatar: newUrl }
+                              : {
+                                  name: prev.businessName || prev.name,
+                                  followers: "10K followers",
+                                  category: "Shopping & Retail",
+                                  verified: true,
+                                  avatar: newUrl,
+                                },
+                          };
+                        });
+                      }}
+                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400"
+                    />
+                  </div>
+                </div>
+              </div>
 
               {/* Brand Name (Client only) */}
               {editingClient.role === "client" && (

@@ -66,6 +66,48 @@ function getAvatarInitials(name: string): string {
   return name.slice(0, 2).toUpperCase();
 }
 
+function ClientAvatar({
+  avatarUrl,
+  name,
+  className = "w-8 h-8 rounded-lg",
+  textSize = "text-xs",
+}: {
+  avatarUrl?: string;
+  name: string;
+  className?: string;
+  textSize?: string;
+}) {
+  const [hasError, setHasError] = useState(false);
+  const initials = getAvatarInitials(name);
+  const gradient = getAvatarGradient(name);
+
+  const isValidUrl = Boolean(avatarUrl && avatarUrl.trim() && !hasError);
+
+  if (isValidUrl) {
+    return (
+      <div
+        className={`relative ${className} overflow-hidden shrink-0 shadow-xs bg-slate-100 border border-slate-200/80 flex items-center justify-center`}
+      >
+        <img
+          src={avatarUrl}
+          alt={name}
+          className="w-full h-full object-cover"
+          onError={() => setHasError(true)}
+          loading="lazy"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`relative ${className} bg-gradient-to-tr ${gradient} flex items-center justify-center text-white font-black ${textSize} shadow-xs shrink-0 select-none`}
+    >
+      {initials}
+    </div>
+  );
+}
+
 export default function AdminOrdersPage() {
   const {
     orders,
@@ -823,13 +865,12 @@ export default function AdminOrdersPage() {
                       {/* Client / Page */}
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-2.5">
-                          <div
-                            className={`w-8 h-8 rounded-lg bg-gradient-to-tr ${getAvatarGradient(
-                              order.businessName || order.clientName || "Client"
-                            )} text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs`}
-                          >
-                            {getAvatarInitials(order.businessName || order.clientName || "CL")}
-                          </div>
+                          <ClientAvatar
+                            avatarUrl={order.thumbnail || undefined}
+                            name={order.businessName || order.clientName || "Client"}
+                            className="w-8 h-8 rounded-lg"
+                            textSize="text-xs"
+                          />
                           <div className="min-w-0">
                             <div
                               className="font-bold text-[#121826] truncate max-w-[170px]"

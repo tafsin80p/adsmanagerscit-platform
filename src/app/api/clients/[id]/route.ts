@@ -54,9 +54,15 @@ export async function PATCH(
     if (body.email !== undefined) updatePayload.email = body.email.trim().toLowerCase();
     if (body.phone !== undefined) updatePayload.phone = body.phone.trim();
     if (body.businessName !== undefined) updatePayload.businessName = body.businessName.trim();
+    if (body.avatar !== undefined) updatePayload.avatar = body.avatar.trim();
     if (body.role !== undefined) updatePayload.role = body.role;
     if (body.dollarRate !== undefined && !isNaN(Number(body.dollarRate))) updatePayload.dollarRate = Number(body.dollarRate);
-    if (body.connectedPage !== undefined) updatePayload.connectedPage = body.connectedPage;
+    if (body.connectedPage !== undefined) {
+      updatePayload.connectedPage = body.connectedPage;
+      if (body.avatar && updatePayload.connectedPage) {
+        updatePayload.connectedPage.avatar = body.avatar.trim();
+      }
+    }
     if (body.password && typeof body.password === "string" && body.password.trim().length > 0) {
       updatePayload.password = hashPassword(body.password.trim());
     }
