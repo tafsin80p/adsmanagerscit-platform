@@ -655,7 +655,7 @@ export default function AdminClientsPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredClients.map((client) => {
               const clientOrders = getClientOrders(client);
               const clientPortalOrders = getClientPortalOrders(client);
@@ -681,477 +681,372 @@ export default function AdminClientsPage() {
               return (
                 <div
                   key={clientId}
-                  className="bg-white rounded-[28px] border border-[#E9EDF4] shadow-[0_4px_25px_rgba(0,0,0,0.03)] overflow-hidden transition-all hover:border-slate-300"
+                  className="bg-white rounded-[24px] border border-[#E9EDF4] shadow-[0_4px_25px_rgba(0,0,0,0.03)] hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between overflow-hidden"
                 >
-                  {/* Client Main Header Row */}
-                  <div className="p-6 sm:p-7 flex flex-col lg:flex-row lg:items-center justify-between gap-5 border-b border-[#F0F3F7]">
-                    {/* Left: Brand Identity & Contact */}
-                    <div className="flex items-center gap-4 min-w-0">
-                      <div
-                        className={`w-14 h-14 rounded-2xl bg-gradient-to-tr ${avatarGradient} flex items-center justify-center text-white font-black text-lg shadow-md shrink-0`}
-                      >
-                        {avatarInitials}
-                      </div>
+                  {/* Card Top & Information Body */}
+                  <div className="p-5 space-y-4">
+                    {/* Header: Avatar, Name, Badges, Dollar Rate */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div
+                          className={`w-12 h-12 rounded-2xl bg-gradient-to-tr ${avatarGradient} flex items-center justify-center text-white font-black text-base shadow-sm shrink-0`}
+                        >
+                          {avatarInitials}
+                        </div>
 
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-extrabold text-base sm:text-lg text-[#121826] truncate">
+                        <div className="min-w-0 flex-1">
+                          <h3
+                            className="font-extrabold text-sm sm:text-base text-[#121826] truncate"
+                            title={client.role === "representative" ? client.name : (client.businessName || client.name)}
+                          >
                             {client.role === "representative" ? client.name : (client.businessName || client.name)}
                           </h3>
-                          {client.role === "admin" ? (
-                            <span className="text-[10px] font-black bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-0.5 rounded-full flex items-center gap-1 shrink-0">
-                              <ShieldCheck className="w-3 h-3 text-purple-600" />
-                              <span>Super Admin</span>
-                            </span>
-                          ) : client.role === "representative" ? (
-                            <span className="text-[10px] font-black bg-blue-50 text-[#3858F6] border border-blue-200 px-2.5 py-0.5 rounded-full flex items-center gap-1 shrink-0">
-                              <Headphones className="w-3 h-3 text-[#3858F6]" />
-                              <span>Support Agent</span>
-                            </span>
-                          ) : (
-                            <span className="text-[10px] font-bold bg-[#EAF8F1] text-[#10B981] border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1 shrink-0">
-                              <CheckCircle2 className="w-3 h-3" />
-                              <span>Client Account</span>
-                            </span>
-                          )}
-                          {client.role === "client" && client.connectedPage?.verified && (
-                            <span className="text-[10px] font-bold bg-[#EFF6FF] text-[#3858F6] border border-[#BFDBFE] px-2.5 py-0.5 rounded-full flex items-center gap-1 shrink-0">
-                              Verified Page
-                            </span>
-                          )}
-                        </div>
 
-                        <div className="text-xs text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
-                          <span className="flex items-center gap-1">
-                            Email: <strong className="text-slate-800">{client.email}</strong>
-                            <button
-                              onClick={(e) => handleCopy(client.email, `email-${clientId}`, e)}
-                              className="text-slate-400 hover:text-slate-600 p-0.5"
-                              title="Copy email"
-                            >
-                              {copiedText === `email-${clientId}` ? (
-                                <Check className="w-3 h-3 text-emerald-500" />
-                              ) : (
-                                <Copy className="w-3 h-3" />
-                              )}
-                            </button>
-                          </span>
-                          <span>•</span>
-                          {client.role === "representative" ? (
-                            <span className="font-bold text-[#3858F6]">
-                              Customer Care Support Representative
-                            </span>
-                          ) : client.role === "admin" ? (
-                            <span className="font-bold text-purple-700">
-                              System Platform Administrator
-                            </span>
-                          ) : (
-                            <>
-                              <span className="truncate">
-                                Owner: <strong>{client.name}</strong> ({client.phone || "No phone"})
+                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                            {client.role === "admin" ? (
+                              <span className="text-[10px] font-black bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0">
+                                <ShieldCheck className="w-3 h-3 text-purple-600" />
+                                <span>Super Admin</span>
                               </span>
-                              <span>•</span>
-                              <span>
-                                Page: <strong>{client.connectedPage?.name || "Meta Page"}</strong>
+                            ) : client.role === "representative" ? (
+                              <span className="text-[10px] font-black bg-blue-50 text-[#3858F6] border border-blue-200 px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0">
+                                <Headphones className="w-3 h-3 text-[#3858F6]" />
+                                <span>Support Agent</span>
                               </span>
-                            </>
-                          )}
+                            ) : (
+                              <>
+                                <span className="text-[10px] font-bold bg-[#EAF8F1] text-[#10B981] border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  <span>Client</span>
+                                </span>
+                                {client.connectedPage?.verified && (
+                                  <span className="text-[10px] font-bold bg-[#EFF6FF] text-[#3858F6] border border-[#BFDBFE] px-1.5 py-0.5 rounded-full shrink-0">
+                                    Verified
+                                  </span>
+                                )}
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
+
+                      {/* Dollar Rate Badge for Client */}
+                      {client.role === "client" || !client.role ? (
+                        <div
+                          className="px-2 py-1 rounded-xl text-xs font-black bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center gap-1 shrink-0 shadow-3xs"
+                          title="Assigned Client Dollar Conversion Rate"
+                        >
+                          <DollarSign className="w-3 h-3 text-emerald-600" />
+                          <span>৳{client.dollarRate || 150}/$1</span>
+                        </div>
+                      ) : null}
                     </div>
 
-                    {/* Right: Actions, Badges & WhatsApp */}
-                    <div className="flex items-center gap-2.5 flex-wrap shrink-0">
+                    {/* Contact & Profile Details Box */}
+                    <div className="text-xs space-y-1.5 bg-[#F8FAFC] p-3 rounded-2xl border border-[#F0F3F7]">
+                      <div className="flex items-center justify-between gap-1 text-slate-600">
+                        <span className="text-slate-400 font-medium text-[11px] shrink-0">Email:</span>
+                        <div className="flex items-center gap-1 truncate font-semibold text-slate-800 text-[11px]">
+                          <span className="truncate">{client.email}</span>
+                          <button
+                            onClick={(e) => handleCopy(client.email, `email-${clientId}`, e)}
+                            className="text-slate-400 hover:text-slate-700 p-0.5 shrink-0 cursor-pointer"
+                            title="Copy email"
+                          >
+                            {copiedText === `email-${clientId}` ? (
+                              <Check className="w-3 h-3 text-emerald-500" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
                       {client.role === "client" || !client.role ? (
                         <>
-                          {/* Live Running Badges */}
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <div
-                              className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 ${
-                                runningPortalAds.length > 0
-                                  ? "bg-[#EAF8F1] border-[#10B981]/40 text-[#059669]"
-                                  : "bg-slate-50 border-slate-200 text-slate-500"
-                              }`}
-                            >
-                              <span
-                                className={`w-2 h-2 rounded-full ${
-                                  runningPortalAds.length > 0 ? "bg-[#10B981] animate-pulse" : "bg-slate-400"
-                                }`}
-                              />
-                              <span>
-                                {runningPortalAds.length > 0
-                                  ? `${runningPortalAds.length} Portal Active`
-                                  : "0 Portal Orders"}
-                              </span>
-                            </div>
-
-                            {clientPageBoosts.length > 0 && (
-                              <div className="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#EFF6FF] border border-[#BFDBFE] text-[#2563EB] flex items-center gap-1.5">
-                                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                                <span>{clientPageBoosts.length} FB Page Boosts Connected</span>
-                              </div>
-                            )}
-
-                            {/* Client Assigned Dollar Rate Badge */}
-                            <div
-                              className="px-2.5 py-1.5 rounded-xl text-xs font-extrabold bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center gap-1 shadow-3xs"
-                              title="Assigned Client Dollar Conversion Rate"
-                            >
-                              <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>৳{client.dollarRate || 150}/$1</span>
-                            </div>
-                          </div>
-
-                          {/* Pending Pill if any */}
-                          {pendingOrdersList.length > 0 && (
-                            <Link
-                              href="/admin/pending"
-                              className="px-3.5 py-2 rounded-2xl text-xs font-bold bg-[#FFFBEB] border border-amber-200 text-[#D97706] hover:bg-[#FEF3C7] transition-colors"
-                            >
-                              {pendingOrdersList.length} Pending Approval
-                            </Link>
-                          )}
-
-                          {/* Direct WhatsApp Client Button */}
-                          {cleanPhone && (
-                            <a
-                              href={`https://wa.me/${cleanPhone}?text=Hi%20${encodeURIComponent(
-                                client.name
-                              )},%20regarding%20your%20Meta%20Ads%20boost%20campaigns%20for%20${encodeURIComponent(
-                                client.businessName
-                              )}.`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#10B981] hover:bg-[#059669] text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
-                            >
-                              <MessageSquare className="w-3.5 h-3.5" />
-                              <span className="hidden sm:inline">WhatsApp</span>
-                            </a>
-                          )}
-
-                          {/* Direct Phone Call Button */}
-                          {cleanPhone && (
-                            <a
-                              href={`tel:${cleanPhone}`}
-                              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
-                              title="Call phone"
-                            >
-                              <Phone className="w-4 h-4" />
-                            </a>
-                          )}
-
-                          {/* Create Order Button */}
-                          <button
-                            onClick={() => {
-                              setOrderModalClientId(client._id || client.id || client.email);
-                              setIsCreateOrderModalOpen(true);
-                            }}
-                            className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#3858F6] border border-blue-200 text-xs font-bold transition-colors cursor-pointer shadow-3xs"
-                            title="Create new order for this client"
-                          >
-                            <ShoppingBag className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">+ Order</span>
-                          </button>
-                        </>
-                      ) : client.role === "representative" ? (
-                        <div className="px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-50 border border-blue-200 text-[#3858F6] flex items-center gap-1.5">
-                          <Headphones className="w-3.5 h-3.5" />
-                          <span>Live Chat Agent</span>
-                        </div>
-                      ) : (
-                        <div className="px-3 py-1.5 rounded-xl text-xs font-bold bg-purple-50 border border-purple-200 text-purple-700 flex items-center gap-1.5">
-                          <ShieldCheck className="w-3.5 h-3.5" />
-                          <span>Super Administrator</span>
-                        </div>
-                      )}
-
-                      {/* Edit User Button */}
-                      <button
-                        onClick={() => {
-                          setEditingClient(client);
-                          setEditPassword("");
-                        }}
-                        className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
-                        title="Edit user details & password"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Edit</span>
-                      </button>
-
-                      {/* Delete User Button */}
-                      <button
-                        onClick={() => setDeletingClient(client)}
-                        disabled={client.email?.toLowerCase() === profile.email?.toLowerCase()}
-                        className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                          client.email?.toLowerCase() === profile.email?.toLowerCase()
-                            ? "bg-slate-100 text-slate-400 cursor-not-allowed opacity-50"
-                            : "bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 hover:border-rose-300 shadow-2xs"
-                        }`}
-                        title={
-                          client.email?.toLowerCase() === profile.email?.toLowerCase()
-                            ? "You cannot delete your own logged-in admin account"
-                            : "Delete user account from MongoDB"
-                        }
-                      >
-                        <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                        <span>Delete</span>
-                      </button>
-
-                      {/* Expand/Collapse Accordion Button (Client only) */}
-                      {(client.role === "client" || !client.role) && (
-                        <button
-                          onClick={() => setExpandedClientId(isExpanded ? null : clientId)}
-                          className="p-2 rounded-xl bg-[#F5F7FB] hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
-                          aria-label="Toggle campaigns"
-                        >
-                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 4 Quick Metrics Strip */}
-                  {client.role === "representative" ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-6 sm:px-7 py-4 bg-[#F8FAFC] border-b border-[#F0F3F7] text-xs">
-                      <div>
-                        <span className="text-slate-400 font-medium">Account Access:</span>
-                        <div className="font-extrabold text-[#3858F6] text-sm mt-0.5 flex items-center gap-1">
-                          <Headphones className="w-3.5 h-3.5" />
-                          <span>Support Agent</span>
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 font-medium">Assigned Desk:</span>
-                        <div className="font-extrabold text-slate-800 text-sm mt-0.5">
-                          Live Chat Portal
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 font-medium">Order Inspection:</span>
-                        <div className="font-extrabold text-[#10B981] text-sm mt-0.5">
-                          Portal Orders Lookup
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 font-medium">Staff Status:</span>
-                        <div className="font-extrabold text-emerald-600 text-sm mt-0.5 flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                          <span>Active Representative</span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : client.role === "admin" ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-6 sm:px-7 py-4 bg-[#FAF5FF] border-b border-[#F0F3F7] text-xs">
-                      <div>
-                        <span className="text-slate-400 font-medium">Account Access:</span>
-                        <div className="font-extrabold text-purple-700 text-sm mt-0.5 flex items-center gap-1">
-                          <ShieldCheck className="w-3.5 h-3.5" />
-                          <span>Super Admin</span>
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 font-medium">Assigned Desk:</span>
-                        <div className="font-extrabold text-slate-800 text-sm mt-0.5">
-                          Full Platform Control
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 font-medium">Settings & Rates:</span>
-                        <div className="font-extrabold text-[#10B981] text-sm mt-0.5">
-                          Global Management
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 font-medium">Staff Status:</span>
-                        <div className="font-extrabold text-purple-700 text-sm mt-0.5 flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse" />
-                          <span>Active Administrator</span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-6 sm:px-7 py-4 bg-[#FBFBFE] border-b border-[#F0F3F7] text-xs">
-                      <div>
-                        <span className="text-slate-400 font-medium">Portal In-App Orders:</span>
-                        <div className="font-extrabold text-[#121826] text-sm mt-0.5">
-                          {clientPortalOrders.length} Orders (0 Active)
-                        </div>
-                      </div>
-
-                      <div>
-                        <span className="text-slate-400 font-medium">Connected Page Boosts:</span>
-                        <div className="font-extrabold text-[#3858F6] text-sm mt-0.5">
-                          {clientPageBoosts.length} Campaigns Synced
-                        </div>
-                      </div>
-
-                      <div>
-                        <span className="text-slate-400 font-medium">Pending Approvals:</span>
-                        <div className="font-extrabold text-[#D97706] text-sm mt-0.5">
-                          {pendingOrdersList.length} In Review
-                        </div>
-                      </div>
-
-                      <div>
-                        <span className="text-slate-400 font-medium">Page Followers:</span>
-                        <div className="font-extrabold text-slate-800 text-sm mt-0.5">
-                          {client.connectedPage?.followers || "12.8K"}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Expanded Section: Running and Past Ads */}
-                  {isExpanded && (
-                    <div className="p-6 sm:p-7 space-y-5 animate-in fade-in duration-150 bg-white">
-                      {/* Section 1: In-App Portal Orders */}
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <ShoppingBag className="w-4 h-4 text-[#3858F6]" />
-                            <h4 className="font-extrabold text-sm text-[#121826]">
-                              In-App Portal Orders ({clientPortalOrders.length})
-                            </h4>
-                          </div>
-                        </div>
-
-                        {clientPortalOrders.length === 0 ? (
-                          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-500 flex items-center justify-between">
-                            <span>This client has not placed any boost orders through this software yet.</span>
-                            <span className="text-[11px] font-bold text-slate-400">Queue Empty (0 Orders)</span>
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {clientPortalOrders.map((ad) => (
-                              <div
-                                key={ad.id}
-                                className="p-4 rounded-2xl bg-[#F8FAFC] border border-slate-200 hover:border-slate-300 transition-all flex flex-col justify-between space-y-3 shadow-2xs"
-                              >
-                                <div>
-                                  <div className="flex items-center justify-between">
-                                    <span className="font-mono font-bold text-xs text-[#3858F6] bg-[#EEF2FF] px-2 py-0.5 rounded-md">
-                                      {ad.id}
-                                    </span>
-                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EAF8F1] text-[#10B981]">
-                                      {ad.status}
-                                    </span>
-                                  </div>
-                                  <h5 className="font-bold text-sm text-[#121826] mt-2 truncate">
-                                    {ad.campaignName}
-                                  </h5>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Section 2: Connected Facebook Page Boosts */}
-                      <div className="space-y-3 pt-3 border-t border-slate-100">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Sparkles className="w-4 h-4 text-amber-500" />
-                            <h4 className="font-extrabold text-sm text-[#121826]">
-                              Connected Facebook Page Boosts ({clientPageBoosts.length})
-                            </h4>
-                            <span className="text-[11px] font-bold text-slate-400">
-                              (Direct from Meta Ads Manager for {client.connectedPage?.name || "Min Mart BD"})
+                          <div className="flex items-center justify-between gap-1 text-slate-600">
+                            <span className="text-slate-400 font-medium text-[11px] shrink-0">Owner:</span>
+                            <span className="font-semibold text-slate-800 text-[11px] truncate">
+                              {client.name} {client.phone ? `(${client.phone})` : ""}
                             </span>
                           </div>
+                          <div className="flex items-center justify-between gap-1 text-slate-600">
+                            <span className="text-slate-400 font-medium text-[11px] shrink-0">Page:</span>
+                            <span
+                              className="font-semibold text-slate-800 text-[11px] truncate"
+                              title={client.connectedPage?.name || "Meta Page"}
+                            >
+                              {client.connectedPage?.name || "Meta Page"}
+                            </span>
+                          </div>
+                        </>
+                      ) : client.role === "representative" ? (
+                        <div className="text-[11px] font-bold text-[#3858F6] pt-0.5 flex items-center gap-1">
+                          <Headphones className="w-3 h-3" />
+                          <span>Customer Care Support Representative</span>
+                        </div>
+                      ) : (
+                        <div className="text-[11px] font-bold text-purple-700 pt-0.5 flex items-center gap-1">
+                          <ShieldCheck className="w-3 h-3" />
+                          <span>System Platform Administrator</span>
+                        </div>
+                      )}
+                    </div>
 
+                    {/* Quick 2x2 Metrics Box */}
+                    {client.role === "representative" ? (
+                      <div className="grid grid-cols-2 gap-2 text-xs bg-blue-50/50 p-3 rounded-2xl border border-blue-100">
+                        <div>
+                          <span className="text-slate-400 text-[10px] block">Assigned Desk:</span>
+                          <span className="font-extrabold text-[#3858F6] text-xs">Live Chat Desk</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[10px] block">Lookup:</span>
+                          <span className="font-extrabold text-slate-800 text-xs">Orders Search</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[10px] block">Account Access:</span>
+                          <span className="font-extrabold text-emerald-600 text-xs">Online Agent</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[10px] block">Support Queue:</span>
+                          <span className="font-extrabold text-slate-800 text-xs">Active Staff</span>
+                        </div>
+                      </div>
+                    ) : client.role === "admin" ? (
+                      <div className="grid grid-cols-2 gap-2 text-xs bg-purple-50/50 p-3 rounded-2xl border border-purple-100">
+                        <div>
+                          <span className="text-slate-400 text-[10px] block">Access:</span>
+                          <span className="font-extrabold text-purple-700 text-xs">Super Admin</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[10px] block">Desk:</span>
+                          <span className="font-extrabold text-slate-800 text-xs">Full Control</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[10px] block">Settings & Rates:</span>
+                          <span className="font-extrabold text-emerald-600 text-xs">Global Master</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[10px] block">Status:</span>
+                          <span className="font-extrabold text-purple-700 text-xs">Active Admin</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2 text-xs bg-[#FBFBFE] p-3 rounded-2xl border border-[#F0F3F7]">
+                        <div>
+                          <span className="text-slate-400 text-[10px] block">Portal Orders:</span>
+                          <span className="font-extrabold text-slate-800 text-xs">
+                            {clientPortalOrders.length} ({runningPortalAds.length} Active)
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[10px] block">Page Boosts:</span>
+                          <span className="font-extrabold text-[#3858F6] text-xs">
+                            {clientPageBoosts.length} Synced
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[10px] block">Approvals:</span>
+                          <span
+                            className={`font-extrabold text-xs ${
+                              pendingOrdersList.length > 0 ? "text-amber-600 font-black" : "text-slate-800"
+                            }`}
+                          >
+                            {pendingOrdersList.length} Pending
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[10px] block">Page Followers:</span>
+                          <span className="font-extrabold text-slate-800 text-xs">
+                            {client.connectedPage?.followers || "12.8K"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Card Bottom Actions & Expandable Orders */}
+                  <div className="bg-[#FAFBFD] p-3.5 border-t border-[#F0F3F7] space-y-3">
+                    <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                      {/* Left: Communication & Quick Order */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {client.role === "client" || !client.role ? (
+                          <>
+                            {cleanPhone && (
+                              <a
+                                href={`https://wa.me/${cleanPhone}?text=Hi%20${encodeURIComponent(
+                                  client.name
+                                )},%20regarding%20your%20Meta%20Ads%20boost%20campaigns.`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2 rounded-xl bg-[#10B981] hover:bg-[#059669] text-white transition-colors shadow-3xs cursor-pointer"
+                                title="Chat on WhatsApp"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5" />
+                              </a>
+                            )}
+                            {cleanPhone && (
+                              <a
+                                href={`tel:${cleanPhone}`}
+                                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors shadow-3xs cursor-pointer"
+                                title="Call Phone"
+                              >
+                                <Phone className="w-3.5 h-3.5" />
+                              </a>
+                            )}
+                            <button
+                              onClick={() => {
+                                setOrderModalClientId(client._id || client.id || client.email);
+                                setIsCreateOrderModalOpen(true);
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#3858F6] border border-blue-200 text-xs font-bold transition-colors cursor-pointer shadow-3xs"
+                              title="Create order for this client"
+                            >
+                              <Plus className="w-3 h-3" />
+                              <span>Order</span>
+                            </button>
+
+                            <button
+                              onClick={() => setExpandedClientId(isExpanded ? null : clientId)}
+                              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
+                                isExpanded
+                                  ? "bg-[#3858F6] text-white border-[#3858F6]"
+                                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                              }`}
+                              title="Toggle Campaigns"
+                            >
+                              <span>Ads ({clientOrders.length})</span>
+                              {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
+
+                      {/* Right: Edit & Delete */}
+                      <div className="flex items-center gap-1.5 ml-auto">
+                        <button
+                          onClick={() => {
+                            setEditingClient(client);
+                            setEditPassword("");
+                          }}
+                          className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
+                          title="Edit details"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          onClick={() => setDeletingClient(client)}
+                          disabled={client.email?.toLowerCase() === profile.email?.toLowerCase()}
+                          className={`p-2 rounded-xl transition-all cursor-pointer ${
+                            client.email?.toLowerCase() === profile.email?.toLowerCase()
+                              ? "bg-slate-100 text-slate-400 cursor-not-allowed opacity-50"
+                              : "bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 hover:border-rose-300"
+                          }`}
+                          title="Delete user"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Expandable Section inside the Grid Card */}
+                    {isExpanded && (
+                      <div className="pt-3 border-t border-slate-200 space-y-3 animate-in fade-in duration-150">
+                        <div className="flex items-center justify-between text-xs font-extrabold text-[#121826]">
+                          <span>In-App Orders ({clientPortalOrders.length})</span>
                           <Link
                             href="/admin/orders"
-                            className="text-xs font-bold text-[#3858F6] hover:underline flex items-center gap-1"
+                            className="text-[11px] font-bold text-[#3858F6] hover:underline"
                           >
-                            <span>View All in Master Table</span>
-                            <ArrowRight className="w-3 h-3" />
+                            All Orders →
                           </Link>
                         </div>
 
-                        {clientPageBoosts.length === 0 ? (
-                          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-500">
-                            No external Facebook page boosts synced yet.
+                        {clientPortalOrders.length === 0 ? (
+                          <div className="p-3 rounded-xl bg-white border border-slate-200 text-[11px] text-slate-400 text-center">
+                            No in-app portal orders placed yet.
                           </div>
                         ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {clientPageBoosts.map((ad) => (
+                          <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                            {clientPortalOrders.map((ad) => (
                               <div
                                 key={ad.id}
-                                className="p-4 rounded-2xl bg-[#F8FAFC] border border-slate-200 hover:border-slate-300 transition-all flex flex-col justify-between space-y-3 shadow-2xs"
+                                className="p-2 rounded-xl bg-white border border-slate-200 flex items-center justify-between text-xs gap-2 shadow-3xs"
                               >
-                                <div>
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="font-mono font-bold text-xs text-[#3858F6] bg-[#EEF2FF] px-2 py-0.5 rounded-md">
-                                        {ad.id}
-                                      </span>
-                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#EFF6FF] text-[#2563EB] border border-[#BFDBFE]">
-                                        FB Page
-                                      </span>
-                                    </div>
-                                    <span
-                                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                                        ad.status === "Active"
-                                          ? "bg-[#EAF8F1] text-[#10B981]"
-                                          : ad.status === "Pending"
-                                          ? "bg-[#FFFBEB] text-[#D97706]"
-                                          : "bg-slate-100 text-slate-600"
-                                      }`}
-                                    >
-                                      {ad.status === "Active" && (
-                                        <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
-                                      )}
-                                      <span>{ad.status}</span>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-mono font-bold text-[10px] text-[#3858F6] bg-blue-50 px-1.5 py-0.2 rounded">
+                                      {ad.id}
+                                    </span>
+                                    <span className="text-[11px] font-bold text-slate-800 truncate block">
+                                      {ad.campaignName}
                                     </span>
                                   </div>
-
-                                  <h5 className="font-bold text-sm text-[#121826] mt-2 truncate">
-                                    {ad.campaignName}
-                                  </h5>
-                                  <div className="text-[11px] text-slate-500 mt-0.5">
-                                    Goal: <strong>{ad.objective}</strong> • {ad.platform}
-                                  </div>
-
-                                  {/* Metrics */}
-                                  <div className="grid grid-cols-3 gap-2 mt-3 p-2.5 rounded-xl bg-white border border-slate-100 text-[11px]">
-                                    <div>
-                                      <div className="text-slate-400">Budget:</div>
-                                      <div className="font-bold text-slate-800">${ad.dailyBudgetUSD}/day</div>
-                                    </div>
-                                    <div>
-                                      <div className="text-slate-400">Reach:</div>
-                                      <div className="font-bold text-[#3858F6]">
-                                        {ad.metrics?.reach ? `${(ad.metrics.reach / 1000).toFixed(1)}K` : "Live"}
-                                      </div>
-                                    </div>
-                                    <div>
-                                      <div className="text-slate-400">Inquiries:</div>
-                                      <div className="font-bold text-[#10B981]">
-                                        {ad.metrics?.conversations || 0}+
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between">
                                   <span className="text-[10px] text-slate-400">
-                                    {ad.durationDays} Days duration
+                                    ${ad.totalBudgetUSD.toFixed(2)} USD • {ad.postType}
                                   </span>
-                                  <button
-                                    onClick={() => setSelectedOrderForModal(ad)}
-                                    className="text-xs font-bold text-[#3858F6] hover:underline flex items-center gap-1 cursor-pointer"
-                                  >
-                                    <Eye className="w-3.5 h-3.5" />
-                                    <span>Inspect Order</span>
-                                  </button>
                                 </div>
+                                <span
+                                  className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                                    ad.status === "Active"
+                                      ? "bg-[#EAF8F1] text-[#10B981]"
+                                      : ad.status === "Pending"
+                                      ? "bg-[#FFFBEB] text-[#D97706]"
+                                      : "bg-slate-100 text-slate-600"
+                                  }`}
+                                >
+                                  {ad.status}
+                                </span>
                               </div>
                             ))}
                           </div>
                         )}
+
+                        {/* Connected FB Page Boosts */}
+                        <div className="pt-2 border-t border-slate-200/60">
+                          <div className="flex items-center justify-between text-xs font-bold text-slate-800 mb-1.5">
+                            <span className="flex items-center gap-1 text-[11px]">
+                              <Sparkles className="w-3 h-3 text-amber-500" />
+                              <span>FB Page Boosts ({clientPageBoosts.length})</span>
+                            </span>
+                          </div>
+
+                          {clientPageBoosts.length === 0 ? (
+                            <div className="p-2 rounded-xl bg-white border border-slate-200 text-center text-[10px] text-slate-400">
+                              No external page boosts synced yet.
+                            </div>
+                          ) : (
+                            <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                              {clientPageBoosts.map((ad) => (
+                                <div
+                                  key={ad.id}
+                                  className="p-2 rounded-xl bg-white border border-slate-200 flex items-center justify-between gap-2 shadow-3xs"
+                                >
+                                  <div className="min-w-0">
+                                    <span className="text-[11px] font-bold text-slate-800 truncate block">
+                                      {ad.campaignName}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400">
+                                      ${ad.dailyBudgetUSD}/day • Reach: {ad.metrics?.reach ? `${(ad.metrics.reach / 1000).toFixed(1)}K` : "Live"}
+                                    </span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedOrderForModal(ad)}
+                                    className="text-[10px] font-bold text-[#3858F6] hover:underline shrink-0"
+                                  >
+                                    Inspect
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               );
             })}
