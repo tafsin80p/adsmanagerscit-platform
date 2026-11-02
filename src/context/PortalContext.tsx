@@ -141,7 +141,7 @@ interface PortalContextType {
   adminUnreadCount: number;
   markNotificationAsRead: (id: string, isAdmin?: boolean) => void;
   markAllNotificationsAsRead: (isAdmin?: boolean) => void;
-  updateProfile: (profile: Partial<ClientProfile>) => void;
+  updateProfile: (profile: Partial<ClientProfile>) => Promise<{ success: boolean; error?: string; user?: any }>;
   updateRates: (rates: {
     exchangeRateBDT?: number;
     serviceChargePercent?: number;
@@ -823,40 +823,32 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
       .then((data) => {
         if (data.success && data.user) {
           const u = data.user;
-          const isMinMart =
-            (u.role === "client" || !u.role) &&
-            (u.email === "minmartbd@gmail.com" ||
-              u.email === "tafsin@fashionhubbd.com" ||
-              u.name?.toLowerCase().includes("min mart") ||
-              u.connectedPage?.name?.toLowerCase().includes("min mart"));
-
-          const realMinMartAvatar = "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=100090491619527";
-          const defaultPageName = isMinMart ? "MIN Mart BD" : (u.businessName || u.name || "My Facebook Page");
+          const userSavedPage = u.connectedPage && u.connectedPage.name ? u.connectedPage : null;
+          const defaultPageName = u.businessName || u.name || (u.email === "minmartbd@gmail.com" ? "MIN Mart BD" : "My Facebook Page");
 
           const restored: ClientProfile = {
-            name: isMinMart ? "MIN Mart BD" : (u.name || defaultPageName),
+            name: u.name || defaultPageName,
             email: u.email,
             phone: u.phone || "",
-            businessName: isMinMart ? "MIN Mart BD" : (u.businessName || u.name || "My Business"),
-            avatar: isMinMart ? realMinMartAvatar : (u.connectedPage?.avatar || u.avatar || "/images/avatar.jpg"),
+            businessName: u.businessName || u.name || defaultPageName,
+            avatar: u.avatar || userSavedPage?.avatar || "/images/avatar.jpg",
             role: u.role === "admin" ? "Specialist" : u.role === "representative" ? "representative" : "Client",
-            connectedPage: isMinMart
+            connectedPage: userSavedPage
               ? {
-                  name: "MIN Mart BD",
-                  id: "110132735345674",
-                  followers: "12.8K followers",
-                  category: "Shopping & Retail",
-                  verified: true,
-                  avatar: realMinMartAvatar,
+                  name: userSavedPage.name,
+                  id: userSavedPage.id || "FB-PAGE",
+                  followers: userSavedPage.followers || "10.0K followers",
+                  category: userSavedPage.category || "Shopping & Retail",
+                  verified: userSavedPage.verified !== false,
+                  avatar: userSavedPage.avatar || u.avatar || "/images/avatar.jpg",
                 }
-              : (u.connectedPage && u.connectedPage.name)
-              ? u.connectedPage
               : {
                   name: defaultPageName,
-                  id: `FB-${Math.floor(10000000 + Math.random() * 90000000)}`,
-                  followers: "5.4K followers",
+                  id: u.email === "minmartbd@gmail.com" ? "110132735345674" : `FB-${Math.floor(10000000 + Math.random() * 90000000)}`,
+                  followers: u.email === "minmartbd@gmail.com" ? "12.8K followers" : "5.4K followers",
                   category: "Shopping & Retail",
                   verified: true,
+                  avatar: u.avatar || "/images/avatar.jpg",
                 },
             currency: u.currency || "USD",
             notifications: u.notifications || {
@@ -1190,7 +1182,9 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateProfile = (updates: Partial<ClientProfile>) => {
+  const updateProfile = async (
+    updates: Partial<ClientProfile>
+  ): Promise<{ success: boolean; error?: string; user?: any }> => {
     setProfile((prev) => {
       const updated = { ...prev, ...updates };
       try {
@@ -1199,11 +1193,39 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
       return updated;
     });
 
-    fetch("/api/auth/me", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updates),
-    }).catch((err) => console.warn("Could not sync profile update with server:", err));
+    try {
+      const res = await fetch("/api/auth/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error || "Failed to update profile in database" };
+      }
+      if (data.user) {
+        const u = data.user;
+        setProfile((prev) => {
+          const synced: ClientProfile = {
+            ...prev,
+            name: u.name || prev.name,
+            businessName: u.businessName || prev.businessName,
+            phone: u.phone || prev.phone,
+            avatar: u.avatar || prev.avatar,
+            connectedPage: u.connectedPage || prev.connectedPage,
+            notifications: u.notifications || prev.notifications,
+          };
+          try {
+            localStorage.setItem("scit_user_profile", JSON.stringify(synced));
+          } catch {}
+          return synced;
+        });
+      }
+      return { success: true, user: data.user };
+    } catch (err: unknown) {
+      const error = err as Error;
+      return { success: false, error: error.message || "Network error updating profile" };
+    }
   };
 
   const updateRates = async (rates: {

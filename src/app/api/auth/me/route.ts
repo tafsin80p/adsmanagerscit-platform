@@ -132,9 +132,14 @@ export async function PATCH(req: Request) {
     if (body.currency && (body.currency === "USD" || body.currency === "BDT")) user.currency = body.currency;
     if (body.connectedPage && typeof body.connectedPage === "object") {
       user.connectedPage = {
-        ...user.connectedPage,
-        ...body.connectedPage,
+        name: body.connectedPage.name !== undefined ? String(body.connectedPage.name).trim() : user.connectedPage?.name || "",
+        id: body.connectedPage.id !== undefined ? String(body.connectedPage.id).trim() : user.connectedPage?.id || "",
+        followers: body.connectedPage.followers !== undefined ? String(body.connectedPage.followers).trim() : user.connectedPage?.followers || "",
+        category: body.connectedPage.category !== undefined ? String(body.connectedPage.category).trim() : user.connectedPage?.category || "Shopping & Retail",
+        verified: body.connectedPage.verified !== undefined ? Boolean(body.connectedPage.verified) : user.connectedPage?.verified ?? true,
+        avatar: body.connectedPage.avatar !== undefined ? String(body.connectedPage.avatar).trim() : user.connectedPage?.avatar || "",
       };
+      user.markModified("connectedPage");
     }
     if (body.notifications && typeof body.notifications === "object") {
       user.notifications = {
@@ -142,6 +147,7 @@ export async function PATCH(req: Request) {
         sms: Boolean(body.notifications.sms ?? user.notifications?.sms ?? true),
         whatsapp: Boolean(body.notifications.whatsapp ?? user.notifications?.whatsapp ?? true),
       };
+      user.markModified("notifications");
     }
 
     await user.save();

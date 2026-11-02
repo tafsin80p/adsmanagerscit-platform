@@ -51,9 +51,21 @@ export default function ProfilePage() {
   });
 
   const [notifications, setNotifications] = useState(profile.notifications);
-  const [savedFeedback, setSavedFeedback] = useState(false);
   const [isSyncingFb, setIsSyncingFb] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+
+  // Manual Save states
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileSaveFeedback, setProfileSaveFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  const [isSavingPageOnly, setIsSavingPageOnly] = useState(false);
+  const [pageSaveFeedback, setPageSaveFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   // Cloudinary Avatar & Asset Upload states
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -195,7 +207,7 @@ export default function ProfilePage() {
     setNotifications(profile.notifications);
   }, [profile]);
 
-  // Real-time Facebook Page detection & sync
+  // Real-time Facebook Page detection & sync (Optional Auto-Detect)
   const handleSyncWithFacebook = async () => {
     setIsSyncingFb(true);
     setSyncFeedback(null);
@@ -214,33 +226,120 @@ export default function ProfilePage() {
           verified: true,
         };
         setConnectedPage(updated);
-        updateProfile({
+        await updateProfile({
           connectedPage: updated,
           avatar: updated.avatar || profile.avatar,
           businessName: updated.name,
         });
-        setSyncFeedback(`Verified Facebook Page "${updated.name}"! Real Followers: ${updated.followers}`);
+        setSyncFeedback(`✅ Facebook Page "${updated.name}" verified! Followers: ${updated.followers}`);
       } else {
-        setSyncFeedback("Could not find public page. Please verify your Facebook page link.");
+        setSyncFeedback("⚠️ Could not auto-detect page online. You can manually enter your Page Name, ID & Followers below and click 'Save Page Details Manually'!");
       }
     } catch {
-      setSyncFeedback("Network error connecting to Facebook API.");
+      setSyncFeedback("Network error connecting to Facebook API. You can still save your page details manually below.");
     } finally {
       setIsSyncingFb(false);
-      setTimeout(() => setSyncFeedback(null), 4000);
+      setTimeout(() => setSyncFeedback(null), 5000);
     }
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  // Instant Manual Save for Connected Facebook Page Details
+  const handleSaveConnectedPageOnly = async () => {
+    if (!connectedPage.name.trim()) {
+      setPageSaveFeedback({
+        type: "error",
+        message: "Please enter your Facebook Page Name.",
+      });
+      return;
+    }
+
+    setIsSavingPageOnly(true);
+    setPageSaveFeedback(null);
+    try {
+      const updatedConnectedPage = {
+        name: connectedPage.name.trim(),
+        id: connectedPage.id.trim() || `FB-${Math.floor(10000000 + Math.random() * 90000000)}`,
+        followers: connectedPage.followers.trim() || "10K followers",
+        category: connectedPage.category.trim() || "Shopping & Retail",
+        verified: connectedPage.verified !== false,
+        avatar: connectedPage.avatar || profile.avatar || "/images/avatar.jpg",
+      };
+
+      const res = await updateProfile({
+        businessName: updatedConnectedPage.name,
+        connectedPage: updatedConnectedPage,
+      });
+
+      if (res.success) {
+        setPageSaveFeedback({
+          type: "success",
+          message: "Facebook Page details saved manually to database! 🎉",
+        });
+        setTimeout(() => setPageSaveFeedback(null), 4500);
+      } else {
+        setPageSaveFeedback({
+          type: "error",
+          message: res.error || "Failed to save page to database.",
+        });
+      }
+    } catch (err: unknown) {
+      const error = err as Error;
+      setPageSaveFeedback({
+        type: "error",
+        message: error.message || "Failed to save page details.",
+      });
+    } finally {
+      setIsSavingPageOnly(false);
+    }
+  };
+
+  // Main Save: All Profile and Settings
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfile({
-      ...formData,
-      businessName: connectedPage.name || formData.businessName,
-      connectedPage,
-      notifications,
-    });
-    setSavedFeedback(true);
-    setTimeout(() => setSavedFeedback(false), 2500);
+    setIsSavingProfile(true);
+    setProfileSaveFeedback(null);
+
+    try {
+      const updatedPage = {
+        name: connectedPage.name.trim() || formData.businessName.trim() || "My Facebook Page",
+        id: connectedPage.id.trim() || `FB-${Math.floor(10000000 + Math.random() * 90000000)}`,
+        followers: connectedPage.followers.trim() || "10K followers",
+        category: connectedPage.category.trim() || "Shopping & Retail",
+        verified: connectedPage.verified !== false,
+        avatar: connectedPage.avatar || profile.avatar || "/images/avatar.jpg",
+      };
+
+      const payload = {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        businessName: formData.businessName.trim() || updatedPage.name,
+        connectedPage: updatedPage,
+        notifications,
+      };
+
+      const res = await updateProfile(payload);
+      if (res.success) {
+        setProfileSaveFeedback({
+          type: "success",
+          message: "All profile and Facebook settings saved successfully to live database! 🎉",
+        });
+        setTimeout(() => setProfileSaveFeedback(null), 4500);
+      } else {
+        setProfileSaveFeedback({
+          type: "error",
+          message: res.error || "Failed to save settings.",
+        });
+      }
+    } catch (err: unknown) {
+      const error = err as Error;
+      setProfileSaveFeedback({
+        type: "error",
+        message: error.message || "Network error saving profile.",
+      });
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
   return (
@@ -571,6 +670,65 @@ export default function ProfilePage() {
                   className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-[#E7ECF3] focus:border-[#0866FF] focus:outline-none"
                 />
               </div>
+
+              <div className="sm:col-span-2">
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Page Logo URL (Optional - or click &quot;Upload Page Logo&quot; above)
+                </label>
+                <input
+                  type="text"
+                  value={connectedPage.avatar}
+                  onChange={(e) => setConnectedPage({ ...connectedPage, avatar: e.target.value })}
+                  placeholder="https://... (Direct image link)"
+                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-[#E7ECF3] focus:border-[#0866FF] focus:outline-none font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Page Save Feedback Alert */}
+            {pageSaveFeedback && (
+              <div
+                className={`p-3 rounded-xl border text-xs flex items-center gap-2 animate-in fade-in ${
+                  pageSaveFeedback.type === "success"
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                    : "bg-rose-50 border-rose-200 text-rose-800"
+                }`}
+              >
+                {pageSaveFeedback.type === "success" ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                )}
+                <span className="font-semibold">{pageSaveFeedback.message}</span>
+              </div>
+            )}
+
+            {/* Manual Save Facebook Page Details Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
+              <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-blue-100 text-[#0866FF] font-bold text-[10px]">
+                  ✓
+                </span>
+                <span>Auto-Detect ছাড়াও পেজের নাম, আইডি বা ফলোয়ার নিজের মতো লিখে সরাসরি সেভ করতে পারবেন।</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleSaveConnectedPageOnly}
+                disabled={isSavingPageOnly}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-60 shrink-0"
+              >
+                {isSavingPageOnly ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Saving Page Details...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Save Page Details Manually</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
 
@@ -784,19 +942,41 @@ export default function ProfilePage() {
           </div>
 
           {/* Save Button */}
-          <div className="flex items-center justify-end gap-3 pt-2">
-            {savedFeedback && (
-              <span className="text-xs font-semibold text-[#12A875] flex items-center gap-1 animate-in fade-in">
-                <CheckCircle2 className="w-4 h-4" />
-                Settings updated!
-              </span>
-            )}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+            <div>
+              {profileSaveFeedback && (
+                <div
+                  className={`p-3 rounded-xl border text-xs flex items-center gap-2 animate-in fade-in ${
+                    profileSaveFeedback.type === "success"
+                      ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                      : "bg-rose-50 border-rose-200 text-rose-800"
+                  }`}
+                >
+                  {profileSaveFeedback.type === "success" ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  )}
+                  <span className="font-semibold">{profileSaveFeedback.message}</span>
+                </div>
+              )}
+            </div>
             <button
               type="submit"
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#0866FF] hover:bg-[#0052CC] text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
+              disabled={isSavingProfile}
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#0866FF] hover:bg-[#0052CC] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-60"
             >
-              <Save className="w-4 h-4" />
-              <span>Save Changes</span>
+              {isSavingProfile ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Saving All Changes...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>Save All Changes</span>
+                </>
+              )}
             </button>
           </div>
         </form>
