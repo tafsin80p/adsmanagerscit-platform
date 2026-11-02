@@ -72,7 +72,7 @@ export default function AdminDashboardPage() {
   const [sourceTab, setSourceTab] = useState<"all" | "portal" | "facebook_page">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
-  const [categoryFilter, setCategoryFilter] = useState<string>("All");
+  const [categoryFilter, setCategoryFilter] = useState<string>("All Formats");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "budget-high" | "budget-low">("newest");
   const [notification, setNotification] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -316,8 +316,10 @@ export default function AdminDashboardPage() {
           : order.status === statusFilter;
 
       const matchesCategory =
+        !categoryFilter ||
         categoryFilter === "All Formats" ||
-        order.postType?.toLowerCase().includes(categoryFilter.toLowerCase());
+        categoryFilter === "All" ||
+        (order.postType && order.postType.toLowerCase().includes(categoryFilter.toLowerCase()));
 
       return matchesSearch && matchesStatus && matchesCategory;
     });

@@ -65,7 +65,7 @@ export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [shiftFilter, setShiftFilter] = useState<string>("All");
   const [objectiveFilter, setObjectiveFilter] = useState<string>("All");
-  const [categoryFilter, setCategoryFilter] = useState<string>("All");
+  const [categoryFilter, setCategoryFilter] = useState<string>("All Formats");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "budget-high" | "budget-low">("newest");
   const [notification, setNotification] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -313,14 +313,14 @@ export default function AdminOrdersPage() {
         pName.includes(q);
 
       const matchesStatus =
-        statusFilter === "All"
+        !statusFilter || statusFilter === "All"
           ? true
           : statusFilter === "Pending"
           ? order.status === "Pending" || order.paymentStatus === "Awaiting Verification"
           : order.status === statusFilter;
 
       const matchesShift =
-        shiftFilter === "All"
+        !shiftFilter || shiftFilter === "All" || shiftFilter === "All Shifts & Sources"
           ? true
           : shiftFilter === "Day Shift"
           ? order.shift === "Day Shift" || (order.addedBy && order.addedBy.shift === "Day Shift")
@@ -331,12 +331,16 @@ export default function AdminOrdersPage() {
           : true;
 
       const matchesObjective =
-        objectiveFilter === "All" ? true : order.objective === objectiveFilter;
+        !objectiveFilter || objectiveFilter === "All" || objectiveFilter === "All Goals"
+          ? true
+          : order.objective === objectiveFilter;
 
       const matchesCategory =
-        categoryFilter === "All Formats"
+        !categoryFilter ||
+        categoryFilter === "All Formats" ||
+        categoryFilter === "All"
           ? true
-          : order.postType?.toLowerCase().includes(categoryFilter.toLowerCase());
+          : (order.postType && order.postType.toLowerCase().includes(categoryFilter.toLowerCase()));
 
       return matchesSearch && matchesStatus && matchesShift && matchesObjective && matchesCategory;
     });

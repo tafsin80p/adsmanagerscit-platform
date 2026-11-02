@@ -194,6 +194,29 @@ export async function sendTelegramMessage(
         const data = await res.json();
         if (res.ok && data.ok) {
           delivered++;
+        } else if (data.parameters?.migrate_to_chat_id) {
+          // Auto-heal: Group upgraded to supergroup, auto-retry with migrated supergroup ID & persist to MongoDB
+          const migratedChatId = String(data.parameters.migrate_to_chat_id);
+          console.log(`[Telegram] Chat ${targetChatId} migrated to supergroup ${migratedChatId}. Resending...`);
+          msgPayload.chat_id = migratedChatId;
+          const retryRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(msgPayload),
+          });
+          const retryData = await retryRes.json();
+          if (retryRes.ok && retryData.ok) {
+            delivered++;
+            try {
+              await SettingModel.updateOne(
+                { key: "global_settings" },
+                { $set: { telegramChatId: migratedChatId, updatedAt: new Date() } }
+              );
+            } catch { }
+          } else {
+            const errMsg = retryData.description || `HTTP ${retryRes.status}`;
+            errors.push(`Chat ${migratedChatId}: ${errMsg}`);
+          }
         } else {
           const errMsg = data.description || `HTTP ${res.status}`;
           errors.push(`Chat ${targetChatId}: ${errMsg}`);
