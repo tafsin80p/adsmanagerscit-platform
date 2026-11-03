@@ -161,6 +161,7 @@ export interface Order {
     lastUpdated: string;
   };
   notes?: string[];
+  specialNote?: string;
   clientEmail?: string;
   clientName?: string;
   businessName?: string;
@@ -172,6 +173,7 @@ export interface Order {
   metaAdId?: string;
   isEligibleForRenew?: boolean;
   screenshotUrl?: string;
+  senderNumber?: string;
   source?: "portal_order" | "facebook_page_boost";
   isExternalBoost?: boolean;
   addedBy?: OrderAuditUser;

@@ -17,21 +17,25 @@ import {
   AlertCircle,
   Trash2,
   Layers,
+  Edit,
 } from "lucide-react";
 import { usePortal } from "@/context/PortalContext";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { FacebookPostPreview } from "@/components/ui/FacebookPostPreview";
+import { EditOrderModal } from "@/components/modals/EditOrderModal";
 
 export const OrderDetailsModal: React.FC = () => {
   const [showPreview, setShowPreview] = React.useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [isEditing, setIsEditing] = React.useState(false);
   const {
     selectedOrderForModal,
     setSelectedOrderForModal,
     setSelectedOrderForRenew,
     setIsRenewModalOpen,
     deleteOrder,
+    profile,
   } = usePortal();
 
   if (!selectedOrderForModal) return null;
@@ -360,6 +364,19 @@ export const OrderDetailsModal: React.FC = () => {
             </div>
           )}
 
+          {/* Special Instructions & Note */}
+          {order.specialNote && (
+            <div className="p-3.5 bg-amber-50/80 border border-amber-200/90 rounded-xl space-y-1">
+              <div className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-amber-700" />
+                <span>Specialist Note / Campaign Instructions:</span>
+              </div>
+              <p className="text-xs text-amber-900 whitespace-pre-wrap leading-relaxed font-medium">
+                {order.specialNote}
+              </p>
+            </div>
+          )}
+
           {/* Specialist Notes */}
           {order.notes && order.notes.length > 0 && (
             <div>
@@ -396,6 +413,17 @@ export const OrderDetailsModal: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2.5">
+            {(profile.role === "admin" || profile.role === "manager" || profile.role === "Specialist") && (
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl shadow-3xs transition-colors cursor-pointer"
+                title="Edit this campaign order"
+              >
+                <Edit className="w-3.5 h-3.5 text-[#0866FF]" />
+                <span>Edit Order</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setSelectedOrderForModal(null)}
@@ -441,6 +469,15 @@ export const OrderDetailsModal: React.FC = () => {
               </button>
             </div>
           </div>
+        )}
+
+        {/* Edit Order Modal */}
+        {isEditing && (
+          <EditOrderModal
+            isOpen={isEditing}
+            onClose={() => setIsEditing(false)}
+            order={order}
+          />
         )}
       </div>
     </div>

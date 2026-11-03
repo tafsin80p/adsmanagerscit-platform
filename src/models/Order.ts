@@ -54,8 +54,10 @@ export interface IOrder extends Document {
   metaCampaignId?: string;
   metaAdId?: string;
   notes?: string[];
+  specialNote?: string;
   isEligibleForRenew?: boolean;
   screenshotUrl?: string;
+  senderNumber?: string;
   source?: "portal_order" | "facebook_page_boost";
   isExternalBoost?: boolean;
   addedBy?: {
@@ -156,8 +158,10 @@ const OrderSchema = new Schema<IOrder>(
     metaCampaignId: { type: String, default: "" },
     metaAdId: { type: String, default: "" },
     notes: [{ type: String }],
+    specialNote: { type: String, default: "" },
     isEligibleForRenew: { type: Boolean, default: false },
     screenshotUrl: { type: String },
+    senderNumber: { type: String, default: "" },
     source: {
       type: String,
       enum: ["portal_order", "facebook_page_boost"],

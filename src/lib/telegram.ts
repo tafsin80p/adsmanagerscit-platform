@@ -446,7 +446,11 @@ export async function notifyNewOrderTelegram(order: any, originOverride?: string
     const paymentStatus = order.paymentStatus || "Awaiting Verification";
     const transactionId = order.transactionId || "N/A";
     const postUrl = order.postUrl || "";
-    const notes = Array.isArray(order.notes) && order.notes.length > 0 ? order.notes[0] : "";
+    const specialNoteText =
+      order.specialNote?.trim() ||
+      (Array.isArray(order.notes)
+        ? order.notes.find((n: string) => n && !n.startsWith("Order created by") && !n.startsWith("Client submitted") && !n.startsWith("Target objective:") && !n.startsWith("Payment submitted") && !n.startsWith("Sender Account:")) || order.notes[0]
+        : typeof order.notes === "string" ? order.notes : "");
     const items: any[] = Array.isArray(order.items) && order.items.length > 0 ? order.items : [];
     const postCount = items.length > 0 ? items.length : 1;
 
@@ -524,7 +528,7 @@ ${postsSection.trim()}
 • Method: <b>${escapeHtml(paymentMethod)}</b>
 • Status: <b>${escapeHtml(paymentStatus)}</b>
 • TrxID: <code>${escapeHtml(transactionId)}</code>
-${notes ? `\n📝 <b>Specialist Note:</b>\n<i>${escapeHtml(notes)}</i>` : ""}
+${specialNoteText ? `\n📝 <b>Special Note / Instructions:</b>\n<i>${escapeHtml(specialNoteText)}</i>` : ""}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 👇 <i>Tap below to verify payment & confirm order instantly without logging into admin:</i>
 `.trim();

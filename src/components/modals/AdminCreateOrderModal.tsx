@@ -274,6 +274,7 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
         notes: notes.trim()
           ? [notes.trim()]
           : [`Order manually entered by agency admin on behalf of ${selectedClient.name}.`],
+        specialNote: notes.trim() || undefined,
         metrics: {
           reach: Number(initialReach) || 0,
           impressions: Number(initialImpressions) || 0,

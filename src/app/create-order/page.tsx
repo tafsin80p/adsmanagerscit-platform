@@ -31,6 +31,7 @@ import {
   Search,
   X,
   Globe,
+  FileText,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AdminLayout } from "@/components/layout/AdminLayout";
@@ -94,6 +95,7 @@ export default function CreateOrderPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("bKash");
   const [transactionId, setTransactionId] = useState("");
   const [senderNumber, setSenderNumber] = useState("");
+  const [specialNotes, setSpecialNotes] = useState("");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isUploadingScreenshot, setIsUploadingScreenshot] = useState(false);
   const [uploadStorageSource, setUploadStorageSource] = useState<"cloudinary" | "local_fallback" | null>(null);
@@ -438,7 +440,9 @@ export default function CreateOrderPage() {
             businessName: orderBusinessName,
             facebookPageName: orderPageName,
             facebookPageId: orderPageId,
+            specialNote: specialNotes.trim() || undefined,
             notes: [
+              specialNotes.trim() ? specialNotes.trim() : "",
               isStaff
                 ? `Order created by ${profile.name} (${profile.role}) in ${orderShift} for ${orderBusinessName}.`
                 : `Client submitted boost order (Post ${i + 1} of ${items.length}).`,
@@ -486,7 +490,9 @@ export default function CreateOrderPage() {
           businessName: orderBusinessName,
           facebookPageName: orderPageName,
           facebookPageId: orderPageId,
+          specialNote: specialNotes.trim() || undefined,
           notes: [
+            specialNotes.trim() ? specialNotes.trim() : "",
             isStaff
               ? `Order created by ${profile.name} (${profile.role}) in ${orderShift} for ${orderBusinessName}.`
               : `Client submitted boost order for ${items.length} item(s).`,
@@ -1624,6 +1630,38 @@ export default function CreateOrderPage() {
                     Number used to send the payment
                   </p>
                 </div>
+              </div>
+            </div>
+
+            {/* Step 4: Special Instructions & Targeting Notes */}
+            <div className="bg-white p-4 sm:p-6 rounded-2xl border border-[#E7ECF3] shadow-2xs space-y-3">
+              <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
+                <h2 className="text-sm font-bold text-[#172033] flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-[#0866FF] text-white text-xs flex items-center justify-center font-bold">
+                    4
+                  </span>
+                  <FileText className="w-4 h-4 text-[#0866FF]" />
+                  <span>Special Note & Instructions (স্পেশাল নোট ও নির্দেশনা)</span>
+                </h2>
+                <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                  Optional
+                </span>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1.5">
+                  Target Audience, Location, Age, or Campaign Instructions
+                </label>
+                <textarea
+                  rows={3}
+                  value={specialNotes}
+                  onChange={(e) => setSpecialNotes(e.target.value)}
+                  placeholder="e.g. Target Audience: Dhaka & Chittagong, Age: 20-35, Female fashion items. Please boost from 10:00 AM. Any additional requirements..."
+                  className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-[#0866FF] focus:outline-none bg-slate-50/50 focus:bg-white transition-all text-slate-800 placeholder:text-slate-400 resize-none font-medium leading-relaxed"
+                />
+                <p className="text-[10px] text-slate-500 mt-1.5 flex items-center gap-1">
+                  💡 <span className="font-semibold text-slate-600">স্পেশাল নোট:</span> এই নোটটি সরাসরি অ্যাডস ম্যানেজার, শিফট অপারেটর এবং টেলিগ্রাম গ্রুপ অ্যালার্টে যাবে।
+                </p>
               </div>
             </div>
           </div>

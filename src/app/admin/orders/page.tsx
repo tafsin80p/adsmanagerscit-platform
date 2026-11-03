@@ -37,12 +37,14 @@ import {
   Sun,
   Moon,
   Sliders,
+  Edit,
 } from "lucide-react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { usePortal } from "@/context/PortalContext";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Order, OrderStatus } from "@/types";
 import { AdminCreateOrderModal } from "@/components/modals/AdminCreateOrderModal";
+import { EditOrderModal } from "@/components/modals/EditOrderModal";
 import { ClientAvatar, getAvatarGradient, getAvatarInitials } from "@/components/ui/ClientAvatar";
 
 export default function AdminOrdersPage() {
@@ -73,6 +75,7 @@ export default function AdminOrdersPage() {
   const [isCreateOrderModalOpen, setIsCreateOrderModalOpen] = useState(false);
   const [preselectedClientId, setPreselectedClientId] = useState<string | undefined>(undefined);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
@@ -858,6 +861,14 @@ export default function AdminOrdersPage() {
                             <div className="text-[11px] text-slate-400">
                               {order.objective} • {order.postType}
                             </div>
+                            {order.specialNote && (
+                              <div
+                                className="text-[10px] text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/80 truncate max-w-[200px] mt-0.5 font-medium"
+                                title={order.specialNote}
+                              >
+                                📝 {order.specialNote}
+                              </div>
+                            )}
                             {order.metaAccountName && (
                               <div className="text-[10px] font-semibold text-[#0866FF] flex items-center gap-1 mt-0.5">
                                 <Share2 className="w-2.5 h-2.5" />
@@ -1041,6 +1052,15 @@ export default function AdminOrdersPage() {
                           >
                             <TrendingUp className="w-3.5 h-3.5" />
                             <span>Results</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingOrder(order)}
+                            className="px-2.5 py-1.5 bg-[#F0FDF4] hover:bg-[#DCFCE7] text-emerald-700 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 shadow-2xs hover:scale-105 active:scale-95 border border-emerald-200"
+                            title="Edit campaign order details, budget, duration, shift, or notes"
+                          >
+                            <Edit className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Edit</span>
                           </button>
                           <button
                             type="button"
@@ -1401,6 +1421,20 @@ export default function AdminOrdersPage() {
             );
           }}
         />
+
+        {/* Edit Order Modal */}
+        {editingOrder && (
+          <EditOrderModal
+            isOpen={!!editingOrder}
+            onClose={() => setEditingOrder(null)}
+            order={editingOrder}
+            onSuccess={() => {
+              showNotification(`Order #${editingOrder.id} updated successfully!`);
+              refreshOrders();
+              refreshPayments();
+            }}
+          />
+        )}
       </div>
     </AdminLayout>
   );

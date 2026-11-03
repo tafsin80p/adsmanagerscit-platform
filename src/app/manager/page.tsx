@@ -33,11 +33,13 @@ import {
   Layers,
   FileText,
   Building,
+  Edit,
 } from "lucide-react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { usePortal } from "@/context/PortalContext";
 import { Order, OrderStatus, ClientAccount, getCurrentShift, ShiftType } from "@/types";
 import { AdminCreateOrderModal } from "@/components/modals/AdminCreateOrderModal";
+import { EditOrderModal } from "@/components/modals/EditOrderModal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ClientAvatar } from "@/components/ui/ClientAvatar";
 
@@ -50,6 +52,7 @@ export default function ManagerDashboardPage() {
     refreshPayments,
     exchangeRateBDT,
     updateOrderStatus,
+    setSelectedOrderForModal,
   } = usePortal();
 
   // Shift & Clock state
@@ -87,6 +90,7 @@ export default function ManagerDashboardPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [preselectedClientId, setPreselectedClientId] = useState<string | undefined>(undefined);
   const [selectedReceiptUrl, setSelectedReceiptUrl] = useState<string | null>(null);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
   // Notifications and Toast
   const [notification, setNotification] = useState<string | null>(null);
@@ -726,6 +730,14 @@ export default function ManagerDashboardPage() {
                               <div className="font-bold text-slate-900 text-xs truncate max-w-[150px]">
                                 {order.campaignName}
                               </div>
+                              {order.specialNote && (
+                                <div
+                                  className="text-[10px] text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/80 truncate max-w-[170px] mt-0.5 font-medium"
+                                  title={order.specialNote}
+                                >
+                                  📝 {order.specialNote}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>
@@ -843,26 +855,41 @@ export default function ManagerDashboardPage() {
 
                         {/* Shift Action Button */}
                         <td className="py-2.5 px-4 text-right">
-                          {isPending ? (
+                          <div className="flex items-center justify-end gap-1.5">
                             <button
                               type="button"
-                              onClick={() => handleApproveOrder(order)}
-                              disabled={isProcessingOrderId === order.id}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                              onClick={() => setEditingOrder(order)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-all cursor-pointer shadow-3xs"
+                              title="Edit order budget, duration, creative or note"
                             >
-                              {isProcessingOrderId === order.id ? (
-                                <RefreshCw className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <CheckCircle2 className="w-3 h-3" />
-                              )}
-                              <span>Approve & Launch</span>
+                              <Edit className="w-3 h-3 text-[#0866FF]" />
+                              <span>Edit</span>
                             </button>
-                          ) : (
-                            <span className="text-[11px] font-semibold text-emerald-600 inline-flex items-center gap-1">
-                              <Check className="w-3 h-3" />
-                              <span>Active</span>
-                            </span>
-                          )}
+                            {isPending ? (
+                              <button
+                                type="button"
+                                onClick={() => handleApproveOrder(order)}
+                                disabled={isProcessingOrderId === order.id}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                              >
+                                {isProcessingOrderId === order.id ? (
+                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <CheckCircle2 className="w-3 h-3" />
+                                )}
+                                <span>Approve</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedOrderForModal(order)}
+                                className="inline-flex items-center gap-1 px-2 py-1 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                                title="View details"
+                              >
+                                <Eye className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -925,6 +952,18 @@ export default function ManagerDashboardPage() {
             </div>
           </div>
         </div>
+      )}
+      {/* Edit Order Modal */}
+      {editingOrder && (
+        <EditOrderModal
+          isOpen={!!editingOrder}
+          onClose={() => setEditingOrder(null)}
+          order={editingOrder}
+          onSuccess={() => {
+            refreshOrders();
+            refreshPayments();
+          }}
+        />
       )}
     </AdminLayout>
   );
