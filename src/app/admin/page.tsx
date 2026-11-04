@@ -52,6 +52,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Order, OrderStatus, getOrderCategory, ClientAccount } from "@/types";
 import { AdminCreateOrderModal } from "@/components/modals/AdminCreateOrderModal";
 import { EditOrderModal } from "@/components/modals/EditOrderModal";
+import { AdminProfitAnalytics } from "@/components/admin/AdminProfitAnalytics";
 import { ClientAvatar, getAvatarGradient, getAvatarInitials } from "@/components/ui/ClientAvatar";
 
 export default function AdminDashboardPage() {
@@ -569,6 +570,9 @@ export default function AdminDashboardPage() {
             </div>
           </Link>
         </div>
+
+        {/* Financial Analytics & Profit Intelligence */}
+        <AdminProfitAnalytics />
 
         {/* Quick Operations Shortcuts Navigation Banner (4 Columns) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

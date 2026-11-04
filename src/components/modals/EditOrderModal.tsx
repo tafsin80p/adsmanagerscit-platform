@@ -354,8 +354,8 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
                   <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
                   <input
                     type="number"
-                    step="0.5"
-                    min="0"
+                    step="any"
+                    min="0.1"
                     value={dailyBudgetUSD}
                     onChange={(e) => handleDailyBudgetChange(Number(e.target.value))}
                     disabled={budgetType === "total"}
@@ -387,8 +387,8 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
                   <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
                   <input
                     type="number"
-                    step="0.5"
-                    min="1"
+                    step="any"
+                    min="0.1"
                     value={totalBudgetUSD}
                     onChange={(e) => handleTotalBudgetChange(Number(e.target.value))}
                     disabled={budgetType === "daily"}

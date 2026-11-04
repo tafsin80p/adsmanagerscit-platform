@@ -29,6 +29,7 @@ export interface IBankAccount {
 export interface ISetting extends Document {
   key: string;
   exchangeRateBDT: number;
+  dollarBuyRateBDT?: number;
   serviceChargePercent: number;
   bkashCashoutPercent: number;
   nagadCashoutPercent: number;
@@ -100,6 +101,7 @@ const SettingSchema = new Schema<ISetting>(
   {
     key: { type: String, required: true, unique: true, default: "global_settings" },
     exchangeRateBDT: { type: Number, default: 131.25 },
+    dollarBuyRateBDT: { type: Number, default: 130 },
     serviceChargePercent: { type: Number, default: 5 },
     bkashCashoutPercent: { type: Number, default: 1.85 },
     nagadCashoutPercent: { type: Number, default: 1.49 },

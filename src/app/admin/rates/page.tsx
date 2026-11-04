@@ -56,6 +56,7 @@ export default function AdminExchangeRatesPage() {
   const {
     profile,
     exchangeRateBDT,
+    dollarBuyRateBDT,
     bkashCashoutPercent,
     nagadCashoutPercent,
     serviceChargePercent,
@@ -92,6 +93,7 @@ export default function AdminExchangeRatesPage() {
 
   // Local Form state for Exchange Rate & Fees
   const [rate, setRate] = useState<number>(exchangeRateBDT || 150);
+  const [buyRate, setBuyRate] = useState<number>(dollarBuyRateBDT || 130);
   const [bkashFee, setBkashFee] = useState<number>(bkashCashoutPercent ?? 2);
   const [nagadFee, setNagadFee] = useState<number>(nagadCashoutPercent ?? 1.5);
   const [serviceFee, setServiceFee] = useState<number>(serviceChargePercent ?? 0);
@@ -188,6 +190,7 @@ export default function AdminExchangeRatesPage() {
   // Synchronize form when context data finishes loading from MongoDB
   useEffect(() => {
     if (exchangeRateBDT) setRate(exchangeRateBDT);
+    if (dollarBuyRateBDT) setBuyRate(dollarBuyRateBDT);
     if (bkashCashoutPercent !== undefined) setBkashFee(bkashCashoutPercent);
     if (nagadCashoutPercent !== undefined) setNagadFee(nagadCashoutPercent);
     if (serviceChargePercent !== undefined) setServiceFee(serviceChargePercent);
@@ -658,6 +661,7 @@ export default function AdminExchangeRatesPage() {
 
       await updateRates({
         exchangeRateBDT: rate,
+        dollarBuyRateBDT: buyRate,
         bkashCashoutPercent: bkashFee,
         nagadCashoutPercent: nagadFee,
         serviceChargePercent: serviceFee,
@@ -1443,6 +1447,40 @@ export default function AdminExchangeRatesPage() {
                         </button>
                       ))}
                     </div>
+                  </div>
+
+                  {/* Agency Dollar Buying Cost Rate & Spread */}
+                  <div className="pt-3 border-t border-slate-100">
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <span>Agency Dollar Buying Cost Rate (ডলার ক্রয় রেট)</span>
+                      </span>
+                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        Spread: +৳{(rate - buyRate).toFixed(2)} Profit / USD
+                      </span>
+                    </label>
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-emerald-600 font-bold text-sm">
+                        ৳
+                      </span>
+                      <input
+                        type="number"
+                        value={buyRate}
+                        onChange={(e) => setBuyRate(Number(e.target.value))}
+                        min={50}
+                        max={300}
+                        step={0.25}
+                        required
+                        className="w-full pl-9 pr-24 py-3 bg-emerald-50/40 border border-emerald-200 rounded-2xl text-base font-extrabold text-emerald-950 focus:outline-none focus:bg-white focus:border-emerald-500 font-mono"
+                      />
+                      <span className="absolute inset-y-0 right-0 pr-4 flex items-center text-xs font-bold text-emerald-700">
+                        Buying Cost / USD
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1.5">
+                      এই রেটের ভিত্তিতে অ্যাডমিন ড্যাশবোর্ডে প্রতিদিন, সপ্তাহ ও মাসের আসল লাভ (Net Profit) স্বয়ংক্রিয়ভাবে হিসাব করা হয়।
+                    </p>
                   </div>
 
                   {/* Agency Service Charge */}

@@ -21,10 +21,17 @@ export function escapeHtml(text: string): string {
     .replace(/"/g, "&quot;");
 }
 
+let cachedTelegramConfig: { config: TelegramConfig; timestamp: number } | null = null;
+
 /**
  * Retrieves the active Telegram configuration from MongoDB settings or environment variables.
  */
-export async function getTelegramConfig(): Promise<TelegramConfig> {
+export async function getTelegramConfig(forceFresh = false): Promise<TelegramConfig> {
+  const now = Date.now();
+  if (!forceFresh && cachedTelegramConfig && now - cachedTelegramConfig.timestamp < 30000) {
+    return cachedTelegramConfig.config;
+  }
+
   let botToken = process.env.TELEGRAM_BOT_TOKEN || "";
   let chatId = process.env.TELEGRAM_CHAT_ID || "";
   let webhookUrl = process.env.TELEGRAM_WEBHOOK_URL || "";
@@ -51,12 +58,15 @@ export async function getTelegramConfig(): Promise<TelegramConfig> {
     console.warn("[Telegram] Could not read settings from MongoDB:", err);
   }
 
-  return {
+  const result = {
     botToken,
     chatId,
     enabled,
     webhookUrl,
   };
+
+  cachedTelegramConfig = { config: result, timestamp: now };
+  return result;
 }
 
 export interface SendTelegramOptions {

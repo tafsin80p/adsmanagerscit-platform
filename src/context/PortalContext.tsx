@@ -70,6 +70,7 @@ interface PortalContextType {
   profile: ClientProfile;
   liveMetrics: LivePerformanceMetrics;
   exchangeRateBDT: number;
+  dollarBuyRateBDT: number;
   serviceChargePercent: number;
   bkashCashoutPercent: number;
   nagadCashoutPercent: number;
@@ -144,6 +145,7 @@ interface PortalContextType {
   updateProfile: (profile: Partial<ClientProfile>) => Promise<{ success: boolean; error?: string; user?: any }>;
   updateRates: (rates: {
     exchangeRateBDT?: number;
+    dollarBuyRateBDT?: number;
     serviceChargePercent?: number;
     bkashCashoutPercent?: number;
     nagadCashoutPercent?: number;
@@ -588,6 +590,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
 
   // Exchange and pricing config (0% service fee, 150 TK per USD)
   const [exchangeRateBDT, setExchangeRateBDT] = useState<number>(150);
+  const [dollarBuyRateBDT, setDollarBuyRateBDT] = useState<number>(130);
   const [serviceChargePercent, setServiceChargePercent] = useState<number>(0);
   const [bkashCashoutPercent, setBkashCashoutPercent] = useState<number>(2);
   const [nagadCashoutPercent, setNagadCashoutPercent] = useState<number>(1.5);
@@ -684,6 +687,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
 
   const applySettingsToState = (s: any) => {
     if (s.exchangeRateBDT !== undefined) setExchangeRateBDT(s.exchangeRateBDT);
+    if (s.dollarBuyRateBDT !== undefined) setDollarBuyRateBDT(s.dollarBuyRateBDT);
     if (s.serviceChargePercent !== undefined) setServiceChargePercent(s.serviceChargePercent);
     if (s.bkashCashoutPercent !== undefined) setBkashCashoutPercent(s.bkashCashoutPercent);
     if (s.nagadCashoutPercent !== undefined) setNagadCashoutPercent(s.nagadCashoutPercent);
@@ -1214,6 +1218,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
 
   const updateRates = async (rates: {
     exchangeRateBDT?: number;
+    dollarBuyRateBDT?: number;
     serviceChargePercent?: number;
     bkashCashoutPercent?: number;
     nagadCashoutPercent?: number;
@@ -1241,6 +1246,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
     telegramWebhookUrl?: string;
   }) => {
     if (rates.exchangeRateBDT !== undefined) setExchangeRateBDT(rates.exchangeRateBDT);
+    if (rates.dollarBuyRateBDT !== undefined) setDollarBuyRateBDT(rates.dollarBuyRateBDT);
     if (rates.serviceChargePercent !== undefined) setServiceChargePercent(rates.serviceChargePercent);
     if (rates.bkashCashoutPercent !== undefined) setBkashCashoutPercent(rates.bkashCashoutPercent);
     if (rates.nagadCashoutPercent !== undefined) setNagadCashoutPercent(rates.nagadCashoutPercent);
@@ -1441,6 +1447,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
         profile,
         liveMetrics,
         exchangeRateBDT: effectiveExchangeRateBDT,
+        dollarBuyRateBDT,
         serviceChargePercent,
         bkashCashoutPercent,
         nagadCashoutPercent,

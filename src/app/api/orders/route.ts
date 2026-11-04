@@ -128,10 +128,15 @@ export async function POST(req: Request) {
         ? `${req.headers.get("x-forwarded-proto") || "https"}://${req.headers.get("x-forwarded-host") || req.headers.get("host")}`
         : "https://adsmanager.shopnocareerit.com");
 
-    // Broadcast instant Telegram alert to bot & group
-    notifyNewOrderTelegram(order, reqOrigin).catch((telErr) => {
-      console.warn("[Orders API] Telegram notification background trigger failed:", telErr);
-    });
+    // Broadcast instant Telegram alert to bot & group (await with 3.5s safety timeout so response never hangs)
+    try {
+      await Promise.race([
+        notifyNewOrderTelegram(order, reqOrigin),
+        new Promise((resolve) => setTimeout(resolve, 3500)),
+      ]);
+    } catch (telErr) {
+      console.warn("[Orders API] Telegram notification trigger failed or timed out:", telErr);
+    }
 
     return NextResponse.json(
       { success: true, message: "Order created successfully", order },
