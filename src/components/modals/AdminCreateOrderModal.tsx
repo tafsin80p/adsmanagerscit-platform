@@ -125,9 +125,22 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
         setScreenshotUrl(data.url);
         setScreenshotPreview(data.url);
 
+        if (data.detectedGateway === "Bank" || data.detectedBankAccount) {
+          setPaymentMethod("Bank Transfer");
+        } else if (data.detectedGateway === "bKash") {
+          setPaymentMethod("bKash");
+        } else if (data.detectedGateway === "Nagad") {
+          setPaymentMethod("Nagad");
+        } else if (data.detectedGateway === "Rocket") {
+          setPaymentMethod("Rocket");
+        }
+
         if (data.detectedTrxId) {
           setTransactionId(data.detectedTrxId);
           setUploadSuccess(`Screenshot uploaded & TrxID scraped: ${data.detectedTrxId}`);
+        } else if (data.detectedBankAccount) {
+          setTransactionId(`A/C: ${data.detectedBankAccount}`);
+          setUploadSuccess(`Bank slip detected: ${data.detectedBankName || "Bank"} (A/C: ${data.detectedBankAccount})`);
         } else {
           setUploadSuccess(
             data.storage === "cloudinary"
@@ -297,14 +310,14 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
         shift: selectedShift,
         ...(status === "Active" || paymentStatus === "Verified"
           ? {
-              confirmedBy: {
-                name: profile.name || (profile.role === "manager" ? "Shift Operator" : "Agency Specialist"),
-                email: profile.email || "specialist@shopnocareerit.com",
-                role: profile.role || "manager",
-                shift: selectedShift,
-                confirmedAt: new Date().toISOString(),
-              },
-            }
+            confirmedBy: {
+              name: profile.name || (profile.role === "manager" ? "Shift Operator" : "Agency Specialist"),
+              email: profile.email || "specialist@shopnocareerit.com",
+              role: profile.role || "manager",
+              shift: selectedShift,
+              confirmedAt: new Date().toISOString(),
+            },
+          }
           : {}),
         createdAt: new Date().toISOString(),
       };
@@ -483,11 +496,10 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
                               setIsClientPickerOpen(false);
                               setCustomTotalUSD(null);
                             }}
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer border ${
-                              isSelected
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer border ${isSelected
                                 ? "bg-[#3858F6] text-white border-[#3858F6] shadow-xs"
                                 : "bg-white text-slate-700 hover:bg-blue-50 hover:text-[#3858F6] border-slate-200"
-                            }`}
+                              }`}
                           >
                             <span className="truncate max-w-[110px]">{c.businessName || c.name}</span>
                             <span className={`text-[10px] px-1 rounded ${isSelected ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600 font-mono"}`}>
@@ -518,11 +530,10 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
                             setIsClientPickerOpen(false);
                             setCustomTotalUSD(null);
                           }}
-                          className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                            isSelected
+                          className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${isSelected
                               ? "bg-blue-50/90 border-[#3858F6] shadow-xs ring-1 ring-[#3858F6]"
                               : "bg-white hover:bg-slate-50/80 border-slate-100 hover:border-slate-200"
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <ClientAvatar
@@ -555,11 +566,10 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
                             </span>
                             <button
                               type="button"
-                              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                isSelected
+                              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${isSelected
                                   ? "bg-[#3858F6] text-white"
                                   : "bg-slate-100 hover:bg-[#3858F6] hover:text-white text-slate-700"
-                              }`}
+                                }`}
                             >
                               {isSelected ? "Selected ✓" : "Select"}
                             </button>
@@ -675,11 +685,10 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
                     setBudgetType("daily");
                     setCustomTotalUSD(null);
                   }}
-                  className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
-                    budgetType === "daily"
+                  className={`px-3 py-1 rounded-md transition-all cursor-pointer ${budgetType === "daily"
                       ? "bg-[#3858F6] text-white shadow-xs font-black"
                       : "text-slate-600 hover:text-slate-900"
-                  }`}
+                    }`}
                 >
                   Daily Budget
                 </button>
@@ -689,11 +698,10 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
                     setBudgetType("total");
                     setCustomTotalUSD(totalBudgetUSD);
                   }}
-                  className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
-                    budgetType === "total"
+                  className={`px-3 py-1 rounded-md transition-all cursor-pointer ${budgetType === "total"
                       ? "bg-[#3858F6] text-white shadow-xs font-black"
                       : "text-slate-600 hover:text-slate-900"
-                  }`}
+                    }`}
                 >
                   Total Budget (Lifetime)
                 </button>
@@ -859,6 +867,7 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
                   <option value="Facebook Card">Facebook Card</option>
                   <option value="bKash">bKash</option>
                   <option value="Nagad">Nagad</option>
+                  <option value="Rocket">Rocket (DBBL)</option>
                   <option value="Bank Transfer">Bank Transfer</option>
                 </select>
               </div>
@@ -1072,11 +1081,10 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setSelectedShift("Day Shift")}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer border ${
-                      selectedShift === "Day Shift"
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer border ${selectedShift === "Day Shift"
                         ? "bg-amber-400 text-amber-950 border-amber-400 shadow-xs"
                         : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                    }`}
+                      }`}
                   >
                     <Sun className="w-3.5 h-3.5 text-amber-600" />
                     <span>☀️ Day (10 AM - 08 PM)</span>
@@ -1085,11 +1093,10 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setSelectedShift("Night Shift")}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer border ${
-                      selectedShift === "Night Shift"
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer border ${selectedShift === "Night Shift"
                         ? "bg-purple-600 text-white border-purple-600 shadow-xs"
                         : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                    }`}
+                      }`}
                   >
                     <Moon className="w-3.5 h-3.5 text-purple-300" />
                     <span>🌙 Night (07 PM - 02:30 AM)</span>

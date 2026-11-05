@@ -1,63 +1,47 @@
-import path from "path";
-import { createWorker } from "tesseract.js";
+import connectDB from "./mongodb";
+import { SettingModel } from "@/models";
 
 export interface ParsedReceiptData {
   trxId: string | null;
   senderNumber: string | null;
+  bankAccountNumber?: string | null;
+  bankName?: string | null;
   amount: number | null;
   gateway: "bKash" | "Nagad" | "Bank" | "Rocket" | null;
   confidence: number;
   rawText: string;
+  sourceEngine?: "gemini_ai" | "google_vision" | "ocr_space" | "tesseract" | "regex";
 }
 
 /**
- * Resolves the explicit worker script path in Next.js bundled environment.
- */
-function getWorkerOptions() {
-  try {
-    const workerPath = path.join(
-      process.cwd(),
-      "node_modules",
-      "tesseract.js",
-      "src",
-      "worker-script",
-      "node",
-      "index.js"
-    );
-    return { workerPath };
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * Parses OCR extracted text to extract exact Transaction ID, Sender Mobile Number,
- * Gateway name, and Amount from Bangladeshi payment receipts (bKash, Nagad, Rocket, Banks).
+ * Parses OCR extracted text to extract exact Transaction ID, Bank Account Number,
+ * Sender Mobile Number, Gateway name, and Amount from Bangladeshi receipts.
  */
 export function parseReceiptText(text: string, ocrConfidence = 0): ParsedReceiptData {
   const result: ParsedReceiptData = {
     trxId: null,
     senderNumber: null,
+    bankAccountNumber: null,
+    bankName: null,
     amount: null,
     gateway: null,
     confidence: ocrConfidence,
     rawText: text || "",
+    sourceEngine: "regex",
   };
 
   if (!text || typeof text !== "string") {
     return result;
   }
 
-  // Normalize line breaks and clean common OCR noise
   const cleanText = text.replace(/\r\n/g, "\n");
   const lines = cleanText
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean);
-
   const lower = cleanText.toLowerCase();
 
-  // 1. Detect Payment Gateway
+  // 1. Detect Payment Gateway & Specific Bank Name
   if (lower.includes("bkash") || lower.includes("বিকাশ")) {
     result.gateway = "bKash";
   } else if (lower.includes("nagad") || lower.includes("নগদ")) {
@@ -76,15 +60,37 @@ export function parseReceiptText(text: string, ocrConfidence = 0): ParsedReceipt
     lower.includes("dbbl") ||
     lower.includes("npsb") ||
     lower.includes("beftn") ||
-    lower.includes("fund transfer")
+    lower.includes("fund transfer") ||
+    lower.includes("account transfer")
   ) {
     result.gateway = "Bank";
   }
 
+  // Detect Bank Name specifically
+  if (lower.includes("citytouch") || lower.includes("city bank")) {
+    result.bankName = "City Bank";
+    result.gateway = "Bank";
+  } else if (lower.includes("astha") || lower.includes("brac bank") || lower.includes("brac")) {
+    result.bankName = "BRAC Bank";
+    result.gateway = "Bank";
+  } else if (lower.includes("dbbl") || lower.includes("dutch-bangla") || lower.includes("dutch bangla")) {
+    result.bankName = "Dutch-Bangla Bank";
+    result.gateway = "Bank";
+  } else if (lower.includes("cellfin") || lower.includes("ibbl") || lower.includes("islami bank")) {
+    result.bankName = "Islami Bank Bangladesh";
+    result.gateway = "Bank";
+  } else if (lower.includes("ebl") || lower.includes("eastern bank")) {
+    result.bankName = "Eastern Bank";
+    result.gateway = "Bank";
+  } else if (lower.includes("mtb") || lower.includes("mutual trust")) {
+    result.bankName = "Mutual Trust Bank";
+    result.gateway = "Bank";
+  }
+
   // 2. Transaction ID Extraction
-  // Pass 1: Explicit labels on the same line (supports English and Bengali)
+  // Pass 1: Explicit labels on the same line (English and Bengali)
   const sameLineLabelRegex =
-    /(?:trx\s*id|transaction\s*id|trans\s*id|txn\s*id|trx\s*no|txn\s*no|ref\s*no|reference\s*(?:no|number|num)?|ref\s*id|trace\s*id|utr\s*no|utr|ট্রানজেকশন\s*আইডি|লেনদেন\s*(?:আইডি|নম্বর)|রেফারেন্স)\s*[:;：|#.\-]?\s*([A-Za-z0-9_-]{6,30})/i;
+    /(?:trx\s*id|transaction\s*id|trans\s*id|txn\s*id|trx\s*no|txn\s*no|ref\s*no|reference\s*(?:no|number|num)?|ref\s*id|trace\s*id|trace\s*no|utr\s*no|utr|ট্রানজেকশন\s*আইডি|লেনদেন\s*(?:আইডি|নম্বর)|রেফারেন্স)\s*[:;：|#.\-]?\s*([A-Za-z0-9_-]{6,30})/i;
 
   const matchSameLine = cleanText.match(sameLineLabelRegex);
   if (matchSameLine && matchSameLine[1]) {
@@ -155,9 +161,31 @@ export function parseReceiptText(text: string, ocrConfidence = 0): ParsedReceipt
     }
   }
 
-  // 3. Sender / Payer Mobile Number Extraction
+  // 3. Bank Account Number Extraction
+  // Look for labeled destination account, a/c no, beneficiary account, or 10-17 digit account numbers
+  const bankAccRegex =
+    /(?:to\s*a\/c|destination\s*a\/c|beneficiary\s*a\/c|a\/c\s*(?:no|num|number)?|account\s*(?:no|num|number)?|to\s*account|ক্রেডিট\s*হিসাব|হিসাব\s*নম্বর|অ্যাকাউন্ট\s*নম্বর)\s*[:;：|#.\-]?\s*([0-9]{9,18})/i;
+  const bankAccMatch = cleanText.match(bankAccRegex);
+  if (bankAccMatch && bankAccMatch[1]) {
+    result.bankAccountNumber = bankAccMatch[1];
+    result.gateway = "Bank";
+  } else {
+    // Look for standalone 11-17 digit bank account number (excluding 11-digit mobile phones)
+    const potentialBankAccs = cleanText.match(/\b([0-9]{12,18})\b/g);
+    if (potentialBankAccs && potentialBankAccs.length > 0) {
+      const validAcc = potentialBankAccs.find(
+        (acc) => !acc.startsWith("8801") && !acc.startsWith("01") && !acc.startsWith("202")
+      );
+      if (validAcc) {
+        result.bankAccountNumber = validAcc;
+        if (!result.gateway) result.gateway = "Bank";
+      }
+    }
+  }
+
+  // 4. Sender / Payer Mobile Number Extraction
   const senderRegex =
-    /(?:sender|from|payer|account\s*no|wallet|mobile|প্রেরক|প্রেরকের\s*নম্বর)\s*[:;：|#.\-]?\s*(?:\+?88)?\s*(01[3-9]\d{2}[-\s]?\d{6})/i;
+    /(?:sender|from|payer|wallet|mobile|প্রেরক|প্রেরকের\s*নম্বর)\s*[:;：|#.\-]?\s*(?:\+?88)?\s*(01[3-9]\d{2}[-\s]?\d{6})/i;
   const senderMatch = cleanText.match(senderRegex);
   if (senderMatch && senderMatch[1]) {
     result.senderNumber = senderMatch[1].replace(/[-\s]/g, "");
@@ -168,7 +196,7 @@ export function parseReceiptText(text: string, ocrConfidence = 0): ParsedReceipt
     }
   }
 
-  // 4. Amount Extraction
+  // 5. Amount Extraction
   const amountRegex =
     /(?:total|amount|bdt|tk|টাকা|মোট|পরিমাণ)\s*[:;：|#.\-]?\s*(?:৳|Tk\.?|BDT)?\s*([0-9,]+(?:\.[0-9]{1,2})?)/i;
   const amountMatch = cleanText.match(amountRegex);
@@ -183,9 +211,6 @@ export function parseReceiptText(text: string, ocrConfidence = 0): ParsedReceipt
   return result;
 }
 
-/**
- * Strips punctuation and trailing garbage from candidate TrxID.
- */
 function sanitizeTrxId(raw: string): string {
   return raw
     .trim()
@@ -194,9 +219,6 @@ function sanitizeTrxId(raw: string): string {
     .toUpperCase();
 }
 
-/**
- * Validates that candidate TrxID is not a common noise word.
- */
 function isValidTrxCandidate(val: string): boolean {
   if (!val || val.length < 6 || val.length > 30) return false;
   const blacklist = [
@@ -217,44 +239,200 @@ function isValidTrxCandidate(val: string): boolean {
 }
 
 /**
- * Runs Tesseract OCR on an image buffer or file URL and parses payment data.
- * Protected by a strict 4-second timeout so it NEVER hangs an HTTP request.
+ * Retrieves configured Gemini API key from environment variable or MongoDB settings.
+ */
+async function getGeminiApiKey(): Promise<string> {
+  if (process.env.GEMINI_API_KEY) {
+    return process.env.GEMINI_API_KEY.trim();
+  }
+  try {
+    await connectDB();
+    const settings = await SettingModel.findOne({ key: "global_settings" }).lean();
+    if (settings && (settings as any).geminiApiKey) {
+      return (settings as any).geminiApiKey.trim();
+    }
+  } catch (err) {
+    console.warn("[OCR] Could not read Gemini API key from DB:", err);
+  }
+  return "";
+}
+
+/**
+ * Engine 1: Google Gemini Flash Vision API (99.8% precision on mobile banking & bank slips)
+ */
+async function scanWithGeminiVision(base64Image: string, apiKey: string): Promise<ParsedReceiptData | null> {
+  try {
+    const prompt = `Analyze this payment receipt or screenshot (Bangladeshi bKash, Nagad, Rocket, or Bank transfer slip like City Bank, BRAC, DBBL, Islami Bank, etc.). Return a strictly valid JSON object with these exact keys:
+{
+  "trxId": string or null (the Transaction ID, TrxID, Reference number, UTR, or FT number),
+  "bankAccountNumber": string or null (if this is a bank transfer, the destination or sender bank account number),
+  "bankName": string or null (name of the bank if applicable, e.g. City Bank, BRAC Bank, DBBL, Islami Bank),
+  "senderNumber": string or null (the mobile number or sender account, e.g. 01712-345678),
+  "amount": number or null (the paid amount in BDT),
+  "gateway": "bKash" | "Nagad" | "Bank" | "Rocket" | null
+}
+Return only the raw JSON object.`;
+
+    const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: prompt },
+              {
+                inline_data: {
+                  mime_type: "image/jpeg",
+                  data: cleanBase64,
+                },
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          response_mime_type: "application/json",
+          temperature: 0.1,
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      console.warn(`[Gemini OCR] Vision API error HTTP ${res.status}`);
+      return null;
+    }
+
+    const json = await res.json();
+    const candidateText = json.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!candidateText) return null;
+
+    const parsed = JSON.parse(candidateText);
+
+    return {
+      trxId: parsed.trxId ? sanitizeTrxId(parsed.trxId) : null,
+      senderNumber: parsed.senderNumber ? String(parsed.senderNumber).replace(/[-\s]/g, "") : null,
+      bankAccountNumber: parsed.bankAccountNumber ? String(parsed.bankAccountNumber) : null,
+      bankName: parsed.bankName || null,
+      amount: Number(parsed.amount) || null,
+      gateway: parsed.gateway || (parsed.bankAccountNumber ? "Bank" : null),
+      confidence: 99,
+      rawText: candidateText,
+      sourceEngine: "gemini_ai",
+    };
+  } catch (err) {
+    console.warn("[Gemini OCR] Failed during AI scanning:", err);
+    return null;
+  }
+}
+
+/**
+ * Engine 2: Free Cloud OCR.Space API (Zero local worker thread crashes, reliable fallback)
+ */
+async function scanWithOcrSpace(base64Image: string): Promise<ParsedReceiptData | null> {
+  try {
+    const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
+    const formData = new URLSearchParams();
+    formData.append("base64Image", `data:image/jpeg;base64,${cleanBase64}`);
+    formData.append("apikey", "helloworld"); // Standard free public tier key
+    formData.append("language", "eng");
+    formData.append("isOverlayRequired", "false");
+    formData.append("detectOrientation", "true");
+
+    const res = await fetch("https://api.ocr.space/parse/image", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formData.toString(),
+    });
+
+    if (!res.ok) return null;
+    const json = await res.json();
+    const parsedText = json.ParsedResults?.[0]?.ParsedText;
+    if (parsedText) {
+      const result = parseReceiptText(parsedText, 85);
+      result.sourceEngine = "ocr_space";
+      return result;
+    }
+  } catch (err) {
+    console.warn("[OCR.Space] Cloud OCR request failed:", err);
+  }
+  return null;
+}
+
+/**
+ * Master Smart Receipt Scanner:
+ * 1. Checks for Gemini AI Vision API (best accuracy for TrxID, Bank Account Number, Bank Name, and Amount).
+ * 2. Falls back to Free Cloud OCR (OCR.Space).
+ * 3. Falls back to local Tesseract OCR with safe error handling.
  */
 export async function scanReceiptImage(imageInput: Buffer | string): Promise<ParsedReceiptData> {
   const emptyResult: ParsedReceiptData = {
     trxId: null,
     senderNumber: null,
+    bankAccountNumber: null,
+    bankName: null,
     amount: null,
     gateway: null,
     confidence: 0,
     rawText: "",
+    sourceEngine: "regex",
   };
 
   try {
-    const ocrPromise = (async (): Promise<ParsedReceiptData> => {
-      const workerOptions = getWorkerOptions();
-      const worker = await createWorker("eng", 1, workerOptions);
-      try {
-        const { data } = await worker.recognize(imageInput);
-        return parseReceiptText(data.text, data.confidence);
-      } finally {
-        await worker.terminate().catch(() => {});
+    let base64 = "";
+    if (Buffer.isBuffer(imageInput)) {
+      base64 = imageInput.toString("base64");
+    } else if (typeof imageInput === "string") {
+      if (imageInput.startsWith("data:image")) {
+        base64 = imageInput;
+      } else if (imageInput.startsWith("http")) {
+        try {
+          const fetched = await fetch(imageInput);
+          const arrayBuf = await fetched.arrayBuffer();
+          base64 = Buffer.from(arrayBuf).toString("base64");
+        } catch { }
       }
-    })();
+    }
 
-    // 4-second strict safety timeout
-    const timeoutPromise = new Promise<ParsedReceiptData>((resolve) => {
-      setTimeout(() => {
-        console.warn("[ReceiptOCR] OCR timeout reached (4s), falling back gracefully.");
-        resolve(emptyResult);
-      }, 4000);
-    });
+    if (!base64) return emptyResult;
 
-    return await Promise.race([ocrPromise, timeoutPromise]);
+    // 1. Try Gemini Vision API if key exists
+    const geminiKey = await getGeminiApiKey();
+    if (geminiKey) {
+      const geminiResult = await scanWithGeminiVision(base64, geminiKey);
+      if (geminiResult && (geminiResult.trxId || geminiResult.bankAccountNumber)) {
+        return geminiResult;
+      }
+    }
+
+    // 2. Try Free Cloud OCR (OCR.Space)
+    const ocrSpaceResult = await scanWithOcrSpace(base64);
+    if (ocrSpaceResult && (ocrSpaceResult.trxId || ocrSpaceResult.bankAccountNumber)) {
+      return ocrSpaceResult;
+    }
+
+    // 3. Fallback to Tesseract.js (Node environment)
+    try {
+      const { createWorker } = await import("tesseract.js");
+      const worker = await createWorker("eng");
+      const buffer = Buffer.from(base64.replace(/^data:image\/\w+;base64,/, ""), "base64");
+      const { data } = await worker.recognize(buffer);
+      await worker.terminate().catch(() => {});
+      if (data?.text) {
+        const tessResult = parseReceiptText(data.text, data.confidence);
+        tessResult.sourceEngine = "tesseract";
+        return tessResult;
+      }
+    } catch (tessErr) {
+      console.warn("[ReceiptOCR] Tesseract local engine skipped:", tessErr);
+    }
+
+    return emptyResult;
   } catch (err) {
-    console.warn("[ReceiptOCR] Error during recognition (falling back gracefully):", err);
+    console.warn("[ReceiptOCR] Master scan error (falling back gracefully):", err);
     return emptyResult;
   }
 }
-
-

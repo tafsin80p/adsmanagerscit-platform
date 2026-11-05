@@ -42,6 +42,11 @@ export const AdminProfitAnalytics: React.FC = () => {
   const [isSavingRate, setIsSavingRate] = useState(false);
   const [rateSavedSuccess, setRateSavedSuccess] = useState(false);
 
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Keep local input in sync if context updates
   React.useEffect(() => {
     if (dollarBuyRateBDT) {
@@ -53,6 +58,10 @@ export const AdminProfitAnalytics: React.FC = () => {
 
   // Filter orders by timeframe
   const filteredOrders = useMemo(() => {
+    if (!mounted) {
+      return orders.filter((order) => order.status !== "Rejected");
+    }
+
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -63,7 +72,7 @@ export const AdminProfitAnalytics: React.FC = () => {
       if (order.status === "Rejected") return false;
 
       // Parse order date
-      let orderTime = Date.now();
+      let orderTime = 0;
       if (order.createdAt) {
         const parsed = new Date(order.createdAt).getTime();
         if (!isNaN(parsed)) orderTime = parsed;
@@ -80,7 +89,7 @@ export const AdminProfitAnalytics: React.FC = () => {
       }
       return true; // "all"
     });
-  }, [orders, timeframe]);
+  }, [orders, timeframe, mounted]);
 
   // Aggregate financials
   const stats = useMemo(() => {
@@ -236,29 +245,40 @@ export const AdminProfitAnalytics: React.FC = () => {
           </div>
         </div>
 
-        {/* Timeframe Filter Tabs */}
-        <div className="inline-flex rounded-xl bg-slate-100/80 p-1 text-xs font-bold self-start lg:self-auto border border-slate-200/60">
-          {(
-            [
-              { id: "today", label: "আজ (Today)" },
-              { id: "week", label: "চলতি সপ্তাহ (7D)" },
-              { id: "month", label: "চলতি মাস (30D)" },
-              { id: "all", label: "সর্বমোট (All)" },
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setTimeframe(tab.id)}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                timeframe === tab.id
-                  ? "bg-white text-[#3858F6] shadow-xs font-black"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Timeframe Filter Tabs */}
+          <div className="inline-flex rounded-xl bg-slate-100/80 p-1 text-xs font-bold border border-slate-200/60">
+            {(
+              [
+                { id: "today", label: "আজ (Today)" },
+                { id: "week", label: "চলতি সপ্তাহ (7D)" },
+                { id: "month", label: "চলতি মাস (30D)" },
+                { id: "all", label: "সর্বমোট (All)" },
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setTimeframe(tab.id)}
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  timeframe === tab.id
+                    ? "bg-white text-[#3858F6] shadow-xs font-black"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <Link
+            href="/admin/analytics"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer"
+            title="Open comprehensive system profit accounting table"
+          >
+            <span>Full Accounting Table</span>
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
       </div>
 
@@ -541,3 +561,4 @@ export const AdminProfitAnalytics: React.FC = () => {
     </div>
   );
 };
+

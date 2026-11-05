@@ -36,7 +36,7 @@ export interface IOrder extends Document {
   budgetType?: "daily" | "total";
   status: "Pending" | "Confirmed" | "Active" | "Paused" | "Completed" | "Rejected";
   paymentStatus: "Verified" | "Awaiting Verification" | "Under Review" | "Unpaid" | "Refunded" | "Failed";
-  paymentMethod?: "bKash" | "Nagad" | "Bank Transfer" | "Meta Ad Account" | "Facebook Card";
+  paymentMethod?: "bKash" | "Nagad" | "Rocket" | "Bank Transfer" | "Meta Ad Account" | "Facebook Card";
   transactionId?: string;
   paidAmountBDT?: number;
   createdAt: string;
@@ -139,7 +139,7 @@ const OrderSchema = new Schema<IOrder>(
     },
     paymentMethod: {
       type: String,
-      enum: ["bKash", "Nagad", "Bank Transfer", "Meta Ad Account", "Facebook Card"],
+      enum: ["bKash", "Nagad", "Rocket", "Bank Transfer", "Meta Ad Account", "Facebook Card"],
     },
     transactionId: { type: String },
     paidAmountBDT: { type: Number, default: 0 },

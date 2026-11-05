@@ -145,6 +145,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, onMobile
                       isLive: true,
                     },
                     {
+                      name: "Analytics & Profit",
+                      href: "/admin/analytics",
+                      icon: TrendingUp,
+                      isLive: true,
+                      badge: { text: "Profit", color: "bg-emerald-100 text-emerald-800" },
+                    },
+                    {
                       name: "Shift Ads Console",
                       href: "/manager",
                       icon: Sliders,

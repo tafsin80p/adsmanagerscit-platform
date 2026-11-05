@@ -62,6 +62,8 @@ export interface ISetting extends Document {
   telegramChatId?: string;
   telegramEnabled?: boolean;
   telegramWebhookUrl?: string;
+  geminiApiKey?: string;
+  ocrEngine?: string;
   lastUpdated: Date;
 }
 
@@ -134,6 +136,8 @@ const SettingSchema = new Schema<ISetting>(
     telegramChatId: { type: String, default: "" },
     telegramEnabled: { type: Boolean, default: true },
     telegramWebhookUrl: { type: String, default: "" },
+    geminiApiKey: { type: String, default: "" },
+    ocrEngine: { type: String, default: "auto" },
     lastUpdated: { type: Date, default: Date.now },
   },
   {

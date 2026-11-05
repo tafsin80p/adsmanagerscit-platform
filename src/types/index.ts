@@ -2,7 +2,7 @@ export type OrderStatus = "Pending" | "Confirmed" | "Active" | "Paused" | "Compl
 
 export type PaymentStatus = "Verified" | "Awaiting Verification" | "Under Review" | "Unpaid" | "Refunded" | "Failed";
 
-export type PaymentMethod = "bKash" | "Nagad" | "Bank Transfer" | "Meta Ad Account" | "Facebook Card";
+export type PaymentMethod = "bKash" | "Nagad" | "Rocket" | "Bank Transfer" | "Meta Ad Account" | "Facebook Card";
 
 export interface BoostItem {
   id: string;

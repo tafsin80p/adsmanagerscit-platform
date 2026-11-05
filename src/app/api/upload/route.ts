@@ -105,9 +105,12 @@ export async function POST(req: Request) {
           message: "Uploaded to Cloudinary successfully",
           detectedTrxId: ocrData?.trxId || null,
           detectedSenderNumber: ocrData?.senderNumber || null,
+          detectedBankAccount: ocrData?.bankAccountNumber || null,
+          detectedBankName: ocrData?.bankName || null,
           detectedAmount: ocrData?.amount || null,
           detectedGateway: ocrData?.gateway || null,
           ocrConfidence: ocrData?.confidence || 0,
+          detectedSourceEngine: ocrData?.sourceEngine || null,
         });
       } catch (cloudErr: unknown) {
         const cErr = cloudErr as Error;
@@ -150,9 +153,12 @@ export async function POST(req: Request) {
       warning: "CLOUDINARY_NOT_CONFIGURED",
       detectedTrxId: ocrData?.trxId || null,
       detectedSenderNumber: ocrData?.senderNumber || null,
+      detectedBankAccount: ocrData?.bankAccountNumber || null,
+      detectedBankName: ocrData?.bankName || null,
       detectedAmount: ocrData?.amount || null,
       detectedGateway: ocrData?.gateway || null,
       ocrConfidence: ocrData?.confidence || 0,
+      detectedSourceEngine: ocrData?.sourceEngine || null,
     });
   } catch (error: unknown) {
     const err = error as Error;

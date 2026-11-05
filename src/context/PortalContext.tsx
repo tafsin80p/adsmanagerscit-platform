@@ -105,6 +105,8 @@ interface PortalContextType {
   telegramChatId: string;
   telegramEnabled: boolean;
   telegramWebhookUrl: string;
+  geminiApiKey: string;
+  ocrEngine: string;
   isLoadingSettings: boolean;
   refreshSettings: () => Promise<void>;
   disconnectMetaApi: () => Promise<void>;
@@ -171,6 +173,8 @@ interface PortalContextType {
     telegramChatId?: string;
     telegramEnabled?: boolean;
     telegramWebhookUrl?: string;
+    geminiApiKey?: string;
+    ocrEngine?: string;
   }) => Promise<any>;
   dbConnected: boolean;
   isAuthenticated: boolean;
@@ -629,6 +633,8 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
   const [telegramChatId, setTelegramChatId] = useState<string>("");
   const [telegramEnabled, setTelegramEnabled] = useState<boolean>(true);
   const [telegramWebhookUrl, setTelegramWebhookUrl] = useState<string>("");
+  const [geminiApiKey, setGeminiApiKey] = useState<string>("");
+  const [ocrEngine, setOcrEngine] = useState<string>("gemini_ai");
   const [isLoadingSettings, setIsLoadingSettings] = useState<boolean>(false);
   const [dbConnected, setDbConnected] = useState<boolean>(false);
 
@@ -728,6 +734,8 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
     if (s.telegramChatId !== undefined) setTelegramChatId(s.telegramChatId);
     if (s.telegramEnabled !== undefined) setTelegramEnabled(Boolean(s.telegramEnabled));
     if (s.telegramWebhookUrl !== undefined) setTelegramWebhookUrl(s.telegramWebhookUrl);
+    if (s.geminiApiKey !== undefined) setGeminiApiKey(s.geminiApiKey);
+    if (s.ocrEngine !== undefined) setOcrEngine(s.ocrEngine);
 
     if (s.lastUpdated) {
       try {
@@ -1244,6 +1252,8 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
     telegramChatId?: string;
     telegramEnabled?: boolean;
     telegramWebhookUrl?: string;
+    geminiApiKey?: string;
+    ocrEngine?: string;
   }) => {
     if (rates.exchangeRateBDT !== undefined) setExchangeRateBDT(rates.exchangeRateBDT);
     if (rates.dollarBuyRateBDT !== undefined) setDollarBuyRateBDT(rates.dollarBuyRateBDT);
@@ -1264,6 +1274,8 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
     if (rates.telegramChatId !== undefined) setTelegramChatId(rates.telegramChatId);
     if (rates.telegramEnabled !== undefined) setTelegramEnabled(rates.telegramEnabled);
     if (rates.telegramWebhookUrl !== undefined) setTelegramWebhookUrl(rates.telegramWebhookUrl);
+    if (rates.geminiApiKey !== undefined) setGeminiApiKey(rates.geminiApiKey);
+    if (rates.ocrEngine !== undefined) setOcrEngine(rates.ocrEngine);
 
     let syncBankDetails = rates.bankDetails;
     if (rates.bankAccounts !== undefined) {
@@ -1476,6 +1488,8 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
         telegramChatId,
         telegramEnabled,
         telegramWebhookUrl,
+        geminiApiKey,
+        ocrEngine,
         isLoadingSettings,
         refreshSettings,
         isSyncing,

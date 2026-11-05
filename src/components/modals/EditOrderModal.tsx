@@ -329,18 +329,16 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setBudgetType("daily")}
-                  className={`px-2.5 py-0.5 rounded-md transition-all cursor-pointer ${
-                    budgetType === "daily" ? "bg-white text-[#0866FF] shadow-xs font-black" : "text-slate-600"
-                  }`}
+                  className={`px-2.5 py-0.5 rounded-md transition-all cursor-pointer ${budgetType === "daily" ? "bg-white text-[#0866FF] shadow-xs font-black" : "text-slate-600"
+                    }`}
                 >
                   Daily
                 </button>
                 <button
                   type="button"
                   onClick={() => setBudgetType("total")}
-                  className={`px-2.5 py-0.5 rounded-md transition-all cursor-pointer ${
-                    budgetType === "total" ? "bg-white text-[#0866FF] shadow-xs font-black" : "text-slate-600"
-                  }`}
+                  className={`px-2.5 py-0.5 rounded-md transition-all cursor-pointer ${budgetType === "total" ? "bg-white text-[#0866FF] shadow-xs font-black" : "text-slate-600"
+                    }`}
                 >
                   Lifetime
                 </button>
@@ -418,11 +416,10 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShift("Day Shift (10 AM - 08 PM)")}
-                    className={`flex-1 py-1.5 px-2 rounded-lg border text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
-                      shift.includes("Day")
+                    className={`flex-1 py-1.5 px-2 rounded-lg border text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${shift.includes("Day")
                         ? "bg-amber-500 text-white border-amber-600 shadow-2xs"
                         : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
-                    }`}
+                      }`}
                   >
                     <Sun className="w-3 h-3 text-amber-200" />
                     <span>Day Shift</span>
@@ -430,11 +427,10 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShift("Night Shift (07 PM - 02:30 AM)")}
-                    className={`flex-1 py-1.5 px-2 rounded-lg border text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
-                      shift.includes("Night")
+                    className={`flex-1 py-1.5 px-2 rounded-lg border text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${shift.includes("Night")
                         ? "bg-purple-700 text-white border-purple-800 shadow-2xs"
                         : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
-                    }`}
+                      }`}
                   >
                     <Moon className="w-3 h-3 text-purple-300" />
                     <span>Night Shift</span>
@@ -457,17 +453,16 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value as OrderStatus)}
-                  className={`w-full px-3 py-2 rounded-lg border font-bold text-xs focus:outline-none ${
-                    status === "Active"
+                  className={`w-full px-3 py-2 rounded-lg border font-bold text-xs focus:outline-none ${status === "Active"
                       ? "bg-emerald-50 border-emerald-300 text-emerald-800"
                       : status === "Pending"
-                      ? "bg-amber-50 border-amber-300 text-amber-800"
-                      : status === "Paused"
-                      ? "bg-slate-100 border-slate-300 text-slate-700"
-                      : status === "Completed"
-                      ? "bg-blue-50 border-blue-300 text-blue-800"
-                      : "bg-rose-50 border-rose-300 text-rose-700"
-                  }`}
+                        ? "bg-amber-50 border-amber-300 text-amber-800"
+                        : status === "Paused"
+                          ? "bg-slate-100 border-slate-300 text-slate-700"
+                          : status === "Completed"
+                            ? "bg-blue-50 border-blue-300 text-blue-800"
+                            : "bg-rose-50 border-rose-300 text-rose-700"
+                    }`}
                 >
                   <option value="Active">Active (Delivering Live)</option>
                   <option value="Pending">Pending (Under Review)</option>

@@ -101,6 +101,14 @@ export default function CreateOrderPage() {
   const [uploadStorageSource, setUploadStorageSource] = useState<"cloudinary" | "local_fallback" | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [ocrStatus, setOcrStatus] = useState<"idle" | "scanning" | "success" | "not_found">("idle");
+  const [detectedPaymentDetails, setDetectedPaymentDetails] = useState<{
+    trxId?: string | null;
+    bankAccount?: string | null;
+    bankName?: string | null;
+    gateway?: string | null;
+    senderNumber?: string | null;
+    engine?: string | null;
+  } | null>(null);
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderCreatedSuccess, setOrderCreatedSuccess] = useState<string | null>(null);
@@ -238,6 +246,31 @@ export default function CreateOrderPage() {
     );
   };
 
+  // Bank selection & popup modal
+  const activeBankAccounts = useMemo(() => {
+    return contextBankAccounts && contextBankAccounts.length > 0
+      ? contextBankAccounts.filter((b) => b.isActive)
+      : [];
+  }, [contextBankAccounts]);
+
+  const [selectedBankId, setSelectedBankId] = useState<string>("");
+  const [isBankModalOpen, setIsBankModalOpen] = useState(false);
+  const [copiedText, setCopiedText] = useState<string | null>(null);
+
+  const selectedBankAccount = useMemo(() => {
+    if (!activeBankAccounts || activeBankAccounts.length === 0) return null;
+    return (
+      activeBankAccounts.find((b) => b.id === selectedBankId) ||
+      activeBankAccounts.find((b) => b.isPrimary) ||
+      activeBankAccounts[0]
+    );
+  }, [activeBankAccounts, selectedBankId]);
+
+  const handleBankSelect = (bank: BankAccount) => {
+    setSelectedBankId(bank.id);
+    setIsBankModalOpen(true);
+  };
+
   // Cloudinary Screenshot upload & OCR scanner
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -246,6 +279,7 @@ export default function CreateOrderPage() {
     setUploadError(null);
     setIsUploadingScreenshot(true);
     setOcrStatus("scanning");
+    setDetectedPaymentDetails(null);
 
     // Immediate local preview so the user sees instant feedback
     const localPreview = URL.createObjectURL(file);
@@ -273,17 +307,57 @@ export default function CreateOrderPage() {
         setUploadedImage(data.url);
         setUploadStorageSource(data.storage === "cloudinary" ? "cloudinary" : "local_fallback");
 
+        const detectedTrx = data.detectedTrxId;
+        const detectedBankAcc = data.detectedBankAccount;
+        const detectedBank = data.detectedBankName;
+        const detectedGtw = data.detectedGateway;
+        const detectedSender = data.detectedSenderNumber;
+        const detectedEngine = data.detectedSourceEngine;
+
+        // Auto-detect Payment Gateway & match Partner Bank
+        if (detectedGtw === "Bank" || detectedBankAcc || detectedBank) {
+          setPaymentMethod("Bank Transfer");
+          if (activeBankAccounts.length > 0) {
+            const matchedBank = activeBankAccounts.find((b) => {
+              if (detectedBank && b.bankName.toLowerCase().includes(detectedBank.toLowerCase())) return true;
+              if (detectedBankAcc && b.accountNumber.includes(detectedBankAcc)) return true;
+              return false;
+            });
+            if (matchedBank) {
+              setSelectedBankId(matchedBank.id);
+            }
+          }
+        } else if (detectedGtw === "bKash") {
+          setPaymentMethod("bKash");
+        } else if (detectedGtw === "Nagad") {
+          setPaymentMethod("Nagad");
+        } else if (detectedGtw === "Rocket") {
+          setPaymentMethod("Rocket");
+        }
+
         // Real dynamic OCR scraping from the receipt image
-        if (data.detectedTrxId) {
-          setTransactionId(data.detectedTrxId);
+        if (detectedTrx) {
+          setTransactionId(detectedTrx);
+          setOcrStatus("success");
+        } else if (detectedBankAcc) {
+          setTransactionId(`A/C: ${detectedBankAcc}`);
           setOcrStatus("success");
         } else {
           setOcrStatus("not_found");
         }
 
-        if (data.detectedSenderNumber && !senderNumber) {
-          setSenderNumber(data.detectedSenderNumber);
+        if (detectedSender && !senderNumber) {
+          setSenderNumber(detectedSender);
         }
+
+        setDetectedPaymentDetails({
+          trxId: detectedTrx || null,
+          bankAccount: detectedBankAcc || null,
+          bankName: detectedBank || null,
+          gateway: detectedGtw || null,
+          senderNumber: detectedSender || null,
+          engine: detectedEngine || null,
+        });
       } else {
         setUploadError(data.error || "Failed to upload receipt to cloud");
         setOcrStatus("idle");
@@ -298,31 +372,6 @@ export default function CreateOrderPage() {
       setIsUploadingScreenshot(false);
       e.target.value = "";
     }
-  };
-
-  // Bank selection & popup modal
-  const activeBankAccounts = useMemo(() => {
-    return contextBankAccounts && contextBankAccounts.length > 0
-      ? contextBankAccounts.filter((b) => b.isActive)
-      : [];
-  }, [contextBankAccounts]);
-
-  const [selectedBankId, setSelectedBankId] = useState<string>("");
-  const [isBankModalOpen, setIsBankModalOpen] = useState(false);
-  const [copiedText, setCopiedText] = useState<string | null>(null);
-
-  const selectedBankAccount = useMemo(() => {
-    if (!activeBankAccounts || activeBankAccounts.length === 0) return null;
-    return (
-      activeBankAccounts.find((b) => b.id === selectedBankId) ||
-      activeBankAccounts.find((b) => b.isPrimary) ||
-      activeBankAccounts[0]
-    );
-  }, [activeBankAccounts, selectedBankId]);
-
-  const handleBankSelect = (bank: BankAccount) => {
-    setSelectedBankId(bank.id);
-    setIsBankModalOpen(true);
   };
 
   const mobileAccounts = {
@@ -1572,24 +1621,44 @@ export default function CreateOrderPage() {
                 {ocrStatus === "scanning" && (
                   <div className="flex items-center gap-2 text-xs text-[#0866FF] bg-[#EBF2FF] p-2.5 rounded-xl font-medium border border-[#0866FF]/20 animate-pulse">
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0866FF] shrink-0" />
-                    <span>Scraping payment screenshot to detect exact Transaction ID...</span>
+                    <span>AI Vision scanning receipt to detect TrxID & Bank details...</span>
                   </div>
                 )}
                 {ocrStatus === "success" && (
-                  <div className="flex items-center justify-between text-xs text-emerald-800 bg-emerald-50 p-2.5 rounded-xl font-medium border border-emerald-200 animate-in fade-in">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-xs text-emerald-800 bg-emerald-50 p-2.5 rounded-xl font-medium border border-emerald-200 animate-in fade-in">
                     <div className="flex items-center gap-2 min-w-0">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                      <span className="truncate">Scraped TrxID: <strong className="font-mono text-emerald-950 font-bold">{transactionId}</strong></span>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span className="truncate">
+                        {detectedPaymentDetails?.bankAccount ? (
+                          <>
+                            Bank Slip: <strong>{detectedPaymentDetails.bankName || "Bank Transfer"}</strong> | A/C:{" "}
+                            <strong className="font-mono text-emerald-950 font-bold">{detectedPaymentDetails.bankAccount}</strong>
+                            {detectedPaymentDetails.trxId && detectedPaymentDetails.trxId !== `A/C: ${detectedPaymentDetails.bankAccount}` ? ` (Ref: ${detectedPaymentDetails.trxId})` : ""}
+                          </>
+                        ) : (
+                          <>
+                            Scraped TrxID: <strong className="font-mono text-emerald-950 font-bold">{transactionId}</strong>
+                            {detectedPaymentDetails?.gateway ? ` (${detectedPaymentDetails.gateway})` : ""}
+                          </>
+                        )}
+                      </span>
                     </div>
-                    <span className="text-[9px] bg-white px-2 py-0.5 rounded-full font-bold text-emerald-700 border border-emerald-200 shrink-0">
-                      ✓ Auto-Filled
-                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
+                      {detectedPaymentDetails?.engine === "gemini_ai" && (
+                        <span className="text-[9px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold border border-indigo-200">
+                          ✨ Gemini Vision AI
+                        </span>
+                      )}
+                      <span className="text-[9px] bg-white px-2 py-0.5 rounded-full font-bold text-emerald-700 border border-emerald-200">
+                        ✓ Auto-Filled
+                      </span>
+                    </div>
                   </div>
                 )}
                 {ocrStatus === "not_found" && (
                   <div className="flex items-center gap-2 text-xs text-amber-800 bg-amber-50 p-2.5 rounded-xl font-medium border border-amber-200 animate-in fade-in">
                     <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                    <span>Could not automatically read TrxID from this screenshot. Please enter your TrxID below manually.</span>
+                    <span>Could not automatically read TrxID or Bank Number from this image. Please enter your TrxID below manually.</span>
                   </div>
                 )}
               </div>
