@@ -283,23 +283,28 @@ export const AdminProfitAnalytics: React.FC = () => {
       </div>
 
       {/* Dollar Buy/Cost Rate Setter & Spread Card */}
-      <div className="bg-gradient-to-r from-slate-900 via-[#182035] to-[#1E1B4B] text-white rounded-2xl p-4 sm:p-5 border border-white/10 shadow-md">
+      <div className="bg-[#F8FAFC] text-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-2xs space-y-3">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <Sliders className="w-4 h-4 text-emerald-400" />
-              <span className="text-xs font-bold text-white uppercase tracking-wider">
+              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
+                <Sliders className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                 Agency Dollar Buying Cost Rate (ডলার ক্রয় রেট)
               </span>
+              <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                Live Dynamic
+              </span>
             </div>
-            <p className="text-xs text-slate-300">
+            <p className="text-xs text-slate-500">
               আপনি প্রতি ডলার কত রেটে ক্রয় করেন সেট করুন। এর ভিত্তিতে প্রতিটি বুস্ট ও ক্যাম্পেইনের আসল লাভ হিসাব করা হয়।
             </p>
           </div>
 
           <form onSubmit={handleSaveBuyRate} className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center bg-white/10 border border-white/20 rounded-xl px-3 py-1.5 text-xs text-white">
-              <span className="text-slate-300 font-bold mr-1">৳</span>
+            <div className="flex items-center bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/10">
+              <span className="text-slate-500 font-bold mr-1">৳</span>
               <input
                 type="number"
                 step="0.25"
@@ -307,7 +312,7 @@ export const AdminProfitAnalytics: React.FC = () => {
                 value={customBuyRate}
                 onChange={(e) => setCustomBuyRate(e.target.value)}
                 placeholder="130"
-                className="w-16 bg-transparent text-white font-mono font-bold focus:outline-none text-xs"
+                className="w-16 bg-transparent text-slate-900 font-mono font-bold focus:outline-none text-xs"
               />
               <span className="text-slate-400 text-[11px] font-medium ml-1">/ USD</span>
             </div>
@@ -315,7 +320,7 @@ export const AdminProfitAnalytics: React.FC = () => {
             <button
               type="submit"
               disabled={isSavingRate}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
             >
               {isSavingRate ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -328,9 +333,9 @@ export const AdminProfitAnalytics: React.FC = () => {
             </button>
 
             {/* Live Spread Pill */}
-            <div className="hidden sm:flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 px-3 py-1.5 rounded-xl text-xs font-bold">
-              <span>Spread:</span>
-              <span className="font-mono text-white">
+            <div className="hidden sm:flex items-center gap-2 bg-white border border-emerald-200 text-emerald-800 px-3 py-1.5 rounded-xl text-xs font-bold shadow-3xs">
+              <span className="text-emerald-600 font-medium">Spread:</span>
+              <span className="font-mono text-emerald-950 font-bold">
                 +৳{standardSpread >= 0 ? standardSpread.toFixed(1) : 0} (Boost) • +৳{adsSpread.toFixed(1)} (Ads)
               </span>
             </div>

@@ -355,24 +355,31 @@ export default function AdminAnalyticsPage() {
         </div>
 
         {/* Agency Dollar Buying Cost Rate Configurator & Spread Banner */}
-        <div className="bg-gradient-to-r from-slate-900 via-[#161F33] to-[#1E1B4B] text-white rounded-[26px] p-5 sm:p-6 border border-white/10 shadow-xl space-y-4">
+        <div className="bg-white text-slate-900 rounded-[26px] p-5 sm:p-6 border border-[#E9EDF4] shadow-[0_4px_25px_rgba(0,0,0,0.03)] space-y-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
             <div className="space-y-1.5 max-w-xl">
-              <div className="flex items-center gap-2">
-                <Sliders className="w-5 h-5 text-emerald-400" />
-                <h3 className="text-sm sm:text-base font-extrabold text-white">
-                  Agency Dollar Buying Cost Rate (আপনার ডলার ক্রয় খরচ রেট)
-                </h3>
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
+                  <Sliders className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-extrabold text-slate-900">
+                    Agency Dollar Buying Cost Rate (আপনার ডলার ক্রয় খরচ রেট)
+                  </h3>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80">
+                    ✓ Live Dynamic Engine
+                  </span>
+                </div>
               </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
+              <p className="text-xs text-slate-500 leading-relaxed pt-0.5">
                 আপনি প্রতি ডলার কত টাকায় ক্রয় করেন এখানে সেট করুন। আপনার সেট করা রেটের ভিত্তিতে ক্লায়েন্টের পেমেন্ট থেকে মেটা অ্যাড খরচ বাদ দিয়ে আসল লাভ (Net Profit) স্বয়ংক্রিয়ভাবে হিসাব করা হচ্ছে।
               </p>
             </div>
 
             {/* Input & Save Form */}
             <form onSubmit={handleSaveBuyRate} className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center bg-white/10 border border-white/20 rounded-2xl px-4 py-2 text-sm text-white backdrop-blur-md">
-                <span className="text-slate-300 font-bold mr-1.5">৳</span>
+              <div className="flex items-center bg-[#F8FAFC] border border-slate-200 rounded-2xl px-4 py-2 text-sm text-slate-900 focus-within:border-emerald-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-500/10 transition-all">
+                <span className="text-slate-500 font-bold mr-1.5">৳</span>
                 <input
                   type="number"
                   step="0.25"
@@ -381,20 +388,20 @@ export default function AdminAnalyticsPage() {
                   value={customBuyRate}
                   onChange={(e) => setCustomBuyRate(e.target.value)}
                   placeholder="130"
-                  className="w-20 bg-transparent text-white font-mono font-black focus:outline-none text-base"
+                  className="w-20 bg-transparent text-slate-900 font-mono font-black focus:outline-none text-base"
                 />
-                <span className="text-slate-300 text-xs font-semibold ml-1.5">/ USD</span>
+                <span className="text-slate-500 text-xs font-semibold ml-1.5">/ USD</span>
               </div>
 
               <button
                 type="submit"
                 disabled={isSavingRate}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-xs font-bold rounded-2xl shadow-md shadow-emerald-500/20 transition-all cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-2xl shadow-sm shadow-emerald-600/20 transition-all cursor-pointer disabled:opacity-50"
               >
                 {isSavingRate ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : rateSavedSuccess ? (
-                  <Check className="w-4 h-4" />
+                  <Check className="w-4 h-4 text-white" />
                 ) : (
                   <Save className="w-4 h-4" />
                 )}
@@ -404,24 +411,24 @@ export default function AdminAnalyticsPage() {
           </div>
 
           {/* Quick Rate & Spread Indicators */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-white/10 text-xs">
-            <div className="bg-white/5 p-3 rounded-xl border border-white/10">
-              <span className="text-slate-400 block text-[11px]">Agency Buy Rate (ক্রয় রেট)</span>
-              <span className="text-base font-extrabold font-mono text-emerald-400">
-                ৳{activeBuyRate.toFixed(2)} BDT <span className="text-xs font-sans text-slate-300">/ USD</span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100 text-xs">
+            <div className="bg-[#F8FAFC] p-3.5 rounded-2xl border border-slate-200/80">
+              <span className="text-slate-500 block text-[11px] font-semibold">Agency Buy Rate (ক্রয় রেট)</span>
+              <span className="text-base font-extrabold font-mono text-emerald-700">
+                ৳{activeBuyRate.toFixed(2)} BDT <span className="text-xs font-sans text-slate-400 font-normal">/ USD</span>
               </span>
             </div>
 
-            <div className="bg-white/5 p-3 rounded-xl border border-white/10">
-              <span className="text-slate-400 block text-[11px]">Client Selling Rate (বিক্রি রেট)</span>
-              <span className="text-base font-extrabold font-mono text-blue-400">
+            <div className="bg-[#F8FAFC] p-3.5 rounded-2xl border border-slate-200/80">
+              <span className="text-slate-500 block text-[11px] font-semibold">Client Selling Rate (বিক্রি রেট)</span>
+              <span className="text-base font-extrabold font-mono text-blue-700">
                 ৳{exchangeRateBDT} (Boost) • ৳155 (Ads)
               </span>
             </div>
 
-            <div className="bg-white/5 p-3 rounded-xl border border-white/10">
-              <span className="text-slate-400 block text-[11px]">Profit Spread per Dollar (প্রতি ডলারে লাভ)</span>
-              <span className="text-base font-extrabold font-mono text-amber-300">
+            <div className="bg-[#F8FAFC] p-3.5 rounded-2xl border border-slate-200/80">
+              <span className="text-slate-500 block text-[11px] font-semibold">Profit Spread per Dollar (প্রতি ডলারে লাভ)</span>
+              <span className="text-base font-extrabold font-mono text-amber-700">
                 +৳{standardSpread >= 0 ? standardSpread.toFixed(1) : 0} (Boost) • +৳{adsSpread.toFixed(1)} (Ads)
               </span>
             </div>
