@@ -149,7 +149,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, onMobile
                       href: "/admin/analytics",
                       icon: TrendingUp,
                       isLive: true,
-                      badge: { text: "Profit", color: "bg-emerald-100 text-emerald-800" },
+                      badge: { text: "Profit", color: "bg-[#EEF2FF] text-[#3858F6]" },
                     },
                     {
                       name: "Shift Ads Console",

@@ -297,7 +297,7 @@ export default function AdminAnalyticsPage() {
         {/* Top Header Banner */}
         <div className="bg-white rounded-[28px] border border-[#E9EDF4] p-5 sm:p-7 shadow-[0_4px_25px_rgba(0,0,0,0.03)] flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/25 shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-[#EEF2FF] text-[#3858F6] border border-[#C7D9FE] flex items-center justify-center shadow-sm shrink-0">
               <TrendingUp className="w-6 h-6 stroke-[2.3]" />
             </div>
             <div>
@@ -305,8 +305,8 @@ export default function AdminAnalyticsPage() {
                 <h1 className="text-lg sm:text-xl font-extrabold text-[#121826]">
                   Agency Financial Profit Analytics & System Accounting
                 </h1>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-emerald-600" />
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#EEF2FF] text-[#3858F6] border border-[#C7D9FE] flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-[#3858F6]" />
                   <span>সম্পূর্ণ সিস্টেম প্রফিট হিসাব</span>
                 </span>
               </div>
@@ -349,7 +349,7 @@ export default function AdminAnalyticsPage() {
               title="Refresh financial data from database"
               className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors cursor-pointer border border-slate-200/80"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin text-[#0866FF]" : ""}`} />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin text-[#3858F6]" : ""}`} />
             </button>
           </div>
         </div>
@@ -359,14 +359,14 @@ export default function AdminAnalyticsPage() {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
             <div className="space-y-1.5 max-w-xl">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-[#EEF2FF] text-[#3858F6] border border-[#C7D9FE] flex items-center justify-center shrink-0">
                   <Sliders className="w-4 h-4" />
                 </div>
                 <div>
                   <h3 className="text-sm sm:text-base font-extrabold text-slate-900">
                     Agency Dollar Buying Cost Rate (আপনার ডলার ক্রয় খরচ রেট)
                   </h3>
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80">
+                  <span className="text-[10px] font-bold text-[#3858F6] bg-[#EEF2FF] px-2 py-0.5 rounded-full border border-[#C7D9FE]">
                     ✓ Live Dynamic Engine
                   </span>
                 </div>
@@ -378,7 +378,7 @@ export default function AdminAnalyticsPage() {
 
             {/* Input & Save Form */}
             <form onSubmit={handleSaveBuyRate} className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center bg-[#F8FAFC] border border-slate-200 rounded-2xl px-4 py-2 text-sm text-slate-900 focus-within:border-emerald-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-500/10 transition-all">
+              <div className="flex items-center bg-[#F8FAFC] border border-slate-200 rounded-2xl px-4 py-2 text-sm text-slate-900 focus-within:border-[#3858F6] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#3858F6]/10 transition-all">
                 <span className="text-slate-500 font-bold mr-1.5">৳</span>
                 <input
                   type="number"
@@ -396,7 +396,7 @@ export default function AdminAnalyticsPage() {
               <button
                 type="submit"
                 disabled={isSavingRate}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-2xl shadow-sm shadow-emerald-600/20 transition-all cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#3858F6] hover:bg-[#2542D9] text-white text-xs font-bold rounded-2xl shadow-sm shadow-[#3858F6]/25 transition-all cursor-pointer disabled:opacity-50"
               >
                 {isSavingRate ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -414,21 +414,21 @@ export default function AdminAnalyticsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100 text-xs">
             <div className="bg-[#F8FAFC] p-3.5 rounded-2xl border border-slate-200/80">
               <span className="text-slate-500 block text-[11px] font-semibold">Agency Buy Rate (ক্রয় রেট)</span>
-              <span className="text-base font-extrabold font-mono text-emerald-700">
+              <span className="text-base font-extrabold font-mono text-slate-900">
                 ৳{activeBuyRate.toFixed(2)} BDT <span className="text-xs font-sans text-slate-400 font-normal">/ USD</span>
               </span>
             </div>
 
             <div className="bg-[#F8FAFC] p-3.5 rounded-2xl border border-slate-200/80">
               <span className="text-slate-500 block text-[11px] font-semibold">Client Selling Rate (বিক্রি রেট)</span>
-              <span className="text-base font-extrabold font-mono text-blue-700">
+              <span className="text-base font-extrabold font-mono text-[#3858F6]">
                 ৳{exchangeRateBDT} (Boost) • ৳155 (Ads)
               </span>
             </div>
 
             <div className="bg-[#F8FAFC] p-3.5 rounded-2xl border border-slate-200/80">
               <span className="text-slate-500 block text-[11px] font-semibold">Profit Spread per Dollar (প্রতি ডলারে লাভ)</span>
-              <span className="text-base font-extrabold font-mono text-amber-700">
+              <span className="text-base font-extrabold font-mono text-[#3858F6]">
                 +৳{standardSpread >= 0 ? standardSpread.toFixed(1) : 0} (Boost) • +৳{adsSpread.toFixed(1)} (Ads)
               </span>
             </div>
@@ -437,30 +437,35 @@ export default function AdminAnalyticsPage() {
 
         {/* 6 High-Impact Financial KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-          {/* Card 1: Net Profit (Hero) */}
-          <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white shadow-lg shadow-emerald-500/15 flex flex-col justify-between min-h-[145px] sm:col-span-2 lg:col-span-2">
+          {/* Card 1: Net Profit (Hero) - Clean White with Primary Brand Accent */}
+          <div className="p-5 rounded-2xl bg-white border-2 border-[#3858F6] shadow-sm flex flex-col justify-between min-h-[145px] sm:col-span-2 lg:col-span-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-emerald-100 font-bold uppercase tracking-wider">
-                Total Net Profit (সর্বমোট নিট লাভ)
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-white/20 text-white">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-[#EEF2FF] text-[#3858F6] flex items-center justify-center font-black">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+                <span className="text-xs text-slate-600 font-bold uppercase tracking-wider">
+                  Total Net Profit (সর্বমোট নিট লাভ)
+                </span>
+              </div>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-[#EEF2FF] text-[#3858F6] border border-[#C7D9FE]">
                 {stats.profitMarginPercent}% Margin
               </span>
             </div>
 
             <div className="my-2">
-              <div className="text-3xl sm:text-4xl font-black text-white tracking-tight font-mono">
+              <div className="text-3xl sm:text-4xl font-black text-[#121826] tracking-tight font-mono">
                 ৳{stats.netProfitBDT.toLocaleString()}{" "}
-                <span className="text-sm font-sans font-bold">BDT</span>
+                <span className="text-sm font-sans font-bold text-[#3858F6]">BDT</span>
               </div>
-              <div className="text-xs text-emerald-100 font-medium mt-1">
+              <div className="text-xs text-slate-500 font-medium mt-1">
                 ≈ ৳{stats.avgProfitPerUSD} BDT Profit / $1 USD Boosted
               </div>
             </div>
 
-            <div className="text-[11px] text-emerald-100/90 font-medium pt-2 border-t border-white/10 flex items-center justify-between">
-              <span>Timeframe: {timeframe.toUpperCase()}</span>
-              <span>{stats.orderCount} Orders Counted</span>
+            <div className="text-[11px] text-slate-400 font-medium pt-2 border-t border-slate-100 flex items-center justify-between">
+              <span>Timeframe: <strong className="text-slate-700 uppercase">{timeframe}</strong></span>
+              <span><strong className="text-slate-700">{stats.orderCount}</strong> Orders Counted</span>
             </div>
           </div>
 
@@ -606,9 +611,9 @@ export default function AdminAnalyticsPage() {
                 </div>
 
                 <div className="pt-1">
-                  <div className="text-2xl font-black text-emerald-700 font-mono">
+                  <div className="text-2xl font-black text-slate-900 font-mono">
                     +৳{stats.dayShiftProfitBDT.toLocaleString()}{" "}
-                    <span className="text-xs font-sans font-bold text-slate-600">Net Profit</span>
+                    <span className="text-xs font-sans font-bold text-[#3858F6]">Net Profit</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-amber-200/80 text-[11px] text-amber-900 font-medium">
                     <div>
@@ -644,9 +649,9 @@ export default function AdminAnalyticsPage() {
                 </div>
 
                 <div className="pt-1">
-                  <div className="text-2xl font-black text-emerald-700 font-mono">
+                  <div className="text-2xl font-black text-slate-900 font-mono">
                     +৳{stats.nightShiftProfitBDT.toLocaleString()}{" "}
-                    <span className="text-xs font-sans font-bold text-slate-600">Net Profit</span>
+                    <span className="text-xs font-sans font-bold text-[#3858F6]">Net Profit</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-purple-200/80 text-[11px] text-purple-900 font-medium">
                     <div>
@@ -670,7 +675,7 @@ export default function AdminAnalyticsPage() {
           <div className="lg:col-span-5 bg-white p-5 sm:p-6 rounded-[28px] border border-[#E9EDF4] shadow-[0_4px_25px_rgba(0,0,0,0.03)] space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-[#EEF2FF] text-[#3858F6] flex items-center justify-center">
                   <Layers className="w-4 h-4" />
                 </div>
                 <div>
@@ -690,13 +695,13 @@ export default function AdminAnalyticsPage() {
                   <div key={catName} className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 space-y-2">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-bold text-slate-800">{catName}</span>
-                      <span className="font-mono font-bold text-emerald-600">
+                      <span className="font-mono font-bold text-[#3858F6]">
                         +৳{data.profit.toLocaleString()} ({catProfitShare}%)
                       </span>
                     </div>
                     <div className="w-full bg-slate-200/80 rounded-full h-2 overflow-hidden">
                       <div
-                        className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
+                        className="bg-[#3858F6] h-2 rounded-full transition-all duration-500"
                         style={{ width: `${Math.min(100, catProfitShare)}%` }}
                       />
                     </div>
@@ -895,10 +900,10 @@ export default function AdminAnalyticsPage() {
 
                         {/* Net Profit */}
                         <td className="py-3 px-4 text-right">
-                          <div className="font-black text-emerald-600 text-sm font-mono">
+                          <div className="font-black text-[#3858F6] text-sm font-mono">
                             +৳{profitBDT.toLocaleString()} BDT
                           </div>
-                          <span className="inline-block text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <span className="inline-block text-[10px] font-bold px-1.5 py-0.2 rounded bg-[#EEF2FF] text-[#3858F6] border border-[#C7D9FE]">
                             {margin}% Profit
                           </span>
                         </td>
