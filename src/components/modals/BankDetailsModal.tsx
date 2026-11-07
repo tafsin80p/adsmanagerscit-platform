@@ -15,6 +15,7 @@ import {
   CityBankLogo,
   BracBankLogo,
   DbblLogo,
+  EasternBankLogo,
 } from "@/components/ui/BankLogos";
 import { BankAccount } from "@/types";
 
@@ -76,15 +77,39 @@ export const BankDetailsModal: React.FC<BankDetailsModalProps> = ({
     },
     DBBL: {
       name: "Dutch-Bangla Bank PLC (DBBL)",
-      branch: "Motijheel Foreign Exchange Branch, Dhaka",
-      accountName: "Meta Ads Agency BD",
-      accountNumber: "115-110-38491",
-      routingNumber: "090272185",
+      branch: "Mirpur-10, Dhaka",
+      accountName: "Foresight IT",
+      accountNumber: "1641100042084",
+      routingNumber: "",
       swift: "DBBLBDDH",
       tag: "NexusPay / Rocket / NPSB",
       instructions:
         "Transfer via NexusPay App, Rocket to Bank transfer, or standard NPSB / BEFTN from any bank. Enter your Phone Number or Order ID in the transaction reference.",
       brandColor: "#008751",
+    },
+    "Eastern Bank": {
+      name: "Eastern Bank Ltd",
+      branch: "Mirpur Darus Salam Road, Dhaka",
+      accountName: "Foresight IT",
+      accountNumber: "1181070000361",
+      routingNumber: "",
+      swift: "EBLBDDH",
+      tag: "NPSB / BEFTN / Online Banking",
+      instructions:
+        "Transfer via online banking app or NPSB. Reference: Your Order ID or Phone Number.",
+      brandColor: "#005BAA",
+    },
+    "Eastern Bank Ltd": {
+      name: "Eastern Bank Ltd",
+      branch: "Mirpur Darus Salam Road, Dhaka",
+      accountName: "Foresight IT",
+      accountNumber: "1181070000361",
+      routingNumber: "",
+      swift: "EBLBDDH",
+      tag: "NPSB / BEFTN / Online Banking",
+      instructions:
+        "Transfer via online banking app or NPSB. Reference: Your Order ID or Phone Number.",
+      brandColor: "#005BAA",
     },
   };
 
@@ -108,6 +133,7 @@ export const BankDetailsModal: React.FC<BankDetailsModalProps> = ({
   const isCity = lowerName.includes("city");
   const isBrac = lowerName.includes("brac");
   const isDbbl = lowerName.includes("dutch") || lowerName.includes("dbbl");
+  const isEbl = lowerName.includes("eastern") || lowerName.includes("ebl");
 
   const handleCopy = (text: string, fieldKey: string) => {
     navigator.clipboard.writeText(text);
@@ -154,6 +180,8 @@ export const BankDetailsModal: React.FC<BankDetailsModalProps> = ({
                 <BracBankLogo className="w-full h-full" />
               ) : isDbbl ? (
                 <DbblLogo className="w-full h-full" />
+              ) : isEbl ? (
+                <EasternBankLogo className="w-full h-full" />
               ) : (
                 <div className="w-10 h-10 rounded-xl bg-[#EEF2FF] text-[#3858F6] flex items-center justify-center">
                   <Building className="w-6 h-6" />

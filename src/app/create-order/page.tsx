@@ -41,6 +41,7 @@ import {
   CityBankLogo,
   BracBankLogo,
   DbblLogo,
+  EasternBankLogo,
   BkashLogo,
   NagadLogo,
 } from "@/components/ui/BankLogos";
@@ -74,7 +75,7 @@ export default function CreateOrderPage() {
   // Always sync latest receiving bank accounts & rates on mount
   useEffect(() => {
     refreshSettings();
-  }, [refreshSettings]);
+  }, []);
 
   // Campaign Type
   const [postType, setPostType] = useState<"Boost Post" | "Ads Campaign" | "Promotion">("Boost Post");
@@ -255,7 +256,7 @@ export default function CreateOrderPage() {
   // Bank selection & popup modal
   const activeBankAccounts = useMemo(() => {
     return contextBankAccounts && contextBankAccounts.length > 0
-      ? contextBankAccounts.filter((b) => b.isActive)
+      ? contextBankAccounts.filter((b) => b.isActive !== false)
       : [];
   }, [contextBankAccounts]);
 
@@ -1323,6 +1324,7 @@ export default function CreateOrderPage() {
                       const isCity = lower.includes("city");
                       const isBrac = lower.includes("brac");
                       const isDbbl = lower.includes("dutch") || lower.includes("dbbl");
+                      const isEbl = lower.includes("eastern") || lower.includes("ebl");
 
                       return (
                         <div
@@ -1352,6 +1354,8 @@ export default function CreateOrderPage() {
                               <BracBankLogo className="w-full h-full max-h-8" />
                             ) : isDbbl ? (
                               <DbblLogo className="w-full h-full max-h-10" />
+                            ) : isEbl ? (
+                              <EasternBankLogo className="w-full h-full max-h-10" />
                             ) : (
                               <div className="w-10 h-10 rounded-xl bg-[#EEF2FF] text-[#3858F6] flex items-center justify-center">
                                 <Building className="w-6 h-6" />

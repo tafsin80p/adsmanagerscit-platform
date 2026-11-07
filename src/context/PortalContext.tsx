@@ -26,41 +26,58 @@ export const DEFAULT_BANKS: BankAccount[] = [
   {
     id: "bank_city",
     bankName: "The City Bank PLC",
-    accountName: "Meta Ads Agency BD",
-    accountNumber: "1502-9384-72001",
-    branch: "Gulshan Avenue Branch, Dhaka",
-    routingNumber: "225271829",
-    swiftCode: "CIBLBDDH",
+    accountName: "Foresight IT",
+    accountNumber: "1412720047001",
+    branch: "Mirpur 10, Dhaka",
+    routingNumber: "",
+    swiftCode: "",
     tag: "CityTouch / NPSB / BEFTN",
     instructions: "Transfer via CityTouch App or any bank's NPSB instant transfer. Reference: Your Phone Number or Order ID.",
     isActive: true,
     isPrimary: true,
+    logoUrl: "",
   },
   {
     id: "bank_brac",
     bankName: "BRAC Bank PLC",
-    accountName: "Meta Ads Agency BD",
-    accountNumber: "2061-4892-0001",
-    branch: "Banani Branch, Dhaka",
-    routingNumber: "060260424",
-    swiftCode: "BRAKBDDH",
+    accountName: "Foresight IT",
+    accountNumber: "22068165160001",
+    branch: "Kalshi Sub Branch",
+    routingNumber: "",
+    swiftCode: "",
     tag: "Astha App / NPSB / BEFTN",
     instructions: "Transfer via Astha App or any bank's NPSB instant transfer. Reference: Your Order ID.",
     isActive: true,
     isPrimary: false,
+    logoUrl: "",
   },
   {
     id: "bank_dbbl",
     bankName: "Dutch-Bangla Bank PLC (DBBL)",
-    accountName: "Meta Ads Agency BD",
-    accountNumber: "115-110-38491",
-    branch: "Motijheel Foreign Exchange Branch, Dhaka",
-    routingNumber: "090272185",
-    swiftCode: "DBBLBDDH",
+    accountName: "Foresight IT",
+    accountNumber: "1641100042084",
+    branch: "Mirpur-10, Dhaka",
+    routingNumber: "",
+    swiftCode: "",
     tag: "NexusPay / Rocket / NPSB",
     instructions: "Transfer via NexusPay App, Rocket to Bank, or NPSB transfer. Reference: Your Phone Number.",
     isActive: true,
     isPrimary: false,
+    logoUrl: "",
+  },
+  {
+    id: "bank_1793535661155_ejtoq",
+    bankName: "Eastern Bank Ltd",
+    accountName: "Foresight IT",
+    accountNumber: "1181070000361",
+    branch: "Mirpur Darus Salam Road, Dhaka",
+    routingNumber: "",
+    swiftCode: "",
+    tag: "NPSB / BEFTN / Online Banking",
+    instructions: "Transfer via online banking app or NPSB. Reference: Your Order ID or Phone Number.",
+    isActive: true,
+    isPrimary: false,
+    logoUrl: "https://res.cloudinary.com/dz4gpb1rn/image/upload/v1793536949/meta_ads/banks/w1fj9xzhau6kazc2snr6.png",
   },
 ];
 
@@ -617,11 +634,11 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
     branch: string;
     routingNumber?: string;
   }>({
-    bankName: "The City Bank Ltd",
-    accountName: "Meta Ads Agency BD",
-    accountNumber: "1502-9384-72001",
-    branch: "Gulshan Avenue Branch, Dhaka",
-    routingNumber: "225271829",
+    bankName: "The City Bank PLC",
+    accountName: "Foresight IT",
+    accountNumber: "1412720047001",
+    branch: "Mirpur 10, Dhaka",
+    routingNumber: "",
   });
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(DEFAULT_BANKS);
   const [ratesLastUpdated, setRatesLastUpdated] = useState<string>("Oct 26, 2026");
@@ -638,10 +655,10 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
   const [isLoadingSettings, setIsLoadingSettings] = useState<boolean>(false);
   const [dbConnected, setDbConnected] = useState<boolean>(false);
 
-  const refreshOrders = async () => {
+  const refreshOrders = useCallback(async () => {
     setIsLoadingOrders(true);
     try {
-      const res = await fetch("/api/orders");
+      const res = await fetch("/api/orders", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.orders)) {
@@ -663,12 +680,12 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoadingOrders(false);
     }
-  };
+  }, []);
 
-  const refreshPayments = async () => {
+  const refreshPayments = useCallback(async () => {
     setIsLoadingPayments(true);
     try {
-      const res = await fetch("/api/payments");
+      const res = await fetch("/api/payments", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.payments)) {
@@ -689,7 +706,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoadingPayments(false);
     }
-  };
+  }, []);
 
   const applySettingsToState = (s: any) => {
     if (s.exchangeRateBDT !== undefined) setExchangeRateBDT(s.exchangeRateBDT);
@@ -754,7 +771,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const refreshSettings = async () => {
+  const refreshSettings = useCallback(async () => {
     setIsLoadingSettings(true);
     try {
       const res = await fetch("/api/settings", { cache: "no-store" });
@@ -769,7 +786,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoadingSettings(false);
     }
-  };
+  }, []);
 
   // Fetch initial data from MongoDB API routes
   useEffect(() => {

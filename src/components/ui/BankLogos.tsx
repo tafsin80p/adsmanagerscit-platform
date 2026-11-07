@@ -89,3 +89,20 @@ export const NagadLogo: React.FC<LogoProps> = ({
     />
   </div>
 );
+
+/**
+ * Real official Eastern Bank Ltd logo
+ */
+export const EasternBankLogo: React.FC<LogoProps> = ({
+  className = "w-6 h-6",
+  alt = "Eastern Bank Ltd",
+}) => (
+  <div className={`relative flex items-center justify-center shrink-0 overflow-hidden ${className}`}>
+    <img
+      src="https://res.cloudinary.com/dz4gpb1rn/image/upload/v1793536949/meta_ads/banks/w1fj9xzhau6kazc2snr6.png"
+      alt={alt}
+      className="w-full h-full object-contain"
+      loading="eager"
+    />
+  </div>
+);

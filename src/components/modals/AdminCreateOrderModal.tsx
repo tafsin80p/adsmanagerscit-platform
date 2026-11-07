@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import { usePortal } from "@/context/PortalContext";
 import { ClientAccount, OrderStatus, PaymentStatus, PaymentMethod, getCurrentShift, ShiftType } from "@/types";
-import { CityBankLogo, BracBankLogo, DbblLogo } from "@/components/ui/BankLogos";
+import { CityBankLogo, BracBankLogo, DbblLogo, EasternBankLogo } from "@/components/ui/BankLogos";
 
 // Consistent avatar initials and gradient helpers
 import { ClientAvatar, getAvatarGradient, getAvatarInitials } from "@/components/ui/ClientAvatar";
@@ -75,7 +75,7 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
 
   const activeBankAccounts = useMemo(() => {
     return bankAccounts && bankAccounts.length > 0
-      ? bankAccounts.filter((b) => b.isActive)
+      ? bankAccounts.filter((b) => b.isActive !== false)
       : [];
   }, [bankAccounts]);
 
@@ -968,6 +968,7 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
                           const isCity = lower.includes("city");
                           const isBrac = lower.includes("brac");
                           const isDbbl = lower.includes("dutch") || lower.includes("dbbl");
+                          const isEbl = lower.includes("eastern") || lower.includes("ebl");
 
                           return (
                             <button
@@ -995,6 +996,8 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
                                     <BracBankLogo className="w-full h-full" />
                                   ) : isDbbl ? (
                                     <DbblLogo className="w-full h-full" />
+                                  ) : isEbl ? (
+                                    <EasternBankLogo className="w-full h-full" />
                                   ) : (
                                     <Building className="w-4 h-4 text-slate-500" />
                                   )}
