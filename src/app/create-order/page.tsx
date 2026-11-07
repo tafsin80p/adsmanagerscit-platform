@@ -68,7 +68,13 @@ export default function CreateOrderPage() {
     nagadActive,
     bankAccounts: contextBankAccounts,
     profile,
+    refreshSettings,
   } = usePortal();
+
+  // Always sync latest receiving bank accounts & rates on mount
+  useEffect(() => {
+    refreshSettings();
+  }, [refreshSettings]);
 
   // Campaign Type
   const [postType, setPostType] = useState<"Boost Post" | "Ads Campaign" | "Promotion">("Boost Post");
@@ -1310,7 +1316,7 @@ export default function CreateOrderPage() {
                   </div>
 
                   {/* Dynamic Bank Cards */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                     {activeBankAccounts.map((bank) => {
                       const isSelected = selectedBankAccount?.id === bank.id;
                       const lower = bank.bankName.toLowerCase();

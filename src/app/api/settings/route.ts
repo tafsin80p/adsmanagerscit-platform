@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import { SettingModel } from "@/models";
 
-
 export async function GET() {
   try {
     await connectDB();
@@ -19,12 +18,26 @@ export async function GET() {
       });
     }
 
-    return NextResponse.json({ success: true, settings });
+    return NextResponse.json(
+      { success: true, settings },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      }
+    );
   } catch (error: unknown) {
     const err = error as Error;
     return NextResponse.json(
       { success: false, error: err.message },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      }
     );
   }
 }
@@ -40,16 +53,28 @@ export async function POST(req: Request) {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    return NextResponse.json({
-      success: true,
-      message: "Settings updated successfully",
-      settings: updated,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Settings updated successfully",
+        settings: updated,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        },
+      }
+    );
   } catch (error: unknown) {
     const err = error as Error;
     return NextResponse.json(
       { success: false, error: err.message },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      }
     );
   }
 }

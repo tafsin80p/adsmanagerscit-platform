@@ -32,9 +32,11 @@ import {
   ArrowRight,
   Building,
   Clock,
+  Copy,
 } from "lucide-react";
 import { usePortal } from "@/context/PortalContext";
 import { ClientAccount, OrderStatus, PaymentStatus, PaymentMethod, getCurrentShift, ShiftType } from "@/types";
+import { CityBankLogo, BracBankLogo, DbblLogo } from "@/components/ui/BankLogos";
 
 // Consistent avatar initials and gradient helpers
 import { ClientAvatar, getAvatarGradient, getAvatarInitials } from "@/components/ui/ClientAvatar";
@@ -54,12 +56,37 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
   initialClientId,
   clients: propClients,
 }) => {
-  const { profile, exchangeRateBDT, refreshOrders, refreshPayments } = usePortal();
+  const { profile, exchangeRateBDT, refreshOrders, refreshPayments, bankAccounts, refreshSettings } = usePortal();
   const [selectedShift, setSelectedShift] = useState<ShiftType>("Day Shift");
 
   useEffect(() => {
     setSelectedShift(getCurrentShift());
   }, []);
+
+  // Always refresh settings and bank accounts when modal is opened
+  useEffect(() => {
+    if (isOpen) {
+      refreshSettings();
+    }
+  }, [isOpen, refreshSettings]);
+
+  const [selectedBankId, setSelectedBankId] = useState<string>("");
+  const [copiedBankField, setCopiedBankField] = useState<string | null>(null);
+
+  const activeBankAccounts = useMemo(() => {
+    return bankAccounts && bankAccounts.length > 0
+      ? bankAccounts.filter((b) => b.isActive)
+      : [];
+  }, [bankAccounts]);
+
+  const selectedBankAccount = useMemo(() => {
+    if (!activeBankAccounts || activeBankAccounts.length === 0) return null;
+    return (
+      activeBankAccounts.find((b) => b.id === selectedBankId) ||
+      activeBankAccounts.find((b) => b.isPrimary) ||
+      activeBankAccounts[0]
+    );
+  }, [activeBankAccounts, selectedBankId]);
 
   const [clientsList, setClientsList] = useState<ClientAccount[]>(propClients || []);
   const [isLoadingClients, setIsLoadingClients] = useState(false);
@@ -127,6 +154,16 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
 
         if (data.detectedGateway === "Bank" || data.detectedBankAccount) {
           setPaymentMethod("Bank Transfer");
+          if (activeBankAccounts.length > 0) {
+            const matched = activeBankAccounts.find((b) => {
+              if (data.detectedBankAccount && b.accountNumber.includes(data.detectedBankAccount)) return true;
+              if (data.detectedBankName && b.bankName.toLowerCase().includes(data.detectedBankName.toLowerCase())) return true;
+              return false;
+            });
+            if (matched) {
+              setSelectedBankId(matched.id);
+            }
+          }
         } else if (data.detectedGateway === "bKash") {
           setPaymentMethod("bKash");
         } else if (data.detectedGateway === "Nagad") {
@@ -285,8 +322,18 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
         facebookPageId: selectedClient.connectedPage?.id || "",
         thumbnail: selectedClient.connectedPage?.avatar || selectedClient.avatar || "/images/placeholder.jpg",
         notes: notes.trim()
-          ? [notes.trim()]
-          : [`Order manually entered by agency admin on behalf of ${selectedClient.name}.`],
+          ? [
+              notes.trim(),
+              ...(paymentMethod === "Bank Transfer" && selectedBankAccount
+                ? [`Bank Transfer: ${selectedBankAccount.bankName} (A/C: ${selectedBankAccount.accountNumber})`]
+                : []),
+            ]
+          : [
+              `Order manually entered by agency admin on behalf of ${selectedClient.name}.` +
+                (paymentMethod === "Bank Transfer" && selectedBankAccount
+                  ? ` Paid to: ${selectedBankAccount.bankName} (${selectedBankAccount.accountNumber})`
+                  : ""),
+            ],
         specialNote: notes.trim() || undefined,
         metrics: {
           reach: Number(initialReach) || 0,
@@ -884,6 +931,152 @@ export const AdminCreateOrderModal: React.FC<AdminCreateOrderModalProps> = ({
                   className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-mono font-medium text-slate-800 focus:outline-none focus:bg-white focus:border-[#3858F6]"
                 />
               </div>
+
+              {/* Receiving Bank Account Selector when Bank Transfer is selected */}
+              {paymentMethod === "Bank Transfer" && (
+                <div className="sm:col-span-2 p-3.5 bg-slate-50/80 border border-slate-200 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-[#EEF2FF] text-[#3858F6] flex items-center justify-center">
+                        <Building className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-900 block leading-tight">
+                          Agency Receiving Bank Account
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          Select which bank received the client's transfer
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold text-[#3858F6] bg-[#EEF2FF] px-2.5 py-0.5 rounded-full">
+                      {activeBankAccounts.length} Available Bank{activeBankAccounts.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+
+                  {activeBankAccounts.length === 0 ? (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                      No active bank accounts found. Please configure bank accounts in Admin Panel &gt; Settings &gt; Receiving Accounts.
+                    </div>
+                  ) : (
+                    <>
+                      {/* Bank selection cards */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                        {activeBankAccounts.map((b) => {
+                          const isSelected = selectedBankAccount?.id === b.id;
+                          const lower = b.bankName.toLowerCase();
+                          const isCity = lower.includes("city");
+                          const isBrac = lower.includes("brac");
+                          const isDbbl = lower.includes("dutch") || lower.includes("dbbl");
+
+                          return (
+                            <button
+                              key={b.id}
+                              type="button"
+                              onClick={() => setSelectedBankId(b.id)}
+                              className={`p-2.5 rounded-xl border text-left transition-all relative flex flex-col justify-between gap-1.5 ${
+                                isSelected
+                                  ? "bg-white border-[#3858F6] ring-2 ring-[#3858F6]/20 shadow-xs"
+                                  : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
+                              }`}
+                            >
+                              {isSelected && (
+                                <span className="absolute top-2 right-2 flex items-center gap-0.5 text-[9px] font-bold text-[#3858F6] bg-[#EEF2FF] px-1.5 py-0.5 rounded-full">
+                                  <Check className="w-2.5 h-2.5" /> Selected
+                                </span>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-lg bg-white border border-slate-100 flex items-center justify-center overflow-hidden shrink-0 p-1">
+                                  {b.logoUrl ? (
+                                    <img src={b.logoUrl} alt={b.bankName} className="w-full h-full object-contain" />
+                                  ) : isCity ? (
+                                    <CityBankLogo className="w-full h-full" />
+                                  ) : isBrac ? (
+                                    <BracBankLogo className="w-full h-full" />
+                                  ) : isDbbl ? (
+                                    <DbblLogo className="w-full h-full" />
+                                  ) : (
+                                    <Building className="w-4 h-4 text-slate-500" />
+                                  )}
+                                </div>
+                                <div className="min-w-0 pr-4">
+                                  <span className="text-[11px] font-bold text-slate-900 block truncate">
+                                    {b.bankName}
+                                  </span>
+                                  <span className="text-[9px] text-slate-400 block truncate">
+                                    {b.branch || "Online Transfer"}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="font-mono text-[10px] font-semibold text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-100 truncate">
+                                {b.accountNumber}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Selected Bank Details Sheet */}
+                      {selectedBankAccount && (
+                        <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
+                          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                            <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                              {selectedBankAccount.bankName}
+                              {selectedBankAccount.isPrimary && (
+                                <span className="text-[9px] font-bold text-[#3858F6] bg-[#EEF2FF] px-1.5 py-0.2 rounded-full">
+                                  Primary
+                                </span>
+                              )}
+                            </span>
+                            {selectedBankAccount.tag && (
+                              <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                                {selectedBankAccount.tag}
+                              </span>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-slate-600">
+                            <div>
+                              <span className="text-slate-400">Account Name: </span>
+                              <span className="font-semibold text-slate-800">{selectedBankAccount.accountName}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <span className="text-slate-400">Account Number: </span>
+                                <span className="font-mono font-bold text-slate-900">{selectedBankAccount.accountNumber}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(selectedBankAccount.accountNumber);
+                                  setCopiedBankField(selectedBankAccount.id);
+                                  setTimeout(() => setCopiedBankField(null), 2000);
+                                }}
+                                className="text-[10px] text-[#3858F6] hover:underline font-semibold flex items-center gap-0.5 ml-2 cursor-pointer"
+                              >
+                                <Copy className="w-3 h-3" />
+                                {copiedBankField === selectedBankAccount.id ? "Copied!" : "Copy"}
+                              </button>
+                            </div>
+                            {selectedBankAccount.branch && (
+                              <div>
+                                <span className="text-slate-400">Branch: </span>
+                                <span className="font-medium text-slate-700">{selectedBankAccount.branch}</span>
+                              </div>
+                            )}
+                            {selectedBankAccount.routingNumber && (
+                              <div>
+                                <span className="text-slate-400">Routing Number: </span>
+                                <span className="font-mono font-medium text-slate-700">{selectedBankAccount.routingNumber}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
 
               {/* Payment Receipt / Screenshot Upload Dropzone */}
               <div className="sm:col-span-2 space-y-2 pt-1">

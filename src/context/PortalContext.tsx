@@ -757,7 +757,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
   const refreshSettings = async () => {
     setIsLoadingSettings(true);
     try {
-      const res = await fetch("/api/settings");
+      const res = await fetch("/api/settings", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.settings) {
@@ -779,9 +779,9 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
       setIsLoadingSettings(true);
       try {
         const [ordersRes, paymentsRes, settingsRes] = await Promise.allSettled([
-          fetch("/api/orders"),
-          fetch("/api/payments"),
-          fetch("/api/settings"),
+          fetch("/api/orders", { cache: "no-store" }),
+          fetch("/api/payments", { cache: "no-store" }),
+          fetch("/api/settings", { cache: "no-store" }),
         ]);
 
         if (ordersRes.status === "fulfilled" && ordersRes.value.ok) {
